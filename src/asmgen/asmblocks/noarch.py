@@ -7,28 +7,6 @@ if not sys.version_info >= (3, 10):
 else:
     from typing import TypeAlias
 
-@unique
-class mem_use_type(Enum):
-    SAMEDATA=1
-    L1=2
-    CONTIGUOUS=3
-
-@unique
-class bvec_strategy_type(Enum):
-    DIST1_BOFF = 1
-    DIST1_INC  = 2
-    FMAIDX     = 3
-    FMAVF      = 4
-    NOLOAD     = 5
-
-@unique
-class avec_strategy_type(Enum):
-    POSTLOAD = 1
-    PRELOAD = 2
-
-class kernel_layout:
-    bvec_strat = bvec_strategy_type.DIST1_BOFF
-    avec_strat = avec_strategy_type.POSTLOAD
 
 
 #TODO: unify and deduplify handling different register types
