@@ -91,8 +91,7 @@ class avxbase(asmgen):
         pfreg1 = self.prefix_if_raw_reg(freg1)
         pfreg2 = self.prefix_if_raw_reg(freg2)
         asmblock  = self.zero_freg(freg2, datatype)
-        asmblock += self.asmwrap(f"vcmpeq{suf} {pfreg2},{pfreg1},{pfreg2}")
-        asmblock += self.asmwrap(f"vptest {pfreg2},{pfreg2}")
+        asmblock += self.asmwrap(f"ucomi{suf} {pfreg2},{pfreg1}")
         asmblock += self.asmwrap(f"je .{label}")
         return asmblock
 
@@ -105,7 +104,7 @@ class avxbase(asmgen):
         asmblock  = self.zero_vreg(vreg2, datatype)
         asmblock += self.asmwrap(f"vcmpeq{suf} {pvreg2},{pvreg1},{pvreg2}")
         asmblock += self.asmwrap(f"vptest {pvreg2},{pvreg2}")
-        asmblock += self.asmwrap(f"je .{label}")
+        asmblock += self.asmwrap(f"jne .{label}")
         return asmblock
 
     def prefix_if_raw_reg(self,  reg : Union[greg_type,

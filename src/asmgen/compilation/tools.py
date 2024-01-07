@@ -18,7 +18,7 @@ class compiler(object):
         if self.executable in arch_flags:
             self.arch_flags = arch_flags[self.executable][arch]
 
-    def compile_lib(self, source, output_filename, cross_compile="native"):
+    def compile_lib(self, source, output_filename, cross_compile="native", extraflags=[]):
         log = logging.getLogger("COMPILATION")
         cross_flags = []
         if "native" != cross_compile:
@@ -29,6 +29,7 @@ class compiler(object):
                self.arch_flags +\
                self.lib_flags +\
                cross_flags +\
+               extraflags +\
                [self.oflag,output_filename] +\
                self.stdin_flags
 
@@ -44,7 +45,7 @@ class compiler(object):
 
         return 0 == p.returncode
 
-    def compile_exe(self, source, output_filename, libs, cross_compile="native"):
+    def compile_exe(self, source, output_filename, libs, cross_compile="native", extraflags=[]):
         log = logging.getLogger("COMPILATION")
         cross_flags = []
         if "native" != cross_compile:
@@ -56,6 +57,7 @@ class compiler(object):
                cross_flags +\
                [self.oflag,output_filename] +\
                libs +\
+               extraflags +\
                self.stdin_flags
 
         log.debug(f"Compiling c++ code for {output_filename} using:")
@@ -66,6 +68,9 @@ class compiler(object):
         output = process_out[0].decode()
         errout = process_out[1].decode()
         log.debug(f"Compilation stdout: {output}")
-        log.debug(f"Compilation stderr: {errout}")
+        if 0 != p.returncode:
+            log.error(f"Compilation stderr: {errout}")
+        else:
+            log.debug(f"Compilation stderr: {errout}")
 
         return 0 == p.returncode
