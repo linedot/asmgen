@@ -40,14 +40,14 @@ class aarch64(asmgen):
         return True
 
     def label(self, label : str) -> str:
-        return self.asmwrap(f".{label}:")
+        return self.asmwrap(f".{label}%=:")
 
     def jump(self, label : str) -> str:
-        return self.asmwrap(f"b .{label}")
+        return self.asmwrap(f"b .{label}%=")
 
     def loopbegin(self, reg : greg_type,
                   label : str) -> str:
-        asmblock  = self.asmwrap(f".{label}:")
+        asmblock  = self.asmwrap(f".{label}%=:")
         asmblock += self.asmwrap(f"sub {reg},{reg},1")
         return asmblock
 
@@ -55,28 +55,28 @@ class aarch64(asmgen):
                      label : str,
                      labelskip : str) -> str:
         asmblock  = self.asmwrap(f"cmp {reg},0")
-        asmblock += self.asmwrap(f"b.eq .{labelskip}")
-        asmblock += self.asmwrap(f".{label}:")
+        asmblock += self.asmwrap(f"b.eq .{labelskip}%=")
+        asmblock += self.asmwrap(f".{label}%=:")
         asmblock += self.asmwrap(f"sub {reg},{reg},1")
         return asmblock
 
     def loopend(self, reg : greg_type,
                 label : str) -> str:
         asmblock  = self.asmwrap(f"cmp {reg},0")
-        asmblock += self.asmwrap(f"b.ne .{label}")
+        asmblock += self.asmwrap(f"b.ne .{label}%=")
         return asmblock
 
     def jzero(self, reg : greg_type,
               label : str) -> str:
         asmblock  = self.asmwrap(f"cmp {reg},0")
-        asmblock += self.asmwrap(f"b.eq .{label}")
+        asmblock += self.asmwrap(f"b.eq .{label}%=")
         return asmblock
 
     def jfzero(self, freg1 : freg_type, freg2 : freg_type,
                greg : greg_type, label : str,
                datatype : asm_data_type):
         asmblock  = self.asmwrap(f"fcmp {freg1},#0.0")
-        asmblock += self.asmwrap(f"b.eq .{label}")
+        asmblock += self.asmwrap(f"b.eq .{label}%=")
         return asmblock
 
     @property

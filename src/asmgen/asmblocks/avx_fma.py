@@ -81,7 +81,7 @@ class avxbase(asmgen):
     def jzero(self, greg : greg_type, label : str) -> str:
         preg = self.prefix_if_raw_reg(greg)
         asmblock  = self.asmwrap(f"test {preg},{preg}")
-        asmblock += self.asmwrap(f"jz .{label}")
+        asmblock += self.asmwrap(f"jz .{label}%=")
         return asmblock
 
     def jfzero(self, freg1 : freg_type, freg2 : freg_type,
@@ -92,7 +92,7 @@ class avxbase(asmgen):
         pfreg2 = self.prefix_if_raw_reg(freg2)
         asmblock  = self.zero_freg(freg2, datatype)
         asmblock += self.asmwrap(f"ucomi{suf} {pfreg2},{pfreg1}")
-        asmblock += self.asmwrap(f"je .{label}")
+        asmblock += self.asmwrap(f"je .{label}%=")
         return asmblock
 
     def jvzero(self, vreg1 : vreg_type, freg : freg_type,
@@ -104,7 +104,7 @@ class avxbase(asmgen):
         asmblock  = self.zero_vreg(vreg2, datatype)
         asmblock += self.asmwrap(f"vcmpeq{suf} {pvreg2},{pvreg1},{pvreg2}")
         asmblock += self.asmwrap(f"vptest {pvreg2},{pvreg2}")
-        asmblock += self.asmwrap(f"jne .{label}")
+        asmblock += self.asmwrap(f"jne .{label}%=")
         return asmblock
 
     def prefix_if_raw_reg(self,  reg : Union[greg_type,
@@ -123,31 +123,31 @@ class avxbase(asmgen):
         return True
 
     def label(self, label : str) -> str:
-        asmblock = self.asmwrap(f".{label}:")
+        asmblock = self.asmwrap(f".{label}%=:")
         return asmblock
 
     def jump(self, label : str) -> str:
-        asmblock = self.asmwrap(f"jmp .{label}")
+        asmblock = self.asmwrap(f"jmp .{label}%=")
         return asmblock
 
     def loopbegin(self, reg : greg_type, label : str):
         preg = self.prefix_if_raw_reg(reg)
-        asmblock  = self.asmwrap(f".{label}:")
+        asmblock  = self.asmwrap(f".{label}%=:")
         asmblock += self.asmwrap(f"sub $1, {preg}")
         return asmblock
 
     def loopbegin_nz(self, reg : greg_type, label : str, skiplabel : str):
         preg = self.prefix_if_raw_reg(reg)
         asmblock  = self.asmwrap(f"test {preg},{preg}")
-        asmblock += self.asmwrap(f"jz .{skiplabel}")
-        asmblock += self.asmwrap(f".{label}:")
+        asmblock += self.asmwrap(f"jz .{skiplabel}%=")
+        asmblock += self.asmwrap(f".{label}%=:")
         asmblock += self.asmwrap(f"sub $1, {preg}")
         return asmblock
 
     def loopend(self, reg, label):
         preg = self.prefix_if_raw_reg(reg)
         asmblock  = self.asmwrap(f"cmp $0x0,{preg}")
-        asmblock += self.asmwrap(f"jne .{label}")
+        asmblock += self.asmwrap(f"jne .{label}%=")
 
         return asmblock
 

@@ -56,13 +56,13 @@ class riscv64(asmgen):
         return False
 
     def label(self, label : str) -> str:
-        return self.asmwrap(f".{label}:")
+        return self.asmwrap(f".{label}%=:")
 
     def jump(self, label : str) -> str:
-        return self.asmwrap(f"j .{label}")
+        return self.asmwrap(f"j .{label}%=")
 
     def jzero(self, reg : greg_type, label : str):
-        return self.asmwrap(f" beq {reg},zero,.{label}")
+        return self.asmwrap(f" beq {reg},zero,.{label}%=")
 
     def jfzero(self, freg1 : freg_type, freg2 : freg_type,
                greg : greg_type, label : str,
@@ -71,24 +71,24 @@ class riscv64(asmgen):
         cdt_suf = self.fcdt_suffixes[datatype]
         asmblock  = self.asmwrap(f"fmv.{dt_suf}.x {freg2},zero")
         asmblock += self.asmwrap(f"feq.{cdt_suf} {greg},{freg1},{freg2}")
-        asmblock += self.asmwrap(f"bnez {greg},.{label}")
+        asmblock += self.asmwrap(f"bnez {greg},.{label}%=")
         return asmblock
 
     def loopbegin(self, reg, label):
-        asmblock  = self.asmwrap(f".{label}:")
+        asmblock  = self.asmwrap(f".{label}%=:")
         asmblock += self.asmwrap(f"addi {reg},{reg},-1")
 
         return asmblock
 
     def loopbegin_nz(self, reg, label, labelskip):
-        asmblock  = self.asmwrap(f"beq {reg},zero,.{labelskip}")
-        asmblock += self.asmwrap(f".{label}:")
+        asmblock  = self.asmwrap(f"beq {reg},zero,.{labelskip}%=")
+        asmblock += self.asmwrap(f".{label}%=:")
         asmblock += self.asmwrap(f"addi {reg},{reg},-1")
 
         return asmblock
 
     def loopend(self, reg, label):
-        asmblock = f"\"bnez {reg}, .{label}\\n\\t\"\n"
+        asmblock = f"\"bnez {reg}, .{label}%=\\n\\t\"\n"
 
         return asmblock
 
