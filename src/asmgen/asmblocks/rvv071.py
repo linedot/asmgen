@@ -1,5 +1,5 @@
-from asmgen.asmblocks.noarch import asm_data_type
-from asmgen.asmblocks.noarch import vreg
+from asmgen.asmblocks.noarch import asm_data_type, asm_index_type
+from asmgen.asmblocks.noarch import vreg,freg,greg
 
 from asmgen.asmblocks.riscv64 import riscv64
 
@@ -18,6 +18,10 @@ class rvv071_vreg(vreg):
 
 class rvv071(riscv64):
 
+    greg_type : TypeAlias = greg
+    freg_type : TypeAlias = freg
+    vreg_type : TypeAlias = vreg
+
     def supportedby_cpuinfo(self, cpuinfo) -> bool:
          isa_idx = cpuinfo.find("rv64")
          if -1 == isa_idx:
@@ -33,6 +37,12 @@ class rvv071(riscv64):
     dt_suffixes = {
             asm_data_type.DOUBLE : "e",
             asm_data_type.SINGLE : "w",
+            }
+    it_suffixes = {
+            asm_index_type.INT64 : "ei64",
+            asm_index_type.INT32 : "ei32",
+            asm_index_type.INT16 : "ei16",
+            asm_index_type.INT8  : "ei8",
             }
 
     def jvzero(self, vreg1, freg, vreg2, greg, label, datatype):
@@ -161,3 +171,33 @@ class rvv071(riscv64):
         asmblock += "        "+self.asmwrap(f"slli {reg}, {reg}, {6-datatype.value.bit_length()}")
         asmblock += self.asmwrap(f"vsetvli {reg}, {reg}, {dt_size}, m1")
         return asmblock
+
+    def load_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("RVV has no load with immediate stride")
+
+    def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        dt_suf = self.dt_suffixes[datatype]
+        return self.asmwrap(f"vls{dt_suf}.v {vreg}, ({areg}), {sreg}")
+
+    def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
+                           vreg : vreg_type, datatype : asm_data_type,
+                           indextype : asm_index_type):
+        dt_suf = self.it_suffixes[indextype]
+        return self.asmwrap(f"vlx{dt_suf}.v {vreg}, ({areg}), {offvreg}")
+
+    def store_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("RVV has no store with immediate stride")
+
+    def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        dt_suf = self.dt_suffixes[datatype]
+        return self.asmwrap(f"vss{dt_suf}.v {vreg}, ({areg}), {sreg}")
+
+    def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
+                             vreg : vreg_type, datatype : asm_data_type,
+                             indextype : asm_index_type):
+        dt_suf = self.it_suffixes[indextype]
+        return self.asmwrap(f"vsux{dt_suf}.v {vreg}, ({areg}), {offvreg}")

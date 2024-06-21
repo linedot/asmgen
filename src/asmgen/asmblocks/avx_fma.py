@@ -1,5 +1,5 @@
 from asmgen.asmblocks.noarch import asmgen
-from asmgen.asmblocks.noarch import asm_data_type
+from asmgen.asmblocks.noarch import asm_data_type,asm_index_type
 from asmgen.asmblocks.noarch import greg, freg, vreg
 
 from abc import abstractmethod
@@ -69,6 +69,11 @@ class avxbase(asmgen):
     dt_suffixes_packed = {
             asm_data_type.DOUBLE : "pd",
             asm_data_type.SINGLE : "ps",
+            }
+
+    it_suffixes = {
+            asm_index_type.INT64 : "q",
+            asm_index_type.INT32 : "d",
             }
 
     dt_suffixes_single = {
@@ -333,6 +338,38 @@ class avxbase(asmgen):
     def store_vector(self, a, voffset, v, datatype):
         return self.store_vector_voff(a, 0, v, datatype)
 
+
+    def load_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("AVX has no load with immediate stride")
+
+    def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("AVX has no load with scalar register stride")
+
+    def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
+                           vreg : vreg_type, datatype : asm_data_type,
+                           indextype : asm_index_type):
+        suf = self.dt_suffixes_single[datatype]
+        pa = self.prefix_if_raw_reg(areg)
+        pv = self.prefix_if_raw_reg(vreg)
+        pov = self.prefix_if_raw_reg(offvreg)
+        address = f"({pa})"
+        isuf = self.it_suffixes[indextype]
+        return self.asmwrap(f"vgather{isuf}{suf} {address},{pov},{pv}")
+
+    def store_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("AVX has no store with immediate stride")
+
+    def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("AVX has no store with scalar register stride")
+
+    def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("AVX has no store with vector register stride")
+
 class fma128(avxbase):
 
     @property
@@ -413,6 +450,10 @@ class fma256(avxbase):
 
 class avx512(avxbase):
 
+    greg_type : TypeAlias = greg
+    freg_type : TypeAlias = freg
+    vreg_type : TypeAlias = vreg
+
     @property
     def req_flags(self):
         return ['avx512f']
@@ -449,4 +490,15 @@ class avx512(avxbase):
         pa = self.prefix_if_raw_reg(a)
         pv = self.prefix_if_raw_reg(v)
         return self.asmwrap(f"vbroadcast{suf} {offset}({pa}),{pv}")
+
+    def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
+                           vreg : vreg_type, datatype : asm_data_type,
+                           indextype : asm_index_type):
+        suf = self.dt_suffixes_single[datatype]
+        pa = self.prefix_if_raw_reg(areg)
+        pv = self.prefix_if_raw_reg(vreg)
+        pov = self.prefix_if_raw_reg(offvreg)
+        address = f"({pa})"
+        isuf = self.it_suffixes[indextype]
+        return self.asmwrap(f"vscatter{isuf}{suf} {address},{pov},{pv}")
 

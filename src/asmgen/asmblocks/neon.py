@@ -1,4 +1,4 @@
-from asmgen.asmblocks.noarch import asm_data_type
+from asmgen.asmblocks.noarch import asm_data_type,asm_index_type
 from asmgen.asmblocks.noarch import vreg,freg,greg
 from asmgen.asmblocks.aarch64 import aarch64
 
@@ -159,3 +159,29 @@ class neon(aarch64):
         assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
         qv = self.vreg_to_qreg(v)
         return self.asmwrap(f"str {qv}, [{a}]")
+
+    def load_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("NEON has no load with immediate stride")
+
+    def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("NEON has no load with scalar register stride")
+
+    def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
+                           vreg : vreg_type, datatype : asm_data_type,
+                           indextype : asm_index_type):
+        raise NotImplementedError("NEON has no load with vector register stride")
+
+    def store_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("NEON has no store with immediate stride")
+
+    def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("NEON has no store with scalar register stride")
+
+    def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
+                             vreg : vreg_type, datatype : asm_data_type,
+                             indextype : asm_index_type):
+        raise NotImplementedError("NEON has no store with vector register stride")

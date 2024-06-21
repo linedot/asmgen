@@ -1,4 +1,4 @@
-from asmgen.asmblocks.noarch import asm_data_type
+from asmgen.asmblocks.noarch import asm_data_type, asm_index_type
 from asmgen.asmblocks.noarch import vreg,freg,greg
 from asmgen.asmblocks.aarch64 import aarch64
 
@@ -169,3 +169,34 @@ class sve(aarch64):
         assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
         suf = self.dt_suffixes[datatype]
         return self.asmwrap(f"ptrue {reg}.{suf}")
+
+
+    def load_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("SVE has no load with immediate stride")
+
+    def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("SVE has no load with scalar register stride")
+
+    def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
+                           vreg : vreg_type, datatype : asm_data_type,
+                           indextype : asm_index_type):
+        suf = self.dt_suffixes[datatype]
+        msuf = self.dt_mnem_suffixes[datatype]
+        return self.asmwrap(f"ld1{msuf}.v {vreg}.{suf}, p0/z,[{areg}, {offvreg}]")
+
+    def store_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("RVV has no store with immediate stride")
+
+    def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("SVE has no store with scalar register stride")
+
+    def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
+                             vreg : vreg_type, datatype : asm_data_type,
+                             indextype : asm_index_type):
+        suf = self.dt_suffixes[datatype]
+        msuf = self.dt_mnem_suffixes[datatype]
+        return self.asmwrap(f"st1{msuf}.v {vreg}.{suf}, p0, [{areg}, {offvreg}]")

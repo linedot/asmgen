@@ -183,8 +183,18 @@ class reg_tracker:
         
 
 class asm_data_type(Enum):
+    HALF   = 2
+    FP16   = 2
     SINGLE = 4
+    FP32   = 4
     DOUBLE = 8
+    FP64   = 8
+
+class asm_index_type(Enum):
+    INT8    = 1
+    INT16   = 2
+    INT32   = 4
+    INT64   = 8
 
 class greg(ABC):
     @abstractmethod
@@ -256,14 +266,6 @@ class asmgen(ABC):
         cpuinfo = f.read()
         f.close()
         return self.supportedby_cpuinfo(cpuinfo)
-#         req_flags = self.get_req_flags()
-#         supported = True
-#         for r in req_flags:
-#             if -1 == cpuinfo.find(r):
-#                 supported = False
-#                 break
-#         return supported
-
 
     @abstractmethod
     def greg(self, reg_idx : int) -> greg:
@@ -496,6 +498,22 @@ class asmgen(ABC):
         raise NotImplementedError("Method to be implemented by derived class")
 
     @abstractmethod
+    def load_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("Method to be implemented by derived class")
+
+    @abstractmethod
+    def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("Method to be implemented by derived class")
+
+    @abstractmethod
+    def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
+                           vreg : vreg_type, datatype : asm_data_type,
+                           indextype : asm_index_type):
+        raise NotImplementedError("Method to be implemented by derived class")
+
+    @abstractmethod
     def load_vector_dist1(self, areg : greg_type, ignored_offset : int,
                           vreg : vreg_type, datatype : asm_data_type):
         raise NotImplementedError("Method to be implemented by derived class")
@@ -518,4 +536,20 @@ class asmgen(ABC):
     @abstractmethod
     def store_vector_voff(self, areg : greg_type, voffset : int, 
                           vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("Method to be implemented by derived class")
+
+    @abstractmethod
+    def store_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("Method to be implemented by derived class")
+
+    @abstractmethod
+    def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("Method to be implemented by derived class")
+
+    @abstractmethod
+    def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
+                             vreg : vreg_type, datatype : asm_data_type,
+                             indextype : asm_index_type):
         raise NotImplementedError("Method to be implemented by derived class")

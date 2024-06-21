@@ -1,4 +1,4 @@
-from asmgen.asmblocks.noarch import asm_data_type
+from asmgen.asmblocks.noarch import asm_data_type, asm_index_type
 from asmgen.asmblocks.noarch import vreg,freg,greg
 from asmgen.asmblocks.riscv64 import riscv64
 
@@ -33,6 +33,12 @@ class rvv(riscv64):
     dt_suffixes = {
             asm_data_type.DOUBLE : "e64",
             asm_data_type.SINGLE : "e32",
+            }
+    it_suffixes = {
+            asm_index_type.INT64 : "ei64",
+            asm_index_type.INT32 : "ei32",
+            asm_index_type.INT16 : "ei16",
+            asm_index_type.INT8  : "ei8",
             }
 
     def vreg(self, reg_idx : int) -> vreg_type:
@@ -164,6 +170,35 @@ class rvv(riscv64):
         return self.store_vector(a, ignored_offset, v, datatype) 
 
     def vsetvlmax(self, reg, datatype):
-        assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
         dt_size = 'e'+str(datatype.value*8)
         return self.asmwrap(f"vsetvli {reg}, zero, {dt_size}, m1, ta, ma")
+
+    def load_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("RVV has no load with immediate stride")
+
+    def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        dt_suf = self.dt_suffixes[datatype]
+        return self.asmwrap(f"vls{dt_suf}.v {vreg}, ({areg}), {sreg}")
+
+    def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
+                           vreg : vreg_type, datatype : asm_data_type,
+                           indextype : asm_index_type):
+        i_suf = self.it_suffixes[indextype]
+        return self.asmwrap(f"vlux{i_suf}.v {vreg}, ({areg}), {offvreg}")
+
+    def store_vector_immstride(self, areg : greg_type, byte_stride : int,
+                    vreg : vreg_type, datatype : asm_data_type):
+        raise NotImplementedError("RVV has no store with immediate stride")
+
+    def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
+                    vreg : vreg_type, datatype : asm_data_type):
+        dt_suf = self.dt_suffixes[datatype]
+        return self.asmwrap(f"vss{dt_suf}.v {vreg}, ({areg}), {sreg}")
+
+    def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
+                             vreg : vreg_type, datatype : asm_data_type,
+                             indextype : asm_index_type):
+        i_suf = self.it_suffixes[indextype]
+        return self.asmwrap(f"vsux{i_suf}.v {vreg}, ({areg}), {offvreg}")

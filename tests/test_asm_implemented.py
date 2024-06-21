@@ -1,6 +1,7 @@
 from typing import Union
 from asmgen.asmblocks.noarch import asmgen, freg, greg, vreg
 from asmgen.asmblocks.noarch import asm_data_type as dt
+from asmgen.asmblocks.noarch import asm_index_type as it
 
 from asmgen.asmblocks.avx_fma import fma128,fma256,avx512
 from asmgen.asmblocks.neon import neon
@@ -17,26 +18,54 @@ allowed_not_implemented = {
         'rvv' : ['load_vector_dist1_inc',
                  'load_vector_dist1_boff',
                  'load_vector_voff',
+                 'load_vector_immstride',
                  'store_vector_voff',
+                 'store_vector_immstride',
                  'add_greg_voff',
                  'fma_idx'],
         'rvv071' : ['load_vector_dist1_inc',
                  'load_vector_dist1_boff',
                  'load_vector_voff',
+                 'load_vector_immstride',
                  'store_vector_voff',
+                 'store_vector_immstride',
                  'add_greg_voff',
                  'fma_idx'],
         'sve' : ['load_vector_dist1_inc',
+                  'load_vector_immstride',
+                  'load_vector_gregstride',
+                  'store_vector_immstride',
+                  'store_vector_gregstride',
                  'fma_vf'],
         'neon' : ['load_vector_dist1_boff',
+                  'load_vector_immstride',
+                  'load_vector_gregstride',
+                  'load_vector_gather',
+                  'store_vector_immstride',
+                  'store_vector_gregstride',
+                  'store_vector_scatter',
                   'fma_vf'],
         'fma128' : ['load_vector_dist1_inc',
+                    'load_vector_immstride',
+                    'load_vector_gregstride',
+                    'store_vector_immstride',
+                    'store_vector_gregstride',
+                    'store_vector_scatter',
                     'fma_idx',
                     'fma_vf'],
         'fma256' : ['load_vector_dist1_inc',
+                    'load_vector_immstride',
+                    'load_vector_gregstride',
+                    'store_vector_immstride',
+                    'store_vector_gregstride',
+                    'store_vector_scatter',
                     'fma_idx',
                     'fma_vf'],
         'avx512' : ['load_vector_dist1_inc',
+                    'load_vector_immstride',
+                    'load_vector_gregstride',
+                    'store_vector_immstride',
+                    'store_vector_gregstride',
                     'fma_idx',
                     'fma_vf']
 }
@@ -105,19 +134,25 @@ class asm_implementation_test(unittest.TestCase):
         ['load_vector_dist1_boff', 'g0', 4, 'v0', dt.SINGLE],
         ['load_vector_dist1_inc', 'g0', 4, 'v0', dt.DOUBLE],
         ['load_vector_dist1_inc', 'g0', 4, 'v0', dt.SINGLE],
+        ['load_vector_immstride', 'g0', 4, 'v0', dt.SINGLE],
+        ['load_vector_gregstride', 'g0', 'g1', 'v0', dt.SINGLE],
+        ['load_vector_gather', 'g0', 'v1', 'v0', dt.SINGLE, it.INT32],
+        ['store_vector_immstride', 'g0', 4, 'v0', dt.SINGLE],
+        ['store_vector_gregstride', 'g0', 'g1', 'v0', dt.SINGLE],
+        ['store_vector_scatter', 'g0', 'v1', 'v0', dt.SINGLE, it.INT32],
     ])
     def test_asmgen_method_implemented(self, name, *argv):
         if name in self.allowed:
             self.skipTest(f"Generator allowed to not implement {name}")
         args_list = []
         def regparam_to_reg(param : str) -> Union[greg,freg,vreg,str]:
-                m = re.match("v(\d)", arg)
+                m = re.match(r"v(\d)", arg)
                 if m:
                     return self.gen.vreg(int(m[1]))
-                m = re.match("g(\d)", arg)
+                m = re.match(r"g(\d)", arg)
                 if m:
                     return self.gen.greg(int(m[1]))
-                m = re.match("f(\d)", arg)
+                m = re.match(r"f(\d)", arg)
                 if m:
                     return self.gen.freg(int(m[1]))
                 return param
