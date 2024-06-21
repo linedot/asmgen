@@ -1,4 +1,4 @@
-from asmgen.asmblocks.noarch import asmgen
+from asmgen.asmblocks.noarch import asmgen, reg_tracker
 from asmgen.asmblocks.noarch import asm_data_type,asm_index_type
 from asmgen.asmblocks.noarch import greg, freg, vreg
 
@@ -82,6 +82,9 @@ class avxbase(asmgen):
             }
 
     greg_names = [f'r{i}' for i in [str(j) for j in range(8,16)]+['ax','bx','cx','dx','si','di','bp','sp']]
+
+    def isaquirks(self, rt : reg_tracker, dt : asm_data_type):
+        return ""
 
     def jzero(self, greg : greg_type, label : str) -> str:
         preg = self.prefix_if_raw_reg(greg)

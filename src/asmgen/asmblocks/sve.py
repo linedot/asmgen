@@ -1,3 +1,4 @@
+from asmgen.asmblocks.noarch import reg_tracker
 from asmgen.asmblocks.noarch import asm_data_type, asm_index_type
 from asmgen.asmblocks.noarch import vreg,freg,greg
 from asmgen.asmblocks.aarch64 import aarch64
@@ -41,6 +42,10 @@ class sve(aarch64):
             asm_data_type.DOUBLE : "d",
             asm_data_type.SINGLE : "w",
             }
+
+    def isaquirks(self, rt : reg_tracker, dt : asm_data_type):
+        asmblock = self.ptrue(self.preg(0), dt)
+        return asmblock
 
     def jvzero(self, vreg1 : vreg, freg : freg,
                vreg2 : vreg,

@@ -8,6 +8,8 @@ else:
     from typing import TypeAlias
 
 
+NIE_MESSAGE : str = "Method to be implemented by derived class"
+
 
 #TODO: unify and deduplify handling different register types
 
@@ -199,28 +201,29 @@ class asm_index_type(Enum):
 class greg(ABC):
     @abstractmethod
     def __init__(self, reg_idx : int):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
     @abstractmethod
     def __str__(self):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
 class freg(ABC):
     @abstractmethod
     def __init__(self, reg_idx : int):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
     @abstractmethod
     def __str__(self):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
 class vreg(ABC):
     @abstractmethod
     def __init__(self, reg_idx : int):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
     @abstractmethod
     def __str__(self):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
 class asmgen(ABC):
+
 
     greg_type : TypeAlias = greg
     freg_type : TypeAlias = freg
@@ -257,8 +260,12 @@ class asmgen(ABC):
         return data_type.value
 
     @abstractmethod
+    def isaquirks(self, rt : reg_tracker, dt : asm_data_type):
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
     def supportedby_cpuinfo(self, cpuinfo : str) -> bool:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     def supported_on_host(self) -> bool:
         # TODO: maybe something more cross-platform?
@@ -269,287 +276,287 @@ class asmgen(ABC):
 
     @abstractmethod
     def greg(self, reg_idx : int) -> greg:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def freg(self, reg_idx : int) -> freg:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def vreg(self, reg_idx : int) -> vreg:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def simd_size(self) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def c_simd_size_function(self) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def is_vla(self) -> bool:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def are_fregs_in_vregs(self) -> bool:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def indexable_elements(self, datatype : asm_data_type) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def max_vregs(self) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def max_fregs(self) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def max_gregs(self) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def min_prefetch_offset(self) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def max_prefetch_offset(self) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def min_load_voff(self) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def max_load_voff(self) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def min_load_immoff(self, datatype : asm_data_type) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def max_load_immoff(self, datatype : asm_data_type) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def max_fload_immoff(self, datatype : asm_data_type) -> int:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def label(self, label : str) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def jump(self, label : str) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def jzero(self, reg : greg_type, label : str) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def jfzero(self, freg1 : freg_type, freg2 : freg_type, 
                greg : greg_type, label : str, 
                datatype : asm_data_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def jvzero(self, vreg1 : vreg_type, freg : freg_type,
                vreg2 : vreg_type, greg : greg_type, label : str,
                datatype : asm_data_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def loopbegin(self, reg : greg_type, label : str) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def loopbegin_nz(self, reg : greg_type, label : str, labelskip : str) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def loopend(self, reg : greg_type, label : str) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod 
     def fma(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
             datatype : asm_data_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod 
     def fmul(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
              datatype : asm_data_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def fma_idx(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
                 idx : int, datatype : asm_data_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def fma_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
                datatype : asm_data_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod 
     def fmul_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
                 datatype : asm_data_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def zero_greg(self, greg : greg_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def zero_freg(self, freg : freg_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def zero_vreg(self, vreg : vreg_type, datatype : asm_data_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def mov_greg(self, src : greg_type, dst : greg_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def mov_freg(self, src : freg_type, dst : freg_type, datatype : asm_data_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def mov_greg_to_param(self, reg : greg_type, param : str) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def mov_param_to_greg(self, param : str, dst : greg_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def mov_param_to_greg_shift(self, param : str, dst : greg_type,
                                 offset : int) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def mov_greg_imm(self, reg : greg_type, imm : int) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def add_greg_imm(self, reg : greg_type, offset : int) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
     def has_add_greg_voff(self) -> bool:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def add_greg_voff(self, reg : greg_type, offset : int,
                       datatype : asm_data_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def add_greg_greg(self, dst : greg_type, reg1 : greg_type, reg2 : greg_type) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def shift_greg_left(self, reg : greg_type, offset : int) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def shift_greg_right(self, reg : greg_type, offset : int) -> str:
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def prefetch_l1_boff(self, areg : greg_type, offset : int):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_pointer(self, areg : greg_type, name : str):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_scalar_immoff(self, areg : greg_type, offset : int,
                            freg : freg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_voff(self, areg : greg_type, voffset : int, 
                          vreg : vreg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector(self, areg : greg_type, ignored_offset : int,
                     vreg : vreg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_immstride(self, areg : greg_type, byte_stride : int,
                     vreg : vreg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
                     vreg : vreg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
                            vreg : vreg_type, datatype : asm_data_type,
                            indextype : asm_index_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_dist1(self, areg : greg_type, ignored_offset : int,
                           vreg : vreg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_dist1_boff(self, areg : greg_type, offset : int, 
                                vreg : vreg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_dist1_inc(self, areg : greg_type, ignored_offset : int,
                               vreg : vreg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def store_vector(self, areg : greg_type, ignored_offset : int,
                      vreg : vreg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def store_vector_voff(self, areg : greg_type, voffset : int, 
                           vreg : vreg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def store_vector_immstride(self, areg : greg_type, byte_stride : int,
                     vreg : vreg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
                     vreg : vreg_type, datatype : asm_data_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
                              vreg : vreg_type, datatype : asm_data_type,
                              indextype : asm_index_type):
-        raise NotImplementedError("Method to be implemented by derived class")
+        raise NotImplementedError(NIE_MESSAGE)

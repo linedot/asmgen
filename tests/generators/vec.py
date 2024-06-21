@@ -17,12 +17,8 @@ class vec_test_generator:
 
 
         asmblock = ""
-        # We need to vsetvli for fp32
-        if "rvv" == testcase.name or "rvv071" == testcase.name:
-            tmpreg_idx = rt.reserve_any_greg()
-            tmpreg = testcase.gen.greg(tmpreg_idx)
-            asmblock += testcase.gen.vsetvlmax(tmpreg, dt.SINGLE)
-            rt.unuse_greg(tmpreg_idx)
+
+        asmblock += testcase.gen.isaquirks(rt, dt.SINGLE)
 
         areg_idx = rt.reserve_any_greg()
         areg = testcase.gen.greg(areg_idx)
@@ -55,12 +51,7 @@ class vec_test_generator:
 
 
         asmblock = ""
-        # We need to vsetvli for fp64
-        if "rvv" == testcase.name or "rvv071" == testcase.name:
-            tmpreg_idx = rt.reserve_any_greg()
-            tmpreg = testcase.gen.greg(tmpreg_idx)
-            asmblock += testcase.gen.vsetvlmax(tmpreg, dt.DOUBLE)
-            rt.unuse_greg(tmpreg_idx)
+        asmblock += testcase.gen.isaquirks(rt, dt.DOUBLE)
 
         areg_idx = rt.reserve_any_greg()
         areg = testcase.gen.greg(areg_idx)
@@ -111,20 +102,12 @@ class vec_test_generator:
         cvreg_idx = rt.reserve_any_vreg()
         cvreg = testcase.gen.vreg(cvreg_idx)
 
-        asmblock  = testcase.gen.zero_vreg(avreg, dt.SINGLE)
+        asmblock  = testcase.gen.isaquirks(rt, dt.SINGLE)
+
+        asmblock += testcase.gen.zero_vreg(avreg, dt.SINGLE)
         asmblock += testcase.gen.zero_vreg(bvreg, dt.SINGLE)
         asmblock += testcase.gen.zero_vreg(cvreg, dt.SINGLE)
 
-        # We need a true p0, otherwise UB
-        if "sve" == testcase.name:
-            asmblock += testcase.gen.ptrue(testcase.gen.preg(0), dt.SINGLE)
-
-        # We need to vsetvli for fp64
-        if "rvv" == testcase.name or "rvv071" == testcase.name:
-            tmpreg_idx = rt.reserve_any_greg()
-            tmpreg = testcase.gen.greg(tmpreg_idx)
-            asmblock += testcase.gen.vsetvlmax(tmpreg, dt.SINGLE)
-            rt.unuse_greg(tmpreg_idx)
 
         aareg_idx = rt.reserve_any_greg()
         aareg = testcase.gen.greg(aareg_idx)
@@ -191,20 +174,12 @@ class vec_test_generator:
         cvreg_idx = rt.reserve_any_vreg()
         cvreg = testcase.gen.vreg(cvreg_idx)
 
-        asmblock  = testcase.gen.zero_vreg(avreg, dt.DOUBLE)
+        asmblock  = testcase.gen.isaquirks(rt, dt.DOUBLE)
+
+        asmblock += testcase.gen.zero_vreg(avreg, dt.DOUBLE)
         asmblock += testcase.gen.zero_vreg(bvreg, dt.DOUBLE)
         asmblock += testcase.gen.zero_vreg(cvreg, dt.DOUBLE)
 
-        # We need a true p0, otherwise UB
-        if "sve" == testcase.name:
-            asmblock += testcase.gen.ptrue(testcase.gen.preg(0), dt.DOUBLE)
-
-        # We need to vsetvli for fp64
-        if "rvv" == testcase.name or "rvv071" == testcase.name:
-            tmpreg_idx = rt.reserve_any_greg()
-            tmpreg = testcase.gen.greg(tmpreg_idx)
-            asmblock += testcase.gen.vsetvlmax(tmpreg, dt.DOUBLE)
-            rt.unuse_greg(tmpreg_idx)
 
         aareg_idx = rt.reserve_any_greg()
         aareg = testcase.gen.greg(aareg_idx)
@@ -264,19 +239,10 @@ class vec_test_generator:
         bvreg_idx = rt.reserve_any_vreg()
         bvreg = testcase.gen.vreg(bvreg_idx)
 
-        asmblock  = testcase.gen.zero_vreg(avreg, dt.SINGLE)
+        asmblock  = testcase.gen.isaquirks(rt, dt.SINGLE)
+
+        asmblock += testcase.gen.zero_vreg(avreg, dt.SINGLE)
         asmblock += testcase.gen.zero_vreg(bvreg, dt.SINGLE)
-
-        # We need a true p0, otherwise UB
-        if "sve" == testcase.name:
-            asmblock += testcase.gen.ptrue(testcase.gen.preg(0), dt.SINGLE)
-
-        # We need to vsetvli for fp64
-        if "rvv" == testcase.name or "rvv071" == testcase.name:
-            tmpreg_idx = rt.reserve_any_greg()
-            tmpreg = testcase.gen.greg(tmpreg_idx)
-            asmblock += testcase.gen.vsetvlmax(tmpreg, dt.SINGLE)
-            rt.unuse_greg(tmpreg_idx)
 
         aareg_idx = rt.reserve_any_greg()
         aareg = testcase.gen.greg(aareg_idx)
@@ -330,19 +296,10 @@ class vec_test_generator:
         bvreg_idx = rt.reserve_any_vreg()
         bvreg = testcase.gen.vreg(bvreg_idx)
 
-        asmblock  = testcase.gen.zero_vreg(avreg, dt.DOUBLE)
+        asmblock  = testcase.gen.isaquirks(rt, dt.DOUBLE)
+
+        asmblock += testcase.gen.zero_vreg(avreg, dt.DOUBLE)
         asmblock += testcase.gen.zero_vreg(bvreg, dt.DOUBLE)
-
-        # We need a true p0, otherwise UB
-        if "sve" == testcase.name:
-            asmblock += testcase.gen.ptrue(testcase.gen.preg(0), dt.DOUBLE)
-
-        # We need to vsetvli for fp64
-        if "rvv" == testcase.name or "rvv071" == testcase.name:
-            tmpreg_idx = rt.reserve_any_greg()
-            tmpreg = testcase.gen.greg(tmpreg_idx)
-            asmblock += testcase.gen.vsetvlmax(tmpreg, dt.DOUBLE)
-            rt.unuse_greg(tmpreg_idx)
 
         aareg_idx = rt.reserve_any_greg()
         aareg = testcase.gen.greg(aareg_idx)

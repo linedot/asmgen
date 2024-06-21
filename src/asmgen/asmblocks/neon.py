@@ -1,3 +1,4 @@
+from asmgen.asmblocks.noarch import reg_tracker
 from asmgen.asmblocks.noarch import asm_data_type,asm_index_type
 from asmgen.asmblocks.noarch import vreg,freg,greg
 from asmgen.asmblocks.aarch64 import aarch64
@@ -48,6 +49,9 @@ class neon(aarch64):
             asm_data_type.DOUBLE : "x",
             asm_data_type.SINGLE : "w",
             }
+
+    def isaquirks(self, rt : reg_tracker, dt : asm_data_type):
+        return ""
 
     def jvzero(self, vreg1 : vreg_type, freg : freg_type,
                vreg2 : vreg_type,

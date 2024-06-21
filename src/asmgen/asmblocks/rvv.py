@@ -1,3 +1,4 @@
+from asmgen.asmblocks.noarch import reg_tracker
 from asmgen.asmblocks.noarch import asm_data_type, asm_index_type
 from asmgen.asmblocks.noarch import vreg,freg,greg
 from asmgen.asmblocks.riscv64 import riscv64
@@ -40,6 +41,13 @@ class rvv(riscv64):
             asm_index_type.INT16 : "ei16",
             asm_index_type.INT8  : "ei8",
             }
+
+    def isaquirks(self, rt : reg_tracker, dt : asm_data_type):
+        tmpreg_idx = rt.reserve_any_greg()
+        tmpreg = self.greg(tmpreg_idx)
+        asmblock = self.vsetvlmax(tmpreg, dt)
+        rt.unuse_greg(tmpreg_idx)
+        return asmblock
 
     def vreg(self, reg_idx : int) -> vreg_type:
         return rvv_vreg(reg_idx)
