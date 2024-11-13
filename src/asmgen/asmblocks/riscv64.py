@@ -161,8 +161,11 @@ class riscv64(asmgen):
     def max_load_immoff(self,datatype):
         return 0
 
+    def min_fload_immoff(self,datatype):
+        return -(1<<11)
+
     def max_fload_immoff(self,datatype):
-        return (1<<12) -1
+        return (1<<11) -1
 
     def prefetch_l1_boff(self, a, offset):
         # Needs Zicbop
