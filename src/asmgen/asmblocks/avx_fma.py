@@ -231,6 +231,11 @@ class avxbase(asmgen):
         preg = self.prefix_if_raw_reg(reg)
         return self.asmwrap(f"addq ${offset},{preg}")
 
+    def mul_greg_imm(self, src, dst, offset):
+        pdst = self.prefix_if_raw_reg(dst)
+        psrc = self.prefix_if_raw_reg(src)
+        return self.asmwrap(f"imulq ${offset},{psrc},{pdst}")
+
     def add_greg_greg(self, dst, reg1, reg2):
         pdst = self.prefix_if_raw_reg(dst)
         preg1 = self.prefix_if_raw_reg(reg1)

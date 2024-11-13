@@ -120,11 +120,20 @@ class riscv64(asmgen):
     def mov_greg_imm(self, reg, imm):
         return self.asmwrap(f"li {reg},{imm}")
 
+    def mul_greg_imm(self, src, dst, offset):
+        #Gotta do 2 instructions for this
+        asmblock  = self.mov_greg_imm(dst, offset)
+        asmblock += self.asmwrap(f"mul {dst},{src},{dst}")
+        return asmblock
+
     def add_greg_imm(self, reg, offset):
         return self.asmwrap(f"add {reg},{reg},{offset}")
 
-    def add_greg_greg(self, dst, reg1, reg2):
-        return self.asmwrap(f"add {dst},{reg1},{reg2}")
+    def add_greg_greg(self, dst, src, reg2):
+        return self.asmwrap(f"add {dst},{src},{reg2}")
+
+    def sub_greg_greg(self, dst, src, reg2):
+        return self.asmwrap(f"sub {dst},{src},{reg2}")
 
     def shift_greg_left(self, reg, offset):
         return self.asmwrap(f"slli {reg},{reg},{offset}")

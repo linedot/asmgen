@@ -456,6 +456,10 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
+    def mul_greg_imm(self, src : greg_type, dst : greg_type, offset : int) -> str:
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
     def add_greg_imm(self, reg : greg_type, offset : int) -> str:
         raise NotImplementedError(NIE_MESSAGE)
 
