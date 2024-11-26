@@ -396,21 +396,64 @@ class asmgen(ABC):
     @abstractmethod 
     def fma(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
             datatype : asm_data_type) -> str:
+        """
+        Fused Multiply-Accumulate (Floating Point)
+        cvreg = avreg*bvreg + cvreg
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod 
+    def fma_np(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
+            datatype : asm_data_type) -> str:
+        """
+        Fused Multiply-Accumulate with Negated Product (Floating Point)
+        cvreg = -avreg*bvreg + cvreg
+        """
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod 
     def fmul(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
              datatype : asm_data_type) -> str:
+        """
+        Multiply (Floating Point)
+        cvreg = avreg*bvreg
+        """
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def fma_idx(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
                 idx : int, datatype : asm_data_type) -> str:
+        """
+        Fused Multiply-Accumulate, selecting lane (Floating Point)
+        cvreg = avreg*bvreg[idx] + cvreg
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
+    def fma_np_idx(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
+                idx : int, datatype : asm_data_type) -> str:
+        """
+        Fused Multiply-Accumulate with Negated Product, selecting lane (Floating Point)
+        cvreg = -avreg*bvreg[idx] + cvreg
+        """
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def fma_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
                datatype : asm_data_type) -> str:
+        """
+        Fused Multiply-Accumulate, vector-scalar (Floating Point)
+        cvreg = avreg*bfreg + cvreg
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
+    def fma_np_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
+               datatype : asm_data_type) -> str:
+        """
+        Fused Multiply-Accumulate with Negated Product, vector-scalar (Floating Point)
+        cvreg = -avreg*bfreg + cvreg
+        """
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod 

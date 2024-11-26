@@ -93,10 +93,25 @@ class neon(aarch64):
         suf = self.dt_suffixes[datatype]
         return self.asmwrap(f"fmla {c}.{suf},{a}.{suf},{b}.{suf}")
 
+    def fma_np(self, a, b, c, datatype):
+        suf = self.dt_suffixes[datatype]
+        return self.asmwrap(f"fmls {c}.{suf},{a}.{suf},{b}.{suf}")
+
     def fma_idx(self, a, b, c, idx, datatype):
         suf = self.dt_suffixes[datatype]
         sufidx = self.dt_prefixes[datatype]
         return self.asmwrap(f"fmla {c}.{suf},{a}.{suf},{b}.{sufidx}[{idx}]")
+
+    def fma_np_idx(self, a, b, c, idx, datatype):
+        suf = self.dt_suffixes[datatype]
+        sufidx = self.dt_prefixes[datatype]
+        return self.asmwrap(f"fmls {c}.{suf},{a}.{suf},{b}.{sufidx}[{idx}]")
+
+    def fma_vf(self, a, b, c, datatype):
+        raise NotImplementedError("NEON has no vector-scalar FMA instruction")
+
+    def fma_np_vf(self, a, b, c, datatype):
+        raise NotImplementedError("NEON has no vector-scalar FMA instruction")
 
     def add_greg_voff(self, reg, offset, datatype):
         byte_offset = self.simd_size*offset

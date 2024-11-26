@@ -183,6 +183,13 @@ class avxbase(asmgen):
         pc = self.prefix_if_raw_reg(c)
         return self.asmwrap(f"vfmadd231{suf} {pa},{pb},{pc}")
 
+    def fma_np(self, a, b, c, datatype):
+        suf = self.dt_suffixes_packed[datatype]
+        pa = self.prefix_if_raw_reg(a)
+        pb = self.prefix_if_raw_reg(b)
+        pc = self.prefix_if_raw_reg(c)
+        return self.asmwrap(f"vfnmadd231{suf} {pa},{pb},{pc}")
+
     def fmul(self, a, b, c, datatype):
         suf = self.dt_suffixes_packed[datatype]
         pa = self.prefix_if_raw_reg(a)
@@ -193,10 +200,16 @@ class avxbase(asmgen):
     def fma_vf(self, a, b, c, datatype):
         raise NotImplementedError("AVX-FMA doesn't have vector x scalar FMA instruction")
 
+    def fma_np_vf(self, a, b, c, datatype):
+        raise NotImplementedError("AVX-FMA doesn't have vector x scalar FMA instruction")
+
     def fmul_vf(self, a, b, c, datatype):
         raise NotImplementedError("AVX-FMA doesn't have vector x scalar FMUL instruction")
 
     def fma_idx(self, a, b, c, idx, datatype):
+        raise NotImplementedError("Indexed FMA not implemented for AVX-FMA generators")
+
+    def fma_np_idx(self, a, b, c, idx, datatype):
         raise NotImplementedError("Indexed FMA not implemented for AVX-FMA generators")
 
     def mov_greg(self, src, dst):

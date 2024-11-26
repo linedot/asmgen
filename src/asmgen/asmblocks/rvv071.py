@@ -101,22 +101,40 @@ class rvv071(riscv64):
         result += "}"
         return result
 
-    def fmul(self, a, b, c, datatype):
-        suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"vfmul.vv {c},{a},{b}")
 
-    def fmul_vf(self, a, b, c, datatype):
-        return self.asmwrap(f"vfmul.vf {c},{a},{b}")
+    # TODO: These don't change between 0.7.1 and 1.0, could be deduplicated
 
-    def fma(self, a, b, c, datatype):
-        suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"vfmacc.vv {c},{a},{b}")
+    def fmul(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
+             datatype : asm_data_type) -> str:
+        return self.asmwrap(f"vfmul.vv {cvreg},{avreg},{bvreg}")
 
-    def fma_idx(self, a, b, c, idx, datatype):
+    def fmul_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
+                datatype : asm_data_type) -> str:
+        return self.asmwrap(f"vfmul.vf {cvreg},{avreg},{bfreg}")
+
+    def fma(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
+            datatype : asm_data_type) -> str:
+        return self.asmwrap(f"vfmacc.vv {cvreg},{avreg},{bvreg}")
+
+    def fma_np(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
+            datatype : asm_data_type) -> str:
+        return self.asmwrap(f"vfnmsac.vv {cvreg},{avreg},{bvreg}")
+
+    def fma_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
+               datatype : asm_data_type) -> str:
+        return self.asmwrap(f"vfmacc.vf {cvreg},{bfreg},{avreg}")
+
+    def fma_np_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
+               datatype : asm_data_type) -> str:
+        return self.asmwrap(f"vfnmsac.vf {cvreg},{bfreg},{avreg}")
+
+    def fma_idx(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
+                idx : int, datatype : asm_data_type) -> str:
         raise NotImplementedError("RVV doesn't have an indexed FMA")
 
-    def fma_vf(self, a, b, c, datatype):
-        return self.asmwrap(f"vfmacc.vf {c},{b},{a}")
+    def fma_np_idx(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
+                   idx : int, datatype : asm_data_type) -> str:
+        raise NotImplementedError("RVV doesn't have an indexed FMA")
 
     @property
     def has_add_greg_voff(self) -> bool:

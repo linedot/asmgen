@@ -94,6 +94,10 @@ class sve(aarch64):
         suf = self.dt_suffixes[datatype]
         return self.asmwrap(f"fmla {c}.{suf},p0/m,{a}.{suf},{b}.{suf}")
 
+    def fma_np(self, a, b, c, datatype):
+        suf = self.dt_suffixes[datatype]
+        return self.asmwrap(f"fmls {c}.{suf},p0/m,{a}.{suf},{b}.{suf}")
+
     def fmul(self, a, b, dst, datatype):
         suf = self.dt_suffixes[datatype]
         return self.asmwrap(f"fmul {dst}.{suf},p0/m,{a}.{suf},{b}.{suf}")
@@ -102,6 +106,17 @@ class sve(aarch64):
         assert self.indexable_elements(datatype) > idx, f"Tried to index above max. indexable element"
         suf = self.dt_suffixes[datatype]
         return self.asmwrap(f"fmla {c}.{suf},p0/m,{a}.{suf},{b}.{suf}[{idx}]")
+
+    def fma_np_idx(self, a, b, c, idx, datatype):
+        assert self.indexable_elements(datatype) > idx, f"Tried to index above max. indexable element"
+        suf = self.dt_suffixes[datatype]
+        return self.asmwrap(f"fmls {c}.{suf},p0/m,{a}.{suf},{b}.{suf}[{idx}]")
+
+    def fma_vf(self, a, b, c, datatype):
+        raise NotImplementedError("SVE has no vector-scalar FMA instruction")
+
+    def fma_np_vf(self, a, b, c, datatype):
+        raise NotImplementedError("SVE has no vector-scalar FMA instruction")
 
     def add_greg_voff(self, reg, offset, datatype):
         return self.asmwrap(f"incb {reg}, ALL, MUL #{offset}")

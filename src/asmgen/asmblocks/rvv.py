@@ -112,12 +112,24 @@ class rvv(riscv64):
             datatype : asm_data_type) -> str:
         return self.asmwrap(f"vfmacc.vv {cvreg},{avreg},{bvreg}")
 
+    def fma_np(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
+            datatype : asm_data_type) -> str:
+        return self.asmwrap(f"vfnmsac.vv {cvreg},{avreg},{bvreg}")
+
     def fma_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
                datatype : asm_data_type) -> str:
         return self.asmwrap(f"vfmacc.vf {cvreg},{bfreg},{avreg}")
 
+    def fma_np_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
+               datatype : asm_data_type) -> str:
+        return self.asmwrap(f"vfnmsac.vf {cvreg},{bfreg},{avreg}")
+
     def fma_idx(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
                 idx : int, datatype : asm_data_type) -> str:
+        raise NotImplementedError("RVV doesn't have an indexed FMA")
+
+    def fma_np_idx(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
+                   idx : int, datatype : asm_data_type) -> str:
         raise NotImplementedError("RVV doesn't have an indexed FMA")
 
     @property
