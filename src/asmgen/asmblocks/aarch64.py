@@ -118,6 +118,12 @@ class aarch64(asmgen):
     def mov_greg_imm(self, reg : greg_type, imm : int) -> str:
         return self.asmwrap(f"mov {reg},#{imm}")
 
+    def mul_greg_imm(self, src, dst, offset):
+        #Gotta do 2 instructions for this
+        asmblock  = self.mov_greg_imm(dst, offset)
+        asmblock += self.asmwrap(f"mul {dst},{src},{dst}")
+        return asmblock
+
     def add_greg_imm(self, reg : greg_type, imm : int) -> str:
         return self.asmwrap(f"add {reg},{reg},#{imm}")
 
