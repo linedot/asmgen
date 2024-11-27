@@ -67,7 +67,8 @@ class reg_tracker:
         if i in self.aliased_gregs.values():
             alias_index = list(self.aliased_gregs.values()).index(i)
             alias = list(self.aliased_gregs.keys())[alias_index]
-            raise IndexError(f"can't alias gp register nr. {i}, it already has the alias \"{alias}\"")
+            raise IndexError(f"can't alias gp register nr. {i}, "
+                             f"it already has the alias \"{alias}\"")
         self.aliased_gregs[name] = i
 
     def alias_freg(self, name : str, i : int):
@@ -80,7 +81,8 @@ class reg_tracker:
         if i in self.aliased_fregs.values():
             alias_index = list(self.aliased_fregs.values()).index(i)
             alias = list(self.aliased_fregs.keys())[alias_index]
-            raise IndexError(f"can't alias fp register nr. {i}, it already has the alias \"{alias}\"")
+            raise IndexError(f"can't alias fp register nr. {i}, "
+                             f"it already has the alias \"{alias}\"")
         self.aliased_fregs[name] = i
 
     def reserve_specific_greg(self, i : int):
@@ -182,7 +184,7 @@ class reg_tracker:
     def get_clobbered_fregs(self) -> set[int]:
         return self.clobbered_fregs
 
-        
+
 
 class asm_data_type(Enum):
     HALF   = 2
@@ -223,8 +225,6 @@ class vreg(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
 class asmgen(ABC):
-
-
     greg_type : TypeAlias = greg
     freg_type : TypeAlias = freg
     vreg_type : TypeAlias = vreg
@@ -242,8 +242,8 @@ class asmgen(ABC):
             return f"{code}\n"
 
     @staticmethod
-    def operands(inputs : list[tuple[str,str,str]], 
-                 outputs : list[tuple[str,str,str]], 
+    def operands(inputs : list[tuple[str,str,str]],
+                 outputs : list[tuple[str,str,str]],
                  clobber : list) -> str:
         opblock  = ": "
         opblock += ",".join([f"[{n}] \"{t}\" ({init})" for n,t,init in outputs])
@@ -370,8 +370,8 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def jfzero(self, freg1 : freg_type, freg2 : freg_type, 
-               greg : greg_type, label : str, 
+    def jfzero(self, freg1 : freg_type, freg2 : freg_type,
+               greg : greg_type, label : str,
                datatype : asm_data_type) -> str:
         raise NotImplementedError(NIE_MESSAGE)
 
@@ -393,7 +393,7 @@ class asmgen(ABC):
     def loopend(self, reg : greg_type, label : str) -> str:
         raise NotImplementedError(NIE_MESSAGE)
 
-    @abstractmethod 
+    @abstractmethod
     def fma(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
             datatype : asm_data_type) -> str:
         """
@@ -402,7 +402,7 @@ class asmgen(ABC):
         """
         raise NotImplementedError(NIE_MESSAGE)
 
-    @abstractmethod 
+    @abstractmethod
     def fma_np(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
             datatype : asm_data_type) -> str:
         """
@@ -411,7 +411,7 @@ class asmgen(ABC):
         """
         raise NotImplementedError(NIE_MESSAGE)
 
-    @abstractmethod 
+    @abstractmethod
     def fmul(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
              datatype : asm_data_type) -> str:
         """
@@ -456,7 +456,7 @@ class asmgen(ABC):
         """
         raise NotImplementedError(NIE_MESSAGE)
 
-    @abstractmethod 
+    @abstractmethod
     def fmul_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
                 datatype : asm_data_type) -> str:
         raise NotImplementedError(NIE_MESSAGE)
@@ -542,7 +542,7 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def load_vector_voff(self, areg : greg_type, voffset : int, 
+    def load_vector_voff(self, areg : greg_type, voffset : int,
                          vreg : vreg_type, datatype : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
@@ -573,7 +573,7 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def load_vector_dist1_boff(self, areg : greg_type, offset : int, 
+    def load_vector_dist1_boff(self, areg : greg_type, offset : int,
                                vreg : vreg_type, datatype : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
@@ -588,7 +588,7 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def store_vector_voff(self, areg : greg_type, voffset : int, 
+    def store_vector_voff(self, areg : greg_type, voffset : int,
                           vreg : vreg_type, datatype : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
