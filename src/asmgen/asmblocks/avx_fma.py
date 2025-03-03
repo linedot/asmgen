@@ -4,11 +4,8 @@ from asmgen.asmblocks.noarch import greg, freg, vreg
 
 from abc import abstractmethod
 
-import sys
-if not sys.version_info >= (3, 10):
-    from typing_extensions import TypeAlias
-else:
-    from typing import TypeAlias
+
+from typing import TypeAlias
 from typing import Union
 
 class x86_greg(greg):

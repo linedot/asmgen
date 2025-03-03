@@ -3,12 +3,8 @@ from asmgen.asmblocks.noarch import asm_data_type,asm_index_type
 from asmgen.asmblocks.noarch import vreg,freg,greg
 from asmgen.asmblocks.aarch64 import aarch64
 
-import sys
 
-if not sys.version_info >= (3, 10):
-    from typing_extensions import TypeAlias
-else:
-    from typing import TypeAlias
+from typing import TypeAlias
 
 class neon_vreg(vreg):
     def __init__(self, reg_idx : int):

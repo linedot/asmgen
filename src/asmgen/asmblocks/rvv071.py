@@ -4,11 +4,7 @@ from asmgen.asmblocks.noarch import vreg,freg,greg
 
 from asmgen.asmblocks.riscv64 import riscv64
 
-import sys
-if not sys.version_info >= (3, 10):
-    from typing_extensions import TypeAlias
-else:
-    from typing import TypeAlias
+from typing import TypeAlias
 
 class rvv071_vreg(vreg):
     def __init__(self, reg_idx : int):

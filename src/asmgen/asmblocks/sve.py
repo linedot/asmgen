@@ -1,26 +1,55 @@
-from asmgen.asmblocks.noarch import reg_tracker
-from asmgen.asmblocks.noarch import asm_data_type, asm_index_type
-from asmgen.asmblocks.noarch import vreg,freg,greg
 from asmgen.asmblocks.aarch64 import aarch64
 
-import sys
-if not sys.version_info >= (3, 10):
-    from typing_extensions import TypeAlias
-else:
-    from typing import TypeAlias
+from asmgen.registers import (
+    reg_tracker,
+    asm_data_type as adt,
+    adt_triple,
+    adt_size,
+    asm_index_type as ait,
+    data_reg,
+    treg,vreg,freg,greg
+)
+from asmgen.asmblocks.operations import opd3,widening_method,modifier
 
-class sve_vreg(vreg):
-    def __init__(self, reg_idx : int):
-        self.reg_str = f"z{reg_idx}"
+from .types.sve_types import sve_vreg
+from .sve_opd3 import sve_fma,sve_fmul
 
-    def __str__(self) -> str:
-        return self.reg_str
+from typing import TypeAlias, Callable
+
 
 class sve(aarch64):
 
     greg_type : TypeAlias = greg
     freg_type : TypeAlias = freg
-    vreg_type : TypeAlias = vreg
+    vreg_type : TypeAlias = sve_vreg
+    treg_type : TypeAlias = treg
+
+    dt_suffixes = {
+            adt.DOUBLE  : "d",
+            adt.UINT64  : "d",
+            adt.SINT64  : "d",
+            adt.SINGLE  : "s",
+            adt.UINT32  : "s",
+            adt.SINT32  : "s",
+            adt.HALF    : "h",
+            adt.UINT16  : "h",
+            adt.SINT16  : "h",
+            adt.FP8E5M2 : "b",
+            adt.FP8E4M3 : "b",
+            adt.UINT8   : "b",
+            adt.SINT8   : "b",
+            }
+    dt_mnem_suffixes = {
+            adt.DOUBLE : "d",
+            adt.SINGLE : "w",
+            }
+
+    def __init__(self):
+        super(sve, self).__init__()
+        self.fma = sve_fma(asmwrap=self.asmwrap,
+                           dt_suffixes=self.dt_suffixes)
+        self.fmul = sve_fmul(asmwrap=self.asmwrap,
+                           dt_suffixes=self.dt_suffixes)
 
     def get_req_flags(self):
         return ['sve']
@@ -34,23 +63,14 @@ class sve(aarch64):
                  break
          return supported
 
-    dt_suffixes = {
-            asm_data_type.DOUBLE : "d",
-            asm_data_type.SINGLE : "s",
-            }
-    dt_mnem_suffixes = {
-            asm_data_type.DOUBLE : "d",
-            asm_data_type.SINGLE : "w",
-            }
-
-    def isaquirks(self, rt : reg_tracker, dt : asm_data_type):
+    def isaquirks(self, rt : reg_tracker, dt : adt):
         asmblock = self.ptrue(self.preg(0), dt)
         return asmblock
 
     def jvzero(self, vreg1 : vreg, freg : freg,
                vreg2 : vreg,
                greg : greg, label : str,
-               datatype : asm_data_type):
+               datatype : adt):
         suf = self.dt_suffixes[datatype]
         asmblock  = self.asmwrap(f"fcmne p1.d,{vreg}.{suf},p0/z,#0,0")
         asmblock += self.asmwrap(f"ptest p0, p1.b")
@@ -89,34 +109,9 @@ class sve(aarch64):
         result += "}"
         return result
 
-
-    def fma(self, a, b, c, datatype):
-        suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"fmla {c}.{suf},p0/m,{a}.{suf},{b}.{suf}")
-
-    def fma_np(self, a, b, c, datatype):
-        suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"fmls {c}.{suf},p0/m,{a}.{suf},{b}.{suf}")
-
-    def fmul(self, a, b, dst, datatype):
+    def fmul(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type, a_dt : adt, b_dt : adt, c_dt : adt):
         suf = self.dt_suffixes[datatype]
         return self.asmwrap(f"fmul {dst}.{suf},p0/m,{a}.{suf},{b}.{suf}")
-
-    def fma_idx(self, a, b, c, idx, datatype):
-        assert self.indexable_elements(datatype) > idx, f"Tried to index above max. indexable element"
-        suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"fmla {c}.{suf},p0/m,{a}.{suf},{b}.{suf}[{idx}]")
-
-    def fma_np_idx(self, a, b, c, idx, datatype):
-        assert self.indexable_elements(datatype) > idx, f"Tried to index above max. indexable element"
-        suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"fmls {c}.{suf},p0/m,{a}.{suf},{b}.{suf}[{idx}]")
-
-    def fma_vf(self, a, b, c, datatype):
-        raise NotImplementedError("SVE has no vector-scalar FMA instruction")
-
-    def fma_np_vf(self, a, b, c, datatype):
-        raise NotImplementedError("SVE has no vector-scalar FMA instruction")
 
     def add_greg_voff(self, reg, offset, datatype):
         return self.asmwrap(f"incb {reg}, ALL, MUL #{offset}")
@@ -192,31 +187,48 @@ class sve(aarch64):
 
 
     def load_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : asm_data_type):
+                    vreg : vreg_type, datatype : adt):
         raise NotImplementedError("SVE has no load with immediate stride")
 
     def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : asm_data_type):
+                    vreg : vreg_type, datatype : adt):
         raise NotImplementedError("SVE has no load with scalar register stride")
 
     def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
-                           vreg : vreg_type, datatype : asm_data_type,
-                           indextype : asm_index_type):
+                           vreg : vreg_type, datatype : adt,
+                           indextype : ait):
         suf = self.dt_suffixes[datatype]
         msuf = self.dt_mnem_suffixes[datatype]
         return self.asmwrap(f"ld1{msuf}.v {vreg}.{suf}, p0/z,[{areg}, {offvreg}]")
 
     def store_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : asm_data_type):
+                    vreg : vreg_type, datatype : adt):
         raise NotImplementedError("RVV has no store with immediate stride")
 
     def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : asm_data_type):
+                    vreg : vreg_type, datatype : adt):
         raise NotImplementedError("SVE has no store with scalar register stride")
 
     def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
-                             vreg : vreg_type, datatype : asm_data_type,
-                             indextype : asm_index_type):
+                             vreg : vreg_type, datatype : adt,
+                             indextype : ait):
         suf = self.dt_suffixes[datatype]
         msuf = self.dt_mnem_suffixes[datatype]
         return self.asmwrap(f"st1{msuf}.v {vreg}.{suf}, p0, [{areg}, {offvreg}]")
+
+
+    # Unsupported functionality:
+    def max_tregs(self, dt : adt):
+        return 0
+
+    def treg(self, reg_idx : int):
+        raise NotImplementedError("SVE has no tiles, use SME")
+
+    def zero_treg(self, treg : treg_type, datatype : adt):
+        raise NotImplementedError("SVE has no tiles, use SME")
+
+    def store_tile(self, areg : greg_type,
+                   ignored_offset : int,
+                   treg : treg_type,
+                   datatype : adt):
+        raise NotImplementedError("SVE has no tiles, use SME")

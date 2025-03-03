@@ -2,11 +2,7 @@ from asmgen.asmblocks.noarch import asmgen
 from asmgen.asmblocks.noarch import asm_data_type
 from asmgen.asmblocks.noarch import greg, freg
 
-import sys
-if not sys.version_info >= (3, 10):
-    from typing_extensions import TypeAlias
-else:
-    from typing import TypeAlias
+from typing import TypeAlias
 
 class riscv64_greg(greg):
     def __init__(self, reg_idx : int):
