@@ -10,22 +10,25 @@ from ...registers import (
 )
 from ..operations import opd3,widening_method,modifier
 
-from ..types.sve_types import sve_vreg
+from ..types.neon_types import neon_vreg
 
 from typing import TypeAlias, Callable
 
-class sve_fma(opd3):
+class neon_fma(opd3):
 
     greg_type : TypeAlias = greg
     freg_type : TypeAlias = freg
-    vreg_type : TypeAlias = sve_vreg
+    vreg_type : TypeAlias = neon_vreg
     treg_type : TypeAlias = treg
 
     def __init__(self,
                  asmwrap : Callable[[str],str],
-                 dt_suffixes : dict[adt,str]):
+                 dt_suffixes : dict[adt,str],
+                 dt_idxsuffixes : dict[adt,str],
+                 ):
         self.asmwrap = asmwrap
         self.dt_suffixes = dt_suffixes
+        self.dt_idxsuffixes = dt_idxsuffixes
 
     @property
     def widening_method(self) -> widening_method:
@@ -44,13 +47,7 @@ class sve_fma(opd3):
             adt_triple(a_dt=adt.FP8E4M3, b_dt=adt.FP8E4M3, c_dt=adt.FP32),
             adt_triple(a_dt=adt.FP8E4M3, b_dt=adt.FP8E4M3, c_dt=adt.FP16),
 
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT64),
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.SINT8,  b_dt=adt.SINT8,  c_dt=adt.SINT32),
-
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.UINT16, c_dt=adt.UINT64),
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.UINT16, c_dt=adt.UINT32),
-            adt_triple(a_dt=adt.UINT8,  b_dt=adt.UINT8,  c_dt=adt.UINT32),
+            # TODO: other types
         ]
 
     def mlx_inst_str(self, a_dt : adt, b_dt : adt, suf : str) -> str:
@@ -84,9 +81,9 @@ class sve_fma(opd3):
         self.check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
         #TODO: better system for checks
         if modifier.vf in modifiers:
-            raise ValueError("SVE has no vf form")
+            raise ValueError("NEON has no vf form")
         if modifier.regidx in modifiers:
-            raise ValueError("SVE has no regidx form")
+            raise ValueError("NEON has no regidx form")
         if (a_dt != b_dt):
             raise ValueError("A and B must have same type")
         if (adt_size(a_dt) > adt_size(c_dt)):
@@ -104,7 +101,7 @@ class sve_fma(opd3):
                 raise ValueError(f"only widening variants exist for unsigned integer types")
         if (adt_size(a_dt) < adt_size(c_dt)):
             if (not modifier.part in modifiers) or ('part' not in kwargs):
-                raise ValueError("SVE requires 'part' modifier and argument for widening operations")
+                raise ValueError("NEON requires 'part' modifier and argument for widening operations")
             part = kwargs['part']
         suf = "s" if modifier.np in modifiers else "a"
 
@@ -122,8 +119,12 @@ class sve_fma(opd3):
 
         narrow_suf = self.dt_suffixes[a_dt]
         wide_suf = self.dt_suffixes[c_dt]
-        inst_str = f"{inst} {cdreg}.{wide_suf},p0/m,{adreg}.{narrow_suf},{bdreg}.{narrow_suf}"
+        inst_str = f"{inst} {cdreg}.{wide_suf},{adreg}.{narrow_suf},"
         if modifier.idx in modifiers:
-            inst_str += f"[{idx}]"
+            b_suf = self.dt_idxsuffixes[b_dt]
+            inst_str += f"{bdreg}.{b_suf}[{idx}]"
+        else:
+            b_suf = narrow_suf
+            inst_str += f"{bdreg}.{b_suf}"
 
         return self.asmwrap(inst_str)

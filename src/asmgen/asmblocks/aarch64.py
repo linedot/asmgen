@@ -94,14 +94,6 @@ class aarch64(asmgen):
     def zero_freg(self, reg : freg_type) -> str:
         return self.asmwrap(f"fmov {reg},#0")
 
-    def fma_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
-               datatype : asm_data_type) -> str:
-        raise NotImplementedError("NEON/SVE doesn't have vector x scalar FMA instruction")
-
-    def fmul_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
-                datatype : asm_data_type) -> str:
-        raise NotImplementedError("NEON/SVE doesn't have vector x scalar FMUL instruction")
-
     def mov_param_to_greg(self, param : str, dst : greg_type) -> str:
         return self.asmwrap(f"ldr {dst},%[{param}]")
 

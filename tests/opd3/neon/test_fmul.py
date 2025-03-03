@@ -1,35 +1,34 @@
 import unittest
 
-from asmgen.asmblocks.sve import sve
+from asmgen.asmblocks.neon import neon
 from asmgen.registers import asm_data_type as adt
 
 from asmgen.asmblocks.operations import modifier as mod
 
-class test_sve_opd3(unittest.TestCase):
+class test_neon_opd3(unittest.TestCase):
     def test_fmul(self):
-        gen = sve()
+        gen = neon()
         gen.set_output_inline(yesno=False)
 
         self.assertEqual(
-            "fmul z0.d,z1.d,z2.d\n",
+            "fmul v0.2d,v1.2d,v2.2d\n",
             gen.fmul(adreg=gen.vreg(1),bdreg=gen.vreg(2),cdreg=gen.vreg(0),
                      a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64))
 
         self.assertEqual(
-            "fmul z0.s,z1.s,z2.s\n",
+            "fmul v0.4s,v1.4s,v2.4s\n",
             gen.fmul(adreg=gen.vreg(1),bdreg=gen.vreg(2),cdreg=gen.vreg(0),
                      a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32))
 
         self.assertEqual(
-            "fmul z0.h,z1.h,z2.h\n",
+            "fmul v0.8h,v1.8h,v2.8h\n",
             gen.fmul(adreg=gen.vreg(1),bdreg=gen.vreg(2),cdreg=gen.vreg(0),
                      a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16))
 
         self.assertEqual(
-            "smullb z0.s,z1.h,z2.h\n",
+            "mul v0.8h,v1.8h,v2.8h\n",
             gen.fmul(adreg=gen.vreg(1),bdreg=gen.vreg(2),cdreg=gen.vreg(0),
-                     a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT32,
-                     modifiers={mod.part}, part=0))
+                     a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT16))
 
         with self.assertRaises(ValueError):
             gen.fmul(adreg=gen.vreg(1),bdreg=gen.vreg(2),cdreg=gen.vreg(0),

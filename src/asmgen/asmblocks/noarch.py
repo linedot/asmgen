@@ -197,20 +197,6 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def fmul(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
-             a_dt : asm_data_type, b_dt : asm_data_type, c_dt : asm_data_type) -> str:
-        """
-        Multiply (Floating Point)
-        cvreg = avreg*bvreg
-        """
-        raise NotImplementedError(NIE_MESSAGE)
-
-    @abstractmethod
-    def fmul_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
-                a_dt : asm_data_type, b_dt : asm_data_type, c_dt : asm_data_type) -> str:
-        raise NotImplementedError(NIE_MESSAGE)
-
-    @abstractmethod
     def zero_greg(self, greg : greg_type) -> str:
         raise NotImplementedError(NIE_MESSAGE)
 

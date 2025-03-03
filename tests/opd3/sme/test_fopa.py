@@ -1,7 +1,6 @@
 import unittest
 
 from asmgen.asmblocks.sme import sme
-from asmgen.asmblocks.sve import sve
 from asmgen.registers import asm_data_type as adt
 
 from asmgen.asmblocks.operations import modifier as mod
