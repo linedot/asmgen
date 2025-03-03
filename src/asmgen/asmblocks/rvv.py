@@ -1,22 +1,42 @@
-from asmgen.asmblocks.noarch import reg_tracker
-from asmgen.asmblocks.noarch import asm_data_type, asm_index_type
-from asmgen.asmblocks.noarch import vreg,freg,greg
-from asmgen.asmblocks.riscv64 import riscv64
+from ..registers import (
+    reg_tracker,
+    asm_data_type as adt,
+    adt_triple,
+    adt_size,
+    asm_index_type as ait,
+    data_reg,
+    treg,vreg,freg,greg
+)
+from .riscv64 import riscv64
+from .types.rvv_types import rvv_vreg
+
+from .rvv_opd3 import rvv_fma,rvv_fmul
 
 from typing import TypeAlias
-
-class rvv_vreg(vreg):
-    def __init__(self, reg_idx : int):
-        self.reg_str = f"v{reg_idx}";
-
-    def __str__(self) -> str:
-        return self.reg_str;
 
 class rvv(riscv64):
 
     greg_type : TypeAlias = greg
     freg_type : TypeAlias = freg
-    vreg_type : TypeAlias = vreg
+    vreg_type : TypeAlias = rvv_vreg
+    treg_type : TypeAlias = treg
+
+    dt_suffixes = {
+            adt.DOUBLE : "e64",
+            adt.SINGLE : "e32",
+            adt.HALF   : "e16",
+            }
+    it_suffixes = {
+            ait.INT64 : "ei64",
+            ait.INT32 : "ei32",
+            ait.INT16 : "ei16",
+            ait.INT8  : "ei8",
+            }
+
+    def __init__(self):
+        super(rvv, self).__init__()
+        self.fma = rvv_fma(asmwrap=self.asmwrap)
+        self.fmul = rvv_fmul(asmwrap=self.asmwrap)
 
     def supportedby_cpuinfo(self, cpuinfo : str) -> bool:
          isa_idx = cpuinfo.find("rv64")
@@ -27,18 +47,7 @@ class rvv(riscv64):
          print(f"Extensions: {extensions}")
          return "v" in extensions
 
-    dt_suffixes = {
-            asm_data_type.DOUBLE : "e64",
-            asm_data_type.SINGLE : "e32",
-            }
-    it_suffixes = {
-            asm_index_type.INT64 : "ei64",
-            asm_index_type.INT32 : "ei32",
-            asm_index_type.INT16 : "ei16",
-            asm_index_type.INT8  : "ei8",
-            }
-
-    def isaquirks(self, rt : reg_tracker, dt : asm_data_type):
+    def isaquirks(self, rt : reg_tracker, dt : adt):
         tmpreg_idx = rt.reserve_any_greg()
         tmpreg = self.greg(tmpreg_idx)
         asmblock = self.vsetvlmax(tmpreg, dt)
@@ -50,8 +59,8 @@ class rvv(riscv64):
 
     def jvzero(self, vreg1 : vreg_type, freg : freg_type,
                vreg2 : vreg_type, greg : greg_type, label : str,
-               datatype : asm_data_type) -> str:
-        dt_suf = self.fdt_suffixes[datatype]
+               dt : adt) -> str:
+        dt_suf = self.fdt_suffixes[dt]
         asmblock  = self.asmwrap(f"fmv.{dt_suf}.x {freg},zero")
         # vec filled with 1 where element not-zero
         asmblock += self.asmwrap(f"vmfne.vf {vreg2},{vreg1},{freg}")
@@ -67,8 +76,8 @@ class rvv(riscv64):
     def is_vla(self):
         return True
 
-    def indexable_elements(self, datatype : asm_data_type):
-        return self.simd_size/datatype.value
+    def indexable_elements(self, dt : adt):
+        return self.simd_size/adt_size(dt)
 
     @property
     def max_vregs(self):
@@ -79,7 +88,7 @@ class rvv(riscv64):
         return 1
 
     def simd_size_to_greg(self, reg : greg_type,
-                          datatype : asm_data_type):
+                          dt : adt):
         return self.asmwrap(f"csrr {reg}, vlenb")
 
     @property
@@ -97,46 +106,22 @@ class rvv(riscv64):
         return result
 
     def fmul(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
-             datatype : asm_data_type) -> str:
+             dt : adt) -> str:
         return self.asmwrap(f"vfmul.vv {cvreg},{avreg},{bvreg}")
 
     def fmul_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
-                datatype : asm_data_type) -> str:
+                dt : adt) -> str:
         return self.asmwrap(f"vfmul.vf {cvreg},{avreg},{bfreg}")
-
-    def fma(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
-            datatype : asm_data_type) -> str:
-        return self.asmwrap(f"vfmacc.vv {cvreg},{avreg},{bvreg}")
-
-    def fma_np(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
-            datatype : asm_data_type) -> str:
-        return self.asmwrap(f"vfnmsac.vv {cvreg},{avreg},{bvreg}")
-
-    def fma_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
-               datatype : asm_data_type) -> str:
-        return self.asmwrap(f"vfmacc.vf {cvreg},{bfreg},{avreg}")
-
-    def fma_np_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
-               datatype : asm_data_type) -> str:
-        return self.asmwrap(f"vfnmsac.vf {cvreg},{bfreg},{avreg}")
-
-    def fma_idx(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type,
-                idx : int, datatype : asm_data_type) -> str:
-        raise NotImplementedError("RVV doesn't have an indexed FMA")
-
-    def fma_np_idx(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
-                   idx : int, datatype : asm_data_type) -> str:
-        raise NotImplementedError("RVV doesn't have an indexed FMA")
 
     @property
     def has_add_greg_voff(self) -> bool:
         return False
 
     def add_greg_voff(self, reg : greg_type, offset : int,
-                      datatype : asm_data_type) -> str:
+                      dt : adt) -> str:
         raise NotImplementedError("RVV doesn't have an instruction to add a vector offset to a gp register")
         
-    def zero_vreg(self, vreg : vreg_type, datatype : asm_data_type) -> str:
+    def zero_vreg(self, vreg : vreg_type, dt : adt) -> str:
         return self.asmwrap(f"vmv.v.i {vreg},0")
 
 
@@ -148,73 +133,86 @@ class rvv(riscv64):
     def max_load_voff(self):
         return 0
 
-    def load_vector(self, a, voffset, v, datatype):
-        assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
-        dt_suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"vl{dt_suf}.v {v}, ({a})")
+    def load_vector(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+        dt_suf = self.dt_suffixes[dt]
+        return self.asmwrap(f"vl{dt_suf}.v {vreg}, ({areg})")
 
     # I'm not seeing equivalents in RVV, I think you're supposed to do things differently
     # (LMUL > 1?), vector index?
-    def load_vector_voff(self, a, ignored_offset, v, datatype):
+    def load_vector_voff(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
         #raise NotImplementedError("RVV has no vector loads with address offset")
         # We can still load the vector - with max_load_{imm,v}off being 0, the generator will
         # just always pass an offset of 0 and add any offset to the address register after
         if ignored_offset != 0:
             raise NotImplementedError("RVV has no vector loads with address offset")
-        return self.load_vector(a, ignored_offset, v, datatype)
+        return self.load_vector(areg=areg, voffset=ignored_offset, vreg=vreg, dt=dt)
 
-    def load_vector_dist1(self, a, ignored_offset, v, datatype):
-        assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
-        dt_suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"vls{dt_suf}.v {v}, ({a}), zero")
+    def load_vector_dist1(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+        dt_suf = self.dt_suffixes[dt]
+        return self.asmwrap(f"vls{dt_suf}.v {vreg}, ({areg}), zero")
 
-    def load_vector_dist1_boff(self, a, ignored_offset, v, datatype):
+    def load_vector_dist1_boff(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
         #raise NotImplementedError("RVV has no vector loads with address offset")
-        return self.load_vector_dist1(a, ignored_offset, v, datatype)
+        return self.load_vector_dist1(areg=areg, ignored_offset=ignored_offset, vreg=vreg, dt=dt)
     
-    def load_vector_dist1_inc(self, a, ignored_offset, v, datatype):
+    def load_vector_dist1_inc(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
         raise NotImplementedError("RVV has no vector loads with address increment")
 
-    def store_vector(self, a, voffset, v, datatype):
-        assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
-        dt_suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"vs{dt_suf}.v {v}, ({a})")
+    def store_vector(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+        dt_suf = self.dt_suffixes[dt]
+        return self.asmwrap(f"vs{dt_suf}.v {vreg}, ({areg})")
 
-    def store_vector_voff(self, a, ignored_offset, v, datatype):
+    def store_vector_voff(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
         if ignored_offset != 0:
             raise NotImplementedError("RVV has no vector stores with address offset")
-        return self.store_vector(a, ignored_offset, v, datatype) 
+        return self.store_vector(areg=areg, ignored_offset=ignored_offset, vreg=vreg, dt=dt)
 
-    def vsetvlmax(self, reg, datatype):
-        dt_size = 'e'+str(datatype.value*8)
+    def vsetvlmax(self, reg : greg_type, dt : adt):
+        dt_size = 'e'+str(adt_size(dt)*8)
         return self.asmwrap(f"vsetvli {reg}, zero, {dt_size}, m1, ta, ma")
 
     def load_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : asm_data_type):
+                    vreg : vreg_type, dt : adt):
         raise NotImplementedError("RVV has no load with immediate stride")
 
     def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : asm_data_type):
-        dt_suf = self.dt_suffixes[datatype]
+                    vreg : vreg_type, dt : adt):
+        dt_suf = self.dt_suffixes[dt]
         return self.asmwrap(f"vls{dt_suf}.v {vreg}, ({areg}), {sreg}")
 
     def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
-                           vreg : vreg_type, datatype : asm_data_type,
-                           indextype : asm_index_type):
+                           vreg : vreg_type, dt : adt,
+                           indextype : ait):
         i_suf = self.it_suffixes[indextype]
         return self.asmwrap(f"vlux{i_suf}.v {vreg}, ({areg}), {offvreg}")
 
     def store_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : asm_data_type):
+                    vreg : vreg_type, dt : adt):
         raise NotImplementedError("RVV has no store with immediate stride")
 
     def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : asm_data_type):
-        dt_suf = self.dt_suffixes[datatype]
+                    vreg : vreg_type, dt : adt):
+        dt_suf = self.dt_suffixes[dt]
         return self.asmwrap(f"vss{dt_suf}.v {vreg}, ({areg}), {sreg}")
 
     def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
-                             vreg : vreg_type, datatype : asm_data_type,
-                             indextype : asm_index_type):
+                             vreg : vreg_type, dt : adt,
+                             indextype : ait):
         i_suf = self.it_suffixes[indextype]
         return self.asmwrap(f"vsux{i_suf}.v {vreg}, ({areg}), {offvreg}")
+
+    # Unsupported functionality:
+    def max_tregs(self, dt : adt):
+        return 0
+
+    def treg(self, reg_idx : int):
+        raise NotImplementedError("RVV has no tiles (for now)")
+
+    def zero_treg(self, treg : treg_type, datatype : adt):
+        raise NotImplementedError("RVV has no tiles (for now)")
+
+    def store_tile(self, areg : greg_type,
+                   ignored_offset : int,
+                   treg : treg_type,
+                   datatype : adt):
+        raise NotImplementedError("RVV has no tiles (for now)")

@@ -113,7 +113,7 @@ class avxbase(asmgen):
         asmblock += self.asmwrap(f"sub $1, {preg}")
         return asmblock
 
-    def loopend(self, reg, label):
+    def loopend(self, reg : greg_type, label : str):
         preg = prefix_if_raw_reg(reg)
         asmblock  = self.asmwrap(f"cmp $0x0,{preg}")
         asmblock += self.asmwrap(f"jne .{label}%=")
@@ -124,8 +124,8 @@ class avxbase(asmgen):
     def is_vla(self):
         return False
 
-    def indexable_elements(self, datatype):
-        return self.simd_size/datatype.value
+    def indexable_elements(self, dt : adt):
+        return self.simd_size/adt_size(dt)
 
     @property
     def max_gregs(self):

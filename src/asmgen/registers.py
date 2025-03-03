@@ -232,6 +232,16 @@ def adt_is_int(dt : asm_data_type) -> bool:
                  adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8]
     return dt in int_types
 
+def adt_is_signed(dt : asm_data_type) -> bool:
+    adt = asm_data_type
+    int_types = [adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8]
+    return dt in int_types
+
+def adt_is_unsigned(dt : asm_data_type) -> bool:
+    adt = asm_data_type
+    int_types = [adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8]
+    return dt in int_types
+
 class adt_triple:
     def __init__(self,
                  a_dt : asm_data_type,

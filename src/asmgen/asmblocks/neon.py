@@ -72,7 +72,7 @@ class neon(aarch64):
     def get_req_flags(self):
         return ['asimd']
 
-    def supportedby_cpuinfo(self, cpuinfo) -> bool:
+    def supportedby_cpuinfo(self, cpuinfo : str) -> bool:
          req_flags = self.get_req_flags()
          supported = True
          for r in req_flags:
@@ -101,8 +101,8 @@ class neon(aarch64):
     def is_vla(self):
         return False
 
-    def indexable_elements(self, datatype):
-        return self.simd_size/datatype.value
+    def indexable_elements(self, dt : adt):
+        return self.simd_size/adt_size(dt)
 
     @property
     def max_vregs(self):
@@ -116,13 +116,13 @@ class neon(aarch64):
     def c_simd_size_function(self):
         return f"size_t get_simd_size() {{ return {self.simd_size}; }}"
 
-    def add_greg_voff(self, reg, offset, datatype):
+    def add_greg_voff(self, reg : greg_type, offset : int, dt : adt):
         byte_offset = self.simd_size*offset
         return self.asmwrap(f"add {reg},{reg},#{byte_offset}")
         
-    def zero_vreg(self, reg, datatype):
-        suf = self.dt_suffixes[datatype]
-        zeroreg = f"{self.dt_greg_pfx[datatype]}zr" 
+    def zero_vreg(self, reg : greg_type, dt : adt):
+        suf = self.dt_suffixes[dt]
+        zeroreg = f"{self.dt_greg_pfx[dt]}zr" 
         return self.asmwrap(f"dup {reg}.{suf},{zeroreg}")
 
     def vreg(self, reg_idx : int) -> neon_vreg:
@@ -131,11 +131,11 @@ class neon(aarch64):
     def qreg(self, i):
         return f"q{i}"
 
-    def min_load_immoff(self,datatype):
+    def min_load_immoff(self, dt : adt):
         return 0
 
-    def max_load_immoff(self,datatype):
-        return 4095*datatype.value*2
+    def max_load_immoff(self, dt : adt):
+        return 4095*adt_size(dt)*2
 
     @property
     def min_load_voff(self):
@@ -149,38 +149,32 @@ class neon(aarch64):
         #       not sure what's up with the actual load. Investigate
         return 4096/8
 
-    def load_vector(self, a, ignored_offset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        qv = self.vreg_to_qreg(v)
-        return self.asmwrap(f"ldr {qv}, [{a}]")
+    def load_vector(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+        qv = self.vreg_to_qreg(vreg)
+        return self.asmwrap(f"ldr {qv}, [{areg}]")
 
-    def load_vector_voff(self, a, voffset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        qv = self.vreg_to_qreg(v)
-        return self.asmwrap(f"ldr {qv}, [{a}, #{voffset*self.simd_size}]")
+    def load_vector_voff(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+        qv = self.vreg_to_qreg(vreg)
+        return self.asmwrap(f"ldr {qv}, [{areg}, #{voffset*self.simd_size}]")
 
-    def load_vector_dist1(self, a, ignored_offset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"ld1r {{{v}.{suf}}}, [{a}]")
+    def load_vector_dist1(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+        suf = self.dt_suffixes[dt]
+        return self.asmwrap(f"ld1r {{{vreg}.{suf}}}, [{areg}]")
 
-    def load_vector_dist1_boff(self, a, offset, v, datatype):
+    def load_vector_dist1_boff(self, areg : greg_type, offset : int, v : vreg_type, dt : adt):
         raise NotImplementedError("load_vector_dist1_boff doesn't make sense with NEON, use load_vector_dist1_inc or load_vector_voff + fma_idx instead")
     
-    def load_vector_dist1_inc(self, a, ignored_offset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"ld1r {{{v}.{suf}}}, [{a}], #{datatype.value}")
+    def load_vector_dist1_inc(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+        suf = self.dt_suffixes[dt]
+        return self.asmwrap(f"ld1r {{{vreg}.{suf}}}, [{areg}], #{adt_size(dt)}")
 
-    def store_vector_voff(self, a, voffset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        qv = self.vreg_to_qreg(v)
-        return self.asmwrap(f"str {qv}, [{a}, #{voffset*self.simd_size}]")
+    def store_vector_voff(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+        qv = self.vreg_to_qreg(vreg)
+        return self.asmwrap(f"str {qv}, [{areg}, #{voffset*self.simd_size}]")
 
-    def store_vector(self, a, voffset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        qv = self.vreg_to_qreg(v)
-        return self.asmwrap(f"str {qv}, [{a}]")
+    def store_vector(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+        qv = self.vreg_to_qreg(vreg)
+        return self.asmwrap(f"str {qv}, [{areg}]")
 
     def load_vector_immstride(self, areg : greg_type, byte_stride : int,
                     vreg : vreg_type, datatype : adt):
