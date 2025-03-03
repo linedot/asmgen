@@ -11,6 +11,7 @@ Supports a subset of instructions from the following ISAs:
 - Arm
     - NEON
     - SVE
+    - SME
 - RISCV
     - RVV 1.0
     - RVV 0.7.1
