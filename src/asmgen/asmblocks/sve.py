@@ -1,6 +1,6 @@
-from asmgen.asmblocks.aarch64 import aarch64
+from .aarch64 import aarch64
 
-from asmgen.registers import (
+from ..registers import (
     reg_tracker,
     asm_data_type as adt,
     adt_triple,
