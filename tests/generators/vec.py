@@ -125,7 +125,7 @@ class vec_test_generator:
         careg = testcase.gen.greg(careg_idx)
         asmblock += testcase.gen.mov_param_to_greg(cvec, careg)
         asmblock += testcase.gen.load_vector(careg, 0, cvreg, dt.SINGLE)
-        asmblock += testcase.gen.fma(avreg, bvreg, cvreg, dt.SINGLE)
+        asmblock += testcase.gen.fma(avreg, bvreg, cvreg, dt.SINGLE, dt.SINGLE, dt.SINGLE)
         asmblock += testcase.gen.store_vector(careg, 0, cvreg, dt.SINGLE)
         rt.unuse_greg(careg_idx)
 
@@ -197,7 +197,7 @@ class vec_test_generator:
         careg = testcase.gen.greg(careg_idx)
         asmblock += testcase.gen.mov_param_to_greg(cvec, careg)
         asmblock += testcase.gen.load_vector(careg, 0, cvreg, dt.DOUBLE)
-        asmblock += testcase.gen.fma(avreg, bvreg, cvreg, dt.DOUBLE)
+        asmblock += testcase.gen.fma(avreg, bvreg, cvreg, dt.DOUBLE, dt.DOUBLE, dt.DOUBLE)
         asmblock += testcase.gen.store_vector(careg, 0, cvreg, dt.DOUBLE)
         rt.unuse_greg(careg_idx)
 
@@ -255,7 +255,7 @@ class vec_test_generator:
         asmblock += testcase.gen.load_vector(bareg, 0, bvreg, dt.SINGLE)
         rt.unuse_greg(bareg_idx)
 
-        asmblock += testcase.gen.fmul(avreg, bvreg, avreg, dt.SINGLE)
+        asmblock += testcase.gen.fmul(avreg, bvreg, avreg, dt.SINGLE, dt.SINGLE, dt.SINGLE)
         asmblock += testcase.gen.store_vector(aareg, 0, avreg, dt.SINGLE)
         rt.unuse_greg(aareg_idx)
 
@@ -312,7 +312,7 @@ class vec_test_generator:
         asmblock += testcase.gen.load_vector(bareg, 0, bvreg, dt.DOUBLE)
         rt.unuse_greg(bareg_idx)
 
-        asmblock += testcase.gen.fmul(avreg, bvreg, avreg, dt.DOUBLE)
+        asmblock += testcase.gen.fmul(avreg, bvreg, avreg, dt.DOUBLE, dt.DOUBLE, dt.DOUBLE)
         asmblock += testcase.gen.store_vector(aareg, 0, avreg, dt.DOUBLE)
         rt.unuse_greg(aareg_idx)
 

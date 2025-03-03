@@ -10,8 +10,8 @@ from asmgen.cppgen.writers import write_test_func_declaration
 from asmgen.cppgen.declarations import vargen,vio_type
 from asmgen.compilation.tools import compiler
 from asmgen.compilation.compiler_presets import cross_archs,cross_cxx_flags
-from .testcase import testcase
 
+from .testcase import testcase
 from .asm_test_generator import asm_test_generator
 
 from parameterized import parameterized, parameterized_class
@@ -26,10 +26,6 @@ import sys
 
 from subprocess import Popen, PIPE
 from typing import Union
-
-MIN_PYTHON = (3, 9)
-if sys.version_info < MIN_PYTHON:
-    sys.exit("Python %s.%s or later is required.\n" % MIN_PYTHON)
 
 # Adding tests:
 # Add test to one of the generators in tests/generators or create a new one

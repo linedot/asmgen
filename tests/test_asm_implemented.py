@@ -120,18 +120,6 @@ class asm_implementation_test(unittest.TestCase):
         # g0 -> self.gen.greg(0), v0 -> self.gen.vreg(0), f0 -> self.gen.freg(0)
         ['loopbegin', 'g0', 'someloop'],
         ['loopend', 'g0', 'someloop'],
-        ['fma', 'v0', 'v1', 'v2', dt.DOUBLE],
-        ['fma_np', 'v0', 'v1', 'v2', dt.DOUBLE],
-        ['fma', 'v0', 'v1', 'v2', dt.SINGLE],
-        ['fma_np', 'v0', 'v1', 'v2', dt.SINGLE],
-        ['fma_vf', 'v0', 'f1', 'v1', dt.DOUBLE],
-        ['fma_np_vf', 'v0', 'f1', 'v1', dt.DOUBLE],
-        ['fma_vf', 'v0', 'f1', 'v1', dt.SINGLE],
-        ['fma_np_vf', 'v0', 'f1', 'v1', dt.SINGLE],
-        ['fma_idx', 'v0', 'v1', 'v2', 0, dt.DOUBLE],
-        ['fma_np_idx', 'v0', 'v1', 'v2', 0, dt.DOUBLE],
-        ['fma_idx', 'v0', 'v1', 'v2', 0, dt.SINGLE],
-        ['fma_np_idx', 'v0', 'v1', 'v2', 0, dt.SINGLE],
         ['zero_greg', 'g0'],
         ['mov_greg', 'g0', 'g1'],
         ['mov_greg_to_param', 'g0', 'someparam'],
@@ -188,9 +176,3 @@ class asm_implementation_test(unittest.TestCase):
         method = getattr(self.gen, name)
         if callable(method):
             method(*args_list)
-
-def main():
-    unittest.main()
-
-if "__main__" == __name__:
-    main()

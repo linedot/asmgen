@@ -11,7 +11,7 @@ from ..registers import (
 )
 from asmgen.asmblocks.operations import opd3,widening_method,modifier
 
-from .types.sve_types import sve_vreg
+from .types.sve_types import sve_vreg,sve_preg
 from .sve_opd3 import sve_fma,sve_fmul
 
 from typing import TypeAlias, Callable
@@ -23,6 +23,7 @@ class sve(aarch64):
     freg_type : TypeAlias = freg
     vreg_type : TypeAlias = sve_vreg
     treg_type : TypeAlias = treg
+    preg_type : TypeAlias = sve_preg
 
     dt_suffixes = {
             adt.DOUBLE  : "d",
@@ -51,10 +52,10 @@ class sve(aarch64):
         self.fmul = sve_fmul(asmwrap=self.asmwrap,
                            dt_suffixes=self.dt_suffixes)
 
-    def get_req_flags(self):
+    def get_req_flags(self) -> list[str]:
         return ['sve']
 
-    def supportedby_cpuinfo(self, cpuinfo):
+    def supportedby_cpuinfo(self, cpuinfo : str) -> bool:
          req_flags = self.get_req_flags()
          supported = True
          for r in req_flags:
@@ -63,15 +64,15 @@ class sve(aarch64):
                  break
          return supported
 
-    def isaquirks(self, rt : reg_tracker, dt : adt):
+    def isaquirks(self, rt : reg_tracker, dt : adt) -> str:
         asmblock = self.ptrue(self.preg(0), dt)
         return asmblock
 
     def jvzero(self, vreg1 : vreg, freg : freg,
                vreg2 : vreg,
                greg : greg, label : str,
-               datatype : adt):
-        suf = self.dt_suffixes[datatype]
+               dt : adt) -> str:
+        suf = self.dt_suffixes[dt]
         asmblock  = self.asmwrap(f"fcmne p1.d,{vreg}.{suf},p0/z,#0,0")
         asmblock += self.asmwrap(f"ptest p0, p1.b")
         asmblock += self.asmwrap(f"b.any .{label}")
@@ -79,23 +80,23 @@ class sve(aarch64):
 
 
     @property
-    def is_vla(self):
+    def is_vla(self) -> bool:
         return True
 
     @property
-    def max_vregs(self):
+    def max_vregs(self) -> int:
         return 32
 
     @property
-    def simd_size(self):
+    def simd_size(self) -> int:
         return 1
 
-    def indexable_elements(self, datatype):
+    def indexable_elements(self, dt : adt) -> int:
         # 128 bits are indexable
-        return 16/datatype.value
+        return 16/adt_size(dt)
 
     @property
-    def c_simd_size_function(self):
+    def c_simd_size_function(self) -> str:
         result  = "size_t get_simd_size() {\n"
         result += "    size_t byte_size = 0;\n"
         result += "    __asm__ volatile(\n"
@@ -109,126 +110,116 @@ class sve(aarch64):
         result += "}"
         return result
 
-    def fmul(self, avreg : vreg_type, bvreg : vreg_type, cvreg : vreg_type, a_dt : adt, b_dt : adt, c_dt : adt):
-        suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"fmul {dst}.{suf},p0/m,{a}.{suf},{b}.{suf}")
-
-    def add_greg_voff(self, reg, offset, datatype):
+    def add_greg_voff(self, reg : greg_type, offset : int, dt : adt) -> str:
         return self.asmwrap(f"incb {reg}, ALL, MUL #{offset}")
 
-    def zero_vreg(self,i,datatype):
-        suf = self.dt_suffixes[datatype]
-        return self.asmwrap(f"dup {i}.{suf},#0")
+    def zero_vreg(self, vreg : vreg_type, dt : adt) -> str:
+        suf = self.dt_suffixes[dt]
+        return self.asmwrap(f"dup {vreg}.{suf},#0")
 
     def vreg(self, reg_idx : int) -> sve_vreg:
         return sve_vreg(reg_idx)
 
-    def min_load_immoff(self,datatype):
+    def min_load_immoff(self, dt : adt) -> int:
         return 0
 
-    def max_load_immoff(self,datatype):
+    def max_load_immoff(self, dt : adt) -> int:
         return 252
 
     @property
-    def min_load_voff(self):
+    def min_load_voff(self) -> int:
         return -8
 
     @property
-    def max_load_voff(self):
+    def max_load_voff(self) -> int:
         return 7
 
-    def load_vector(self, a, ignored_offset, v, datatype):
-        assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
-        suf = self.dt_suffixes[datatype]
-        msuf = self.dt_mnem_suffixes[datatype]
-        return self.asmwrap(f"ld1{msuf} {v}.{suf}, p0/z, [{a}]")
+    def load_vector(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt) -> str:
+        suf = self.dt_suffixes[dt]
+        msuf = self.dt_mnem_suffixes[dt]
+        return self.asmwrap(f"ld1{msuf} {vreg}.{suf}, p0/z, [{areg}]")
 
-    def load_vector_voff(self, a, voffset, v, datatype):
-        assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
-        suf = self.dt_suffixes[datatype]
-        msuf = self.dt_mnem_suffixes[datatype]
-        return self.asmwrap(f"ld1{msuf} {v}.{suf}, p0/z, [{a}, #{voffset}, MUL VL]")
+    def load_vector_voff(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt) -> str:
+        suf = self.dt_suffixes[dt]
+        msuf = self.dt_mnem_suffixes[dt]
+        return self.asmwrap(f"ld1{msuf} {vreg}.{suf}, p0/z, [{areg}, #{voffset}, MUL VL]")
 
-    def load_vector_dist1(self, a, ignored_offset, v, datatype):
-        assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
-        suf = self.dt_suffixes[datatype]
-        msuf = self.dt_mnem_suffixes[datatype]
-        return self.asmwrap(f"ld1r{msuf} {v}.{suf}, p0/z, [{a}]")
+    def load_vector_dist1(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt) -> str:
+        suf = self.dt_suffixes[dt]
+        msuf = self.dt_mnem_suffixes[dt]
+        return self.asmwrap(f"ld1r{msuf} {vreg}.{suf}, p0/z, [{areg}]")
 
-    def load_vector_dist1_boff(self, a, offset, v, datatype):
-        assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
-        suf = self.dt_suffixes[datatype]
-        msuf = self.dt_mnem_suffixes[datatype]
-        return self.asmwrap(f"ld1r{msuf} {v}.{suf}, p0/z, [{a}, #{offset}]")
+    def load_vector_dist1_boff(self, areg : greg_type, offset : int, vreg : vreg_type, dt : adt) -> str:
+        suf = self.dt_suffixes[dt]
+        msuf = self.dt_mnem_suffixes[dt]
+        return self.asmwrap(f"ld1r{msuf} {vreg}.{suf}, p0/z, [{areg}, #{offset}]")
 
-    def load_vector_dist1_inc(self, a, ignored_offset, v, datatype):
+    def load_vector_dist1_inc(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt) -> str:
         raise NotImplementedError("SVE doesn't have a post-index ld1r{suf}, use load_vector_dist1_boff instead")
 
-    def store_vector_voff(self, a, voffset, v, datatype):
-        assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
-        suf = self.dt_suffixes[datatype]
-        msuf = self.dt_mnem_suffixes[datatype]
-        address = f"[{a}, #{voffset}, MUL VL]"
+    def store_vector_voff(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt) -> str:
+        suf = self.dt_suffixes[dt]
+        msuf = self.dt_mnem_suffixes[dt]
+        address = f"[{areg}, #{voffset}, MUL VL]"
         if 0 == voffset:
-            address = f"[{a}]"
-        return self.asmwrap(f"st1{msuf} {{{v}.{suf}}}, p0, {address}")
+            address = f"[{areg}]"
+        return self.asmwrap(f"st1{msuf} {{{vreg}.{suf}}}, p0, {address}")
 
-    def store_vector(self, a, voffset, v, datatype):
-        return self.store_vector_voff(a, 0, v, datatype)
+    def store_vector(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt) -> str:
+        return self.store_vector_voff(areg=areg, voffset=0, vreg=vreg, dt=dt)
 
     # SVE-specific
-    def preg(self, i):
-        return f"p{i}"
+    def preg(self, idx : int) -> preg_type:
+        return sve_preg(idx)
 
-    def ptrue(self, reg, datatype):
-        assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
-        suf = self.dt_suffixes[datatype]
+    def ptrue(self, reg : preg_type, dt : adt) -> str:
+        suf = self.dt_suffixes[dt]
         return self.asmwrap(f"ptrue {reg}.{suf}")
 
 
     def load_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : adt):
+                    vreg : vreg_type, dt : adt) -> str:
         raise NotImplementedError("SVE has no load with immediate stride")
 
     def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : adt):
+                    vreg : vreg_type, dt : adt) -> str:
         raise NotImplementedError("SVE has no load with scalar register stride")
 
     def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
-                           vreg : vreg_type, datatype : adt,
-                           indextype : ait):
-        suf = self.dt_suffixes[datatype]
-        msuf = self.dt_mnem_suffixes[datatype]
+                           vreg : vreg_type, dt : adt,
+                           indextype : ait) -> str:
+        suf = self.dt_suffixes[dt]
+        msuf = self.dt_mnem_suffixes[dt]
         return self.asmwrap(f"ld1{msuf}.v {vreg}.{suf}, p0/z,[{areg}, {offvreg}]")
 
     def store_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : adt):
+                    vreg : vreg_type, dt : adt) -> str:
         raise NotImplementedError("RVV has no store with immediate stride")
 
     def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : adt):
+                    vreg : vreg_type, dt : adt) -> str:
         raise NotImplementedError("SVE has no store with scalar register stride")
 
     def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
-                             vreg : vreg_type, datatype : adt,
-                             indextype : ait):
-        suf = self.dt_suffixes[datatype]
-        msuf = self.dt_mnem_suffixes[datatype]
+                             vreg : vreg_type, dt : adt,
+                             indextype : ait) -> str:
+        suf = self.dt_suffixes[dt]
+        msuf = self.dt_mnem_suffixes[dt]
         return self.asmwrap(f"st1{msuf}.v {vreg}.{suf}, p0, [{areg}, {offvreg}]")
 
 
     # Unsupported functionality:
-    def max_tregs(self, dt : adt):
+    def max_tregs(self, dt : adt) -> int:
         return 0
 
-    def treg(self, reg_idx : int):
+    def treg(self, reg_idx : int) -> treg_type:
         raise NotImplementedError("SVE has no tiles, use SME")
 
-    def zero_treg(self, treg : treg_type, datatype : adt):
+    def zero_treg(self, treg : treg_type, dt : adt) -> str:
         raise NotImplementedError("SVE has no tiles, use SME")
 
     def store_tile(self, areg : greg_type,
                    ignored_offset : int,
                    treg : treg_type,
-                   datatype : adt):
+                   dt : adt) -> str:
         raise NotImplementedError("SVE has no tiles, use SME")
