@@ -9,6 +9,7 @@ from ..registers import (
     reg_tracker,
     greg,freg,vreg,treg,
     asm_data_type,
+    adt_size,
     asm_index_type
 )
 
@@ -50,8 +51,8 @@ class asmgen(ABC):
         return opblock
 
     @staticmethod
-    def data_size(data_type : asm_data_type):
-        return data_type.value
+    def data_size(dt : asm_data_type):
+        return adt_size(dt)
 
     @abstractmethod
     def isaquirks(self, rt : reg_tracker, dt : asm_data_type):
