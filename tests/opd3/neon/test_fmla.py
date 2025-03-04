@@ -43,3 +43,21 @@ class test_neon_opd3(unittest.TestCase):
             gen.fma(adreg=gen.vreg(1),bdreg=gen.vreg(2),cdreg=gen.vreg(0),
                     a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32,
                     modifiers={mod.part, mod.np}, part=0))
+
+        self.assertEqual(
+            "fmlsllbt v0.4s,v1.16b,v2.16b\n",
+            gen.fma(adreg=gen.vreg(1),bdreg=gen.vreg(2),cdreg=gen.vreg(0),
+                    a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32,
+                    modifiers={mod.part, mod.np}, part=1))
+
+        self.assertEqual(
+            "fmlslltb v0.4s,v1.16b,v2.16b\n",
+            gen.fma(adreg=gen.vreg(1),bdreg=gen.vreg(2),cdreg=gen.vreg(0),
+                    a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32,
+                    modifiers={mod.part, mod.np}, part=2))
+
+        self.assertEqual(
+            "fmlslltt v0.4s,v1.16b,v2.16b\n",
+            gen.fma(adreg=gen.vreg(1),bdreg=gen.vreg(2),cdreg=gen.vreg(0),
+                    a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32,
+                    modifiers={mod.part, mod.np}, part=3))

@@ -63,9 +63,19 @@ class sve_fmul(opd3):
     def partial_inst_suffix(self, ways : int, part : int):
         if ways.bit_count() != 1:
             raise ValueError(f"ways={ways} is not a power of 2")
-        suf = 'l'*(ways.bit_length()-1)
+        char_count = ways.bit_length()-1
+        suf = 'l'*char_count
 
-        suf += f"{part:b>{ways.bit_length()-1}b}".replace('1','t').replace('0','b')
+        # Works, but is too much of a 'detour' from the intent
+        #suf += f"{part:b>{ways.bit_length()-1}b}".replace('1','t').replace('0','b')
+        #return suf
+
+        partsuf = ['b']*char_count
+        for i in range(char_count):
+            if (part >> i) & 0x1:
+                partsuf[-(i+1)] = 't'
+
+        suf += "".join(partsuf)
 
         return suf
 
