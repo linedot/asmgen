@@ -41,7 +41,11 @@ class compiler(object):
         output = process_out[0].decode()
         errout = process_out[1].decode()
         log.debug(f"Compilation stdout: {output}")
-        log.debug(f"Compilation stderr: {errout}")
+        if 0 != p.returncode:
+            log.error(f"{' '.join(cmd)}")
+            log.error(f"Compilation stderr: {errout}")
+        else:
+            log.debug(f"Compilation stderr: {errout}")
 
         return 0 == p.returncode
 
@@ -69,6 +73,7 @@ class compiler(object):
         errout = process_out[1].decode()
         log.debug(f"Compilation stdout: {output}")
         if 0 != p.returncode:
+            log.error(f"{' '.join(cmd)}")
             log.error(f"Compilation stderr: {errout}")
         else:
             log.debug(f"Compilation stderr: {errout}")

@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "asmgen"
-version = "0.1.1"
+version = "0.2.0"
 authors = [
   { name="linedot", email="linedot@linedot.org" },
 ]
-description = "Assembly Generation tool for AVX/FMA, AVX2, AVX512, ARM NEON, ARM SVE, RISCV RVV"
+description = "Assembly Generation tool for AVX/FMA, AVX2, AVX512, ARM NEON, ARM SVE, ARM SME, RISCV RVV"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",

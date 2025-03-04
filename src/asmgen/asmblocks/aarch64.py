@@ -1,37 +1,26 @@
-from asmgen.asmblocks.noarch import asmgen
-from asmgen.asmblocks.noarch import asm_data_type
-from asmgen.asmblocks.noarch import greg, freg, vreg
+from .noarch import asmgen
+from ..registers import (
+    reg_tracker,
+    asm_data_type as adt,
+    adt_triple,
+    adt_size,
+    asm_index_type as ait,
+    data_reg,
+    treg,vreg,freg,greg
+)
 
-import sys
-if not sys.version_info >= (3, 10):
-    from typing_extensions import TypeAlias
-else:
-    from typing import TypeAlias
+from .types.aarch64_types import aarch64_greg,aarch64_freg
 
-class aarch64_greg(greg):
-    def __init__(self, reg_idx : int):
-        self.reg_str = f"x{reg_idx}"
-
-    def __str__(self) -> str:
-        return self.reg_str
-
-class aarch64_freg(freg):
-    def __init__(self, reg_idx : int):
-        # TODO: Other data types
-        self.reg_str = f"d{reg_idx}"
-
-    def __str__(self) -> str:
-        return self.reg_str
+from typing import TypeAlias
 
 class aarch64(asmgen):
 
-    greg_type : TypeAlias = greg
-    freg_type : TypeAlias = freg
-    vreg_type : TypeAlias = vreg
+    greg_type : TypeAlias = aarch64_greg
+    freg_type : TypeAlias = aarch64_freg
 
     dt_greg_pfx = {
-            asm_data_type.DOUBLE : "x",
-            asm_data_type.SINGLE : "w",
+            adt.DOUBLE : "x",
+            adt.SINGLE : "w",
             }
 
 
@@ -74,7 +63,7 @@ class aarch64(asmgen):
 
     def jfzero(self, freg1 : freg_type, freg2 : freg_type,
                greg : greg_type, label : str,
-               datatype : asm_data_type):
+               datatype : adt):
         asmblock  = self.asmwrap(f"fcmp {freg1},#0.0")
         asmblock += self.asmwrap(f"b.eq .{label}%=")
         return asmblock
@@ -91,19 +80,11 @@ class aarch64(asmgen):
         return self.asmwrap(f"mov {dst},{src}")
 
     def mov_freg(self, src : freg_type, dst : freg_type,
-                 datatype : asm_data_type) -> str:
+                 datatype : adt) -> str:
         return self.asmwrap(f"fmov {dst},{src}")
 
     def zero_freg(self, reg : freg_type) -> str:
         return self.asmwrap(f"fmov {reg},#0")
-
-    def fma_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
-               datatype : asm_data_type) -> str:
-        raise NotImplementedError("NEON/SVE doesn't have vector x scalar FMA instruction")
-
-    def fmul_vf(self, avreg : vreg_type, bfreg : freg_type, cvreg : vreg_type,
-                datatype : asm_data_type) -> str:
-        raise NotImplementedError("NEON/SVE doesn't have vector x scalar FMUL instruction")
 
     def mov_param_to_greg(self, param : str, dst : greg_type) -> str:
         return self.asmwrap(f"ldr {dst},%[{param}]")
@@ -165,7 +146,7 @@ class aarch64(asmgen):
 
     def load_scalar_immoff(self, areg : greg_type,
                            offset : int, freg : freg_type,
-                           datatype : asm_data_type) -> str:
+                           datatype : adt) -> str:
         return self.asmwrap(f"ldr {freg},[{areg},#{offset}]")
 
     def prefetch_l1_boff(self, areg : greg_type,

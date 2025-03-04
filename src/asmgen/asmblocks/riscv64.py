@@ -1,12 +1,15 @@
-from asmgen.asmblocks.noarch import asmgen
-from asmgen.asmblocks.noarch import asm_data_type
-from asmgen.asmblocks.noarch import greg, freg
+from .noarch import asmgen
+from ..registers import (
+    reg_tracker,
+    asm_data_type as adt,
+    adt_triple,
+    adt_size,
+    asm_index_type as ait,
+    data_reg,
+    treg,vreg,freg,greg
+)
 
-import sys
-if not sys.version_info >= (3, 10):
-    from typing_extensions import TypeAlias
-else:
-    from typing import TypeAlias
+from typing import TypeAlias
 
 class riscv64_greg(greg):
     def __init__(self, reg_idx : int):
@@ -34,13 +37,13 @@ class riscv64(asmgen):
                  [f'a{i}' for i in range(8)]
 
     fdt_suffixes = {
-            asm_data_type.DOUBLE : "d",
-            asm_data_type.SINGLE : "w",
+            adt.DOUBLE : "d",
+            adt.SINGLE : "w",
             }
 
     fcdt_suffixes = {
-            asm_data_type.DOUBLE : "d",
-            asm_data_type.SINGLE : "s",
+            adt.DOUBLE : "d",
+            adt.SINGLE : "s",
             }
 
     freg_names = [f'f{i}' for i in range(32)]
@@ -52,7 +55,7 @@ class riscv64(asmgen):
         return riscv64_freg(reg_idx)
 
     @property
-    def are_fregs_in_vregs(self):
+    def are_fregs_in_vregs(self) -> bool:
         return False
 
     def label(self, label : str) -> str:
@@ -61,33 +64,33 @@ class riscv64(asmgen):
     def jump(self, label : str) -> str:
         return self.asmwrap(f"j .{label}%=")
 
-    def jzero(self, reg : greg_type, label : str):
+    def jzero(self, reg : greg_type, label : str) -> str:
         return self.asmwrap(f" beq {reg},zero,.{label}%=")
 
     def jfzero(self, freg1 : freg_type, freg2 : freg_type,
                greg : greg_type, label : str,
-               datatype : asm_data_type):
-        dt_suf = self.fdt_suffixes[datatype]
-        cdt_suf = self.fcdt_suffixes[datatype]
+               dt : adt) -> str:
+        dt_suf = self.fdt_suffixes[dt]
+        cdt_suf = self.fcdt_suffixes[dt]
         asmblock  = self.asmwrap(f"fmv.{dt_suf}.x {freg2},zero")
         asmblock += self.asmwrap(f"feq.{cdt_suf} {greg},{freg1},{freg2}")
         asmblock += self.asmwrap(f"bnez {greg},.{label}%=")
         return asmblock
 
-    def loopbegin(self, reg, label):
+    def loopbegin(self, reg : greg_type, label : str) -> str:
         asmblock  = self.asmwrap(f".{label}%=:")
         asmblock += self.asmwrap(f"addi {reg},{reg},-1")
 
         return asmblock
 
-    def loopbegin_nz(self, reg, label, labelskip):
+    def loopbegin_nz(self, reg : greg_type, label : str, labelskip : str) -> str:
         asmblock  = self.asmwrap(f"beq {reg},zero,.{labelskip}%=")
         asmblock += self.asmwrap(f".{label}%=:")
         asmblock += self.asmwrap(f"addi {reg},{reg},-1")
 
         return asmblock
 
-    def loopend(self, reg, label):
+    def loopend(self, reg : greg_type, label : str):
         asmblock = f"\"bnez {reg}, .{label}%=\\n\\t\"\n"
 
         return asmblock
@@ -100,51 +103,51 @@ class riscv64(asmgen):
     def max_fregs(self):
         return len(self.freg_names)
 
-    def mov_freg(self, src, dst, datatype : asm_data_type):
-        dt_suf = self.fdt_suffixes[datatype]
+    def mov_freg(self, src : freg_type, dst : freg_type, dt : adt):
+        dt_suf = self.fdt_suffixes[dt]
         return self.asmwrap(f"fmv.{dt_suf} {dst},{src}")
 
-    def mov_greg(self, src, dst):
+    def mov_greg(self, src : greg_type, dst : greg_type):
         # There is no mov instruction?
         return self.asmwrap(f"add {dst},{src},0")
 
-    def mov_param_to_greg(self, param, dst):
+    def mov_param_to_greg(self, param : str, dst : greg_type):
         return self.asmwrap(f"ld {dst},%[{param}]")
 
-    def mov_param_to_greg_shift(self, param, dst, offset):
-        return self.asmwrap(f"slli {dst},%[{param}],offset")
+    def mov_param_to_greg_shift(self, param : str, dst : greg_type, bit_count : int):
+        return self.asmwrap(f"slli {dst},%[{param}],{bit_count}")
 
-    def mov_greg_to_param(self, src, param):
+    def mov_greg_to_param(self, src : greg_type, param : str):
         return self.asmwrap(f"sd {src},%[{param}]")
 
-    def mov_greg_imm(self, reg, imm):
+    def mov_greg_imm(self, reg : greg_type, imm : int):
         return self.asmwrap(f"li {reg},{imm}")
 
-    def mul_greg_imm(self, src, dst, offset):
+    def mul_greg_imm(self, src : greg_type, dst : greg_type, factor : int):
         #Gotta do 2 instructions for this
-        asmblock  = self.mov_greg_imm(dst, offset)
+        asmblock  = self.mov_greg_imm(dst, factor)
         asmblock += self.asmwrap(f"mul {dst},{src},{dst}")
         return asmblock
 
-    def add_greg_imm(self, reg, offset):
+    def add_greg_imm(self, reg : greg_type, offset : int):
         return self.asmwrap(f"add {reg},{reg},{offset}")
 
-    def add_greg_greg(self, dst, src, reg2):
+    def add_greg_greg(self, dst : greg_type, src : greg_type, reg2 : greg_type):
         return self.asmwrap(f"add {dst},{src},{reg2}")
 
-    def sub_greg_greg(self, dst, src, reg2):
+    def sub_greg_greg(self, dst : greg_type, src : greg_type, reg2 : greg_type):
         return self.asmwrap(f"sub {dst},{src},{reg2}")
 
-    def shift_greg_left(self, reg, offset):
-        return self.asmwrap(f"slli {reg},{reg},{offset}")
+    def shift_greg_left(self, reg : greg_type, bit_count : int):
+        return self.asmwrap(f"slli {reg},{reg},{bit_count}")
 
-    def shift_greg_right(self, reg, offset):
-        return self.asmwrap(f"srli {reg},{reg},{offset}")
+    def shift_greg_right(self, reg : greg_type, bit_count : int):
+        return self.asmwrap(f"srli {reg},{reg},{bit_count}")
 
-    def zero_greg(self, reg):
+    def zero_greg(self, reg : greg_type):
         return self.mov_greg("zero", reg)
 
-    def zero_freg(self, reg):
+    def zero_freg(self, reg : greg_type):
         return self.asmwrap(f"fcvt.d.w {reg}, zero")
 
     @property
@@ -155,26 +158,25 @@ class riscv64(asmgen):
     def max_prefetch_offset(self):
         return 32760
 
-    def min_load_immoff(self,datatype):
+    def min_load_immoff(self, dt : adt):
         return 0
 
-    def max_load_immoff(self,datatype):
+    def max_load_immoff(self, dt : adt):
         return 0
 
-    def min_fload_immoff(self,datatype):
+    def min_fload_immoff(self, dt : adt):
         return -(1<<11)
 
-    def max_fload_immoff(self,datatype):
+    def max_fload_immoff(self, dt : adt):
         return (1<<11) -1
 
-    def prefetch_l1_boff(self, a, offset):
+    def prefetch_l1_boff(self, areg : greg_type, offset : int):
         # Needs Zicbop
-        return self.asmwrap(f"prefetch.r {offset}({a})")
+        return self.asmwrap(f"prefetch.r {offset}({areg})")
 
-    def load_pointer(self, a, name):
-        return self.asmwrap(f"ld {a},%[{name}]")
+    def load_pointer(self, areg : greg_type, name : str):
+        return self.asmwrap(f"ld {areg},%[{name}]")
 
-    def load_scalar_immoff(self, areg, offset, freg, datatype):
-        assert isinstance(datatype, asm_data_type), f"Not an asm_data_type: {datatype}"
-        dt_suf = self.fdt_suffixes[datatype]
+    def load_scalar_immoff(self, areg : greg_type, offset : int, freg : freg_type,  dt : adt):
+        dt_suf = self.fdt_suffixes[dt]
         return self.asmwrap(f"fl{dt_suf} {freg}, {offset}({areg})")
