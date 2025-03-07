@@ -50,7 +50,7 @@ class neon_fma(opd3):
             # TODO: other types
         ]
 
-    def mlx_inst_str(self, a_dt : adt, b_dt : adt, suf : str) -> str:
+    def mlx_inst_str(self, a_dt : adt, b_dt : adt, c_dt : adt, suf : str) -> str:
         if a_dt in [adt.FP8E5M2, adt.FP8E4M3, adt.FP16, adt.FP32, adt.FP64]:
             return f"fml{suf}"
         if a_dt in [adt.BF16]:
@@ -122,7 +122,7 @@ class neon_fma(opd3):
 
 
 
-        inst = self.mlx_inst_str(a_dt=a_dt, b_dt=b_dt, suf=suf)
+        inst = self.mlx_inst_str(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt, suf=suf)
         if modifier.part in modifiers:
             ways = adt_size(c_dt)//adt_size(a_dt)
             inst += self.partial_inst_suffix(ways=ways, part=part)
