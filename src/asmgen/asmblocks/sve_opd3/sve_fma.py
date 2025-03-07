@@ -89,7 +89,7 @@ class sve_fma(opd3):
 
     def __call__(self, adreg : vreg_type, bdreg : vreg_type, cdreg : vreg_type,
                  a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[modifier] = [],
+                 modifiers : set[modifier] = set(),
                  **kwargs) -> str:
         self.check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
         #TODO: better system for checks
@@ -112,6 +112,8 @@ class sve_fma(opd3):
         if c_dt in [adt.UINT64, adt.UINT32, adt.UINT16]:
             if adt_size(a_dt) == adt_size(c_dt):
                 raise ValueError(f"only widening variants exist for unsigned integer types")
+
+        part = None
         if (adt_size(a_dt) < adt_size(c_dt)):
             if (not modifier.part in modifiers) or ('part' not in kwargs):
                 raise ValueError("SVE requires 'part' modifier and argument for widening operations")

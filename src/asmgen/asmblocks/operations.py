@@ -8,14 +8,14 @@ from ..registers import (
     adt_triple,
 )
 
-class widening_method:
+class widening_method(Enum):
     vec_group = auto()
     vec_multi = auto()
     dot_neighbours = auto()
     split_instructions = auto()
 
 #TODO: masked modifier
-class modifier:
+class modifier(Enum):
     np = auto()
     idx = auto()
     regidx = auto()
