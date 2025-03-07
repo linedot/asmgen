@@ -99,7 +99,7 @@ class rvv_fmul(opd3):
            (adt_is_float(a_dt) and adt_is_int(c_dt)):
                raise ValueError("Accumulator and multiplicands must be both either fp or int types")
         if (adt_size(a_dt) < adt_size(c_dt)):
-            if adt_is_int(c_dt) and modifiers.np in modifiers:
+            if adt_is_int(c_dt) and modifier.np in modifiers:
                raise ValueError("RVV has no np form for widening integer operation")
         if (adt_size(c_dt)//adt_size(a_dt)) > 2:
                raise ValueError("RVV only supports 2*SEW widening")
