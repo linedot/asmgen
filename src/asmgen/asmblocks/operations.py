@@ -9,6 +9,7 @@ from ..registers import (
 )
 
 class widening_method(Enum):
+    none = auto()
     vec_group = auto()
     vec_multi = auto()
     dot_neighbours = auto()

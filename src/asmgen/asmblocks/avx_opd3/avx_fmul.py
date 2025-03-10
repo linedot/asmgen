@@ -34,7 +34,7 @@ class avx_fmul(opd3):
 
     @property
     def widening_method(self) -> widening_method:
-        raise NotImplementedError("AVX mixed precision not implemented")
+        return widening_method.none
 
     def supported_triples(self) -> list[adt_triple]:
         supported_list = [
