@@ -158,19 +158,15 @@ class riscv64(asmgen):
     def max_prefetch_offset(self):
         return 32760
 
-    @property
     def min_load_immoff(self, dt : adt):
         return 0
 
-    @property
     def max_load_immoff(self, dt : adt):
         return 0
 
-    @property
     def min_fload_immoff(self, dt : adt):
         return -(1<<11)
 
-    @property
     def max_fload_immoff(self, dt : adt):
         return (1<<11) -1
 
