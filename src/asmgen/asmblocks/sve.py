@@ -93,7 +93,7 @@ class sve(aarch64):
 
     def indexable_elements(self, dt : adt) -> int:
         # 128 bits are indexable
-        return 16/adt_size(dt)
+        return 16//adt_size(dt)
 
     @property
     def c_simd_size_function(self) -> str:

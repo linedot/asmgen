@@ -125,7 +125,7 @@ class avxbase(asmgen):
         return False
 
     def indexable_elements(self, dt : adt):
-        return self.simd_size/adt_size(dt)
+        return self.simd_size//adt_size(dt)
 
     @property
     def max_gregs(self):
