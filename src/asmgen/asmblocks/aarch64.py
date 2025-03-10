@@ -140,8 +140,7 @@ class aarch64(asmgen):
     def max_prefetch_offset(self):
         return 32760
 
-    @property
-    def max_fload_immoff(self):
+    def max_fload_immoff(self, dt : adt):
         return 4095
 
     def load_scalar_immoff(self, areg : greg_type,

@@ -219,14 +219,13 @@ class avxbase(asmgen):
     def max_prefetch_offset(self):
         return 2**31
 
-    def min_load_immoff(self,datatype):
+    def min_load_immoff(self, dt : adt):
         return 0
 
-    def max_load_immoff(self,datatype):
+    def max_load_immoff(self, dt : adt):
         return 2**31
 
-    @property
-    def max_fload_immoff(self):
+    def max_fload_immoff(self, dt : adt):
         return 2**31
 
     @property
