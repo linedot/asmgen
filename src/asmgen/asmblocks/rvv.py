@@ -48,10 +48,10 @@ class rvv(riscv64):
          return "v" in extensions
 
     def isaquirks(self, rt : reg_tracker, dt : adt):
-        tmpreg_idx = rt.reserve_any_greg()
+        tmpreg_idx = rt.reserve_any_reg("greg")
         tmpreg = self.greg(tmpreg_idx)
         asmblock = self.vsetvlmax(tmpreg, dt)
-        rt.unuse_greg(tmpreg_idx)
+        rt.unuse_reg("greg", tmpreg_idx)
         return asmblock
 
     def vreg(self, reg_idx : int) -> vreg_type:
@@ -133,27 +133,27 @@ class rvv(riscv64):
     def max_load_voff(self):
         return 0
 
-    def load_vector(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+    def load_vector(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
         dt_suf = self.dt_suffixes[dt]
         return self.asmwrap(f"vl{dt_suf}.v {vreg}, ({areg})")
 
     # I'm not seeing equivalents in RVV, I think you're supposed to do things differently
     # (LMUL > 1?), vector index?
-    def load_vector_voff(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+    def load_vector_voff(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
         #raise NotImplementedError("RVV has no vector loads with address offset")
         # We can still load the vector - with max_load_{imm,v}off being 0, the generator will
         # just always pass an offset of 0 and add any offset to the address register after
-        if ignored_offset != 0:
+        if voffset != 0:
             raise NotImplementedError("RVV has no vector loads with address offset")
-        return self.load_vector(areg=areg, voffset=ignored_offset, vreg=vreg, dt=dt)
+        return self.load_vector(areg=areg, ignored_offset=voffset, vreg=vreg, dt=dt)
 
     def load_vector_dist1(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
         dt_suf = self.dt_suffixes[dt]
         return self.asmwrap(f"vls{dt_suf}.v {vreg}, ({areg}), zero")
 
-    def load_vector_dist1_boff(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+    def load_vector_dist1_boff(self, areg : greg_type, offset : int, vreg : vreg_type, dt : adt):
         #raise NotImplementedError("RVV has no vector loads with address offset")
-        return self.load_vector_dist1(areg=areg, ignored_offset=ignored_offset, vreg=vreg, dt=dt)
+        return self.load_vector_dist1(areg=areg, ignored_offset=offset, vreg=vreg, dt=dt)
     
     def load_vector_dist1_inc(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
         raise NotImplementedError("RVV has no vector loads with address increment")

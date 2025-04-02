@@ -1,4 +1,4 @@
-from asmgen.asmblocks.noarch import reg_tracker
+from asmgen.registers import reg_tracker
 from asmgen.cppgen.checkers import bi_u64_eq
 from asmgen.cppgen.declarations import vargen
 from asmgen.cppgen.expressions import identity
@@ -18,7 +18,7 @@ class greg_test_generator:
         test_name = "mov_imm_to_greg"
 
         varname = vg.new_var("std::uint64_t")
-        reg_idx = rt.reserve_any_greg()
+        reg_idx = rt.reserve_any_reg(type_tag="greg")
         reg = tcase.gen.greg(reg_idx)
         imm = tcase.random_immediate()
 
@@ -26,7 +26,7 @@ class greg_test_generator:
         asmblock += tcase.gen.mov_greg_imm(reg, imm)
         asmblock += tcase.gen.mov_greg_to_param(reg, varname)
 
-        rt.unuse_greg(reg_idx)
+        rt.unuse_reg(type_tag="greg", idx=reg_idx)
         check_function = bi_u64_eq(f"check_{test_name}",identity)
         tcase.add_test(test_name, rt, vg,
                       asmblock, 
@@ -39,13 +39,13 @@ class greg_test_generator:
         test_name = "add_imm_to_greg"
 
         varname = vg.new_var("std::uint64_t")
-        reg_idx = rt.reserve_any_greg()
+        reg_idx = rt.reserve_any_reg(type_tag="greg")
         reg = tcase.gen.greg(reg_idx)
         imm = tcase.random_immediate()
         asmblock  = tcase.gen.zero_greg(reg)
         asmblock += tcase.gen.add_greg_imm(reg, imm)
         asmblock += tcase.gen.mov_greg_to_param(reg, varname)
-        rt.unuse_greg(reg_idx)
+        rt.unuse_reg(type_tag="greg", idx=reg_idx)
         check_function = bi_u64_eq(f"check_{test_name}",identity)
         tcase.add_test(test_name, rt, vg,
                       asmblock, 
@@ -58,14 +58,14 @@ class greg_test_generator:
         test_name = "add_imm_to_greg_2_times"
 
         varname = vg.new_var("std::uint64_t")
-        reg_idx = rt.reserve_any_greg()
+        reg_idx = rt.reserve_any_reg(type_tag="greg")
         reg = tcase.gen.greg(reg_idx)
         imm = tcase.random_immediate()
         asmblock  = tcase.gen.zero_greg(reg)
         asmblock += tcase.gen.add_greg_imm(reg, imm)
         asmblock += tcase.gen.add_greg_imm(reg, imm)
         asmblock += tcase.gen.mov_greg_to_param(reg, varname)
-        rt.unuse_greg(reg_idx)
+        rt.unuse_reg(type_tag="greg", idx=reg_idx)
         check_function = bi_u64_eq(f"check_{test_name}",identity)
         tcase.add_test(test_name, rt, vg,
                       asmblock, 
@@ -78,9 +78,9 @@ class greg_test_generator:
         test_name = "add_greg_to_greg"
 
         varname = vg.new_var("std::uint64_t")
-        dst_idx = rt.reserve_any_greg()
-        reg1_idx = rt.reserve_any_greg()
-        reg2_idx = rt.reserve_any_greg()
+        dst_idx = rt.reserve_any_reg(type_tag="greg")
+        reg1_idx = rt.reserve_any_reg(type_tag="greg")
+        reg2_idx = rt.reserve_any_reg(type_tag="greg")
 
         dst = tcase.gen.greg(dst_idx)
         reg1 = tcase.gen.greg(reg1_idx)
@@ -96,9 +96,9 @@ class greg_test_generator:
         asmblock += tcase.gen.add_greg_greg(dst, reg1, reg2)
         asmblock += tcase.gen.mov_greg_to_param(dst, varname)
 
-        rt.unuse_greg(dst_idx)
-        rt.unuse_greg(reg1_idx)
-        rt.unuse_greg(reg2_idx)
+        rt.unuse_reg(type_tag="greg", idx=dst_idx)
+        rt.unuse_reg(type_tag="greg", idx=reg1_idx)
+        rt.unuse_reg(type_tag="greg", idx=reg2_idx)
 
         check_function = bi_u64_eq(f"check_{test_name}",identity)
         tcase.add_test(test_name, rt, vg,

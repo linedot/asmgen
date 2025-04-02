@@ -1,4 +1,3 @@
-from asmgen.asmblocks.noarch import reg_tracker
 from asmgen.registers import ( 
     asm_data_type as adt,
     asm_index_type as ait,

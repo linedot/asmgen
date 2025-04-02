@@ -21,8 +21,8 @@ from .avx_opd3 import avx_fma,avx_fmul
 
 class avxbase(asmgen):
 
-    greg_type : TypeAlias = greg
-    freg_type : TypeAlias = freg
+    greg_type : TypeAlias = x86_greg
+    freg_type : TypeAlias = avx_freg
     vreg_type : TypeAlias = vreg
     treg_type : TypeAlias = treg
 
@@ -63,28 +63,28 @@ class avxbase(asmgen):
 
     def jfzero(self, freg1 : freg_type, freg2 : freg_type,
                greg : greg_type, label : str,
-               datatype : adt) -> str:
-        suf = 's'+self.dt_suffixes[datatype]
+               dt : adt) -> str:
+        suf = 's'+self.dt_suffixes[dt]
         pfreg1 = prefix_if_raw_reg(freg1)
         pfreg2 = prefix_if_raw_reg(freg2)
-        asmblock  = self.zero_freg(freg2, datatype)
+        asmblock  = self.zero_freg(freg2, dt)
         asmblock += self.asmwrap(f"ucomi{suf} {pfreg2},{pfreg1}")
         asmblock += self.asmwrap(f"je .{label}%=")
         return asmblock
 
     def jvzero(self, vreg1 : vreg_type, freg : freg_type,
                vreg2 : vreg_type, greg : greg_type, label : str,
-               datatype : adt) -> str:
-        suf = 'p'+self.dt_suffixes[datatype]
+               dt : adt) -> str:
+        suf = 'p'+self.dt_suffixes[dt]
         pvreg1 = prefix_if_raw_reg(vreg1)
         pvreg2 = prefix_if_raw_reg(vreg2)
-        asmblock  = self.zero_vreg(vreg2, datatype)
+        asmblock  = self.zero_vreg(vreg2, dt)
         asmblock += self.asmwrap(f"vcmpeq{suf} {pvreg2},{pvreg1},{pvreg2}")
         asmblock += self.asmwrap(f"vptest {pvreg2},{pvreg2}")
         asmblock += self.asmwrap(f"jne .{label}%=")
         return asmblock
 
-    def xmm_to_ymm(self, vreg):
+    def xmm_to_ymm(self, vreg : xmm_vreg):
         return vreg.replace("xmm","ymm")
 
     @property
@@ -138,44 +138,44 @@ class avxbase(asmgen):
 
 
 
-    def mov_greg(self, src, dst):
+    def mov_greg(self, src : greg_type, dst : greg_type):
         psrc = prefix_if_raw_reg(src)
         pdst = prefix_if_raw_reg(dst)
         return self.asmwrap(f"movq {psrc}, {pdst}")
 
-    def mov_freg(self, src, dst, datatype : adt):
-        suf = 's'+self.dt_suffixes[datatype]
+    def mov_freg(self, src : freg_type, dst : freg_type, dt : adt):
+        suf = 's'+self.dt_suffixes[dt]
         return self.asmwrap(f"vmov{suf} {src}, {dst}")
 
-    def mov_greg_to_param(self, reg, param):
+    def mov_greg_to_param(self, reg : greg_type, param : str):
         preg = prefix_if_raw_reg(reg)
         return self.asmwrap(f"movq {preg},%[{param}]")
 
-    def mov_param_to_greg(self, param, reg):
+    def mov_param_to_greg(self, param : str, reg : greg_type):
         preg = prefix_if_raw_reg(reg)
         return self.asmwrap(f"movq %[{param}],{preg}")
 
-    def mov_param_to_greg_shift(self, param, dst, offset):
+    def mov_param_to_greg_shift(self, param : str, dst : greg_type, offset : int):
         pdst = prefix_if_raw_reg(dst)
         return self.asmwrap(f"leaq (,%[{param}],{1<<offset}),{pdst}")
 
-    def mov_greg_imm(self, reg, imm):
+    def mov_greg_imm(self, reg : greg_type, imm : int):
         preg = prefix_if_raw_reg(reg)
         return self.asmwrap(f"movq ${imm},{preg}")
 
-    def zero_greg(self, reg):
+    def zero_greg(self, reg : greg_type):
         return self.mov_greg_imm(reg, 0)
 
-    def add_greg_imm(self, reg, offset):
+    def add_greg_imm(self, reg : greg_type, offset : int):
         preg = prefix_if_raw_reg(reg)
         return self.asmwrap(f"addq ${offset},{preg}")
 
-    def mul_greg_imm(self, src, dst, offset):
+    def mul_greg_imm(self, src : greg_type, dst : greg_type, offset : int):
         pdst = prefix_if_raw_reg(dst)
         psrc = prefix_if_raw_reg(src)
         return self.asmwrap(f"imulq ${offset},{psrc},{pdst}")
 
-    def add_greg_greg(self, dst, reg1, reg2):
+    def add_greg_greg(self, dst : greg_type, reg1 : greg_type, reg2 : greg_type):
         pdst = prefix_if_raw_reg(dst)
         preg1 = prefix_if_raw_reg(reg1)
         preg2 = prefix_if_raw_reg(reg2)
@@ -189,27 +189,27 @@ class avxbase(asmgen):
     def has_add_greg_voff(self) -> bool:
         return True
 
-    def add_greg_voff(self, reg, offset, datatype):
+    def add_greg_voff(self, reg : greg_type, offset : int, dt : adt):
         offset = offset*self.simd_size
-        return self.add_greg_imm(reg, offset)
+        return self.add_greg_imm(reg=reg, offset=offset)
 
-    def shift_greg_left(self, reg, offset):
+    def shift_greg_left(self, reg : greg_type, offset : int):
         preg = prefix_if_raw_reg(reg)
         return self.asmwrap(f"shlq ${offset},{preg}")
 
-    def shift_greg_right(self, reg, offset):
+    def shift_greg_right(self, reg : greg_type, offset : int):
         preg = prefix_if_raw_reg(reg)
         return self.asmwrap(f"shrq ${offset},{preg}")
 
-    def greg(self, i):
+    def greg(self, i : int):
         return x86_greg.greg_names[i]
 
     def freg(self, reg_idx : int) -> freg_type:
         return avx_freg(reg_idx)
         #return f"xmm{i}"
 
-    def zero_freg(self,reg,datatype):
-        return self.zero_vreg(reg, datatype)
+    def zero_freg(self, freg : freg_type, dt : adt):
+        return self.zero_vreg(vreg=freg, dt=dt)
 
     @property
     def min_prefetch_offset(self):
@@ -236,67 +236,64 @@ class avxbase(asmgen):
     def max_load_voff(self):
         return 2**31/self.simd_size
 
-    def prefetch_l1_boff(self, reg, offset):
+    def prefetch_l1_boff(self, reg : greg_type, offset : int):
         preg = prefix_if_raw_reg(reg)
         return self.asmwrap(f"prefetcht0 {offset}({preg})")
 
-    def load_pointer(self, reg, name):
+    def load_pointer(self, reg : greg_type, name : str):
         preg = prefix_if_raw_reg(reg)
         return self.asmwrap(f"mov %[{name}],{preg}")
 
 
-    def load_vector_voff(self, a, voffset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        suf = 'p'+self.dt_suffixes[datatype]
-        pa = prefix_if_raw_reg(a)
-        pv = prefix_if_raw_reg(v)
+    def load_vector_voff(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+        suf = 'p'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pv = prefix_if_raw_reg(vreg)
         address = f"{voffset*self.simd_size}({pa})"
         if 0 == voffset:
             address = f"({pa})"
         return self.asmwrap(f"vmovu{suf} {address},{pv}")
 
-    def load_scalar_immoff(self, a, immoffset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        suf = 's'+self.dt_suffixes[datatype]
-        pa = prefix_if_raw_reg(a)
-        pv = prefix_if_raw_reg(v)
+    def load_scalar_immoff(self, areg : greg_type, immoffset : int, vreg : vreg_type, dt : adt):
+        suf = 's'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pv = prefix_if_raw_reg(vreg)
         address = f"{immoffset}({pa})"
         if 0 == immoffset:
             address = f"({pa})"
         return self.asmwrap(f"vmov{suf} {address},{pv}")
 
-    def load_vector(self, a, ignored_offset, v, datatype):
-        return self.load_vector_voff(a, 0, v, datatype)
+    def load_vector(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+        return self.load_vector_voff(areg=areg, voffset=0, vreg=vreg, dt=dt)
 
-    def load_vector_dist1_inc(self, a, ignored_offset, v, datatype):
+    def load_vector_dist1_inc(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
         raise NotImplementedError("AVX doesn't have a post-index load, use load_vector_dist1_boff instead")
 
-    def store_vector_voff(self, a, voffset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        suf = 'p'+self.dt_suffixes[datatype]
-        pa = prefix_if_raw_reg(a)
-        pv = prefix_if_raw_reg(v)
+    def store_vector_voff(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+        suf = 'p'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pv = prefix_if_raw_reg(vreg)
         address = f"{voffset*self.simd_size}({pa})"
         if 0 == voffset:
             address = f"({pa})"
         return self.asmwrap(f"vmovu{suf} {pv},{address}")
 
-    def store_vector(self, a, voffset, v, datatype):
-        return self.store_vector_voff(a, 0, v, datatype)
+    def store_vector(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+        return self.store_vector_voff(areg=areg, voffset=0, vreg=vreg, dt=dt)
 
 
     def load_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : adt):
+                    vreg : vreg_type, dt : adt):
         raise NotImplementedError("AVX has no load with immediate stride")
 
     def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : adt):
+                    vreg : vreg_type, dt : adt):
         raise NotImplementedError("AVX has no load with scalar register stride")
 
     def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
-                           vreg : vreg_type, datatype : adt,
+                           vreg : vreg_type, dt : adt,
                            indextype : ait):
-        suf = 's'+self.dt_suffixes[datatype]
+        suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
         pov = prefix_if_raw_reg(offvreg)
@@ -305,15 +302,15 @@ class avxbase(asmgen):
         return self.asmwrap(f"vgather{isuf}{suf} {address},{pov},{pv}")
 
     def store_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : adt):
+                    vreg : vreg_type, dt : adt):
         raise NotImplementedError("AVX has no store with immediate stride")
 
     def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : adt):
+                    vreg : vreg_type, dt : adt):
         raise NotImplementedError("AVX has no store with scalar register stride")
 
     def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
-                    vreg : vreg_type, datatype : adt):
+                    vreg : vreg_type, dt : adt):
         raise NotImplementedError("AVX has no store with vector register stride")
 
     # Unsupported functionality:
@@ -323,16 +320,21 @@ class avxbase(asmgen):
     def treg(self, reg_idx : int):
         raise NotImplementedError("SVE has no tiles, use SME")
 
-    def zero_treg(self, treg : treg_type, datatype : adt):
+    def zero_treg(self, treg : treg_type, dt : adt):
         raise NotImplementedError("SVE has no tiles, use SME")
 
     def store_tile(self, areg : greg_type,
                    ignored_offset : int,
                    treg : treg_type,
-                   datatype : adt):
+                   dt : adt):
         raise NotImplementedError("SVE has no tiles, use SME")
 
 class fma128(avxbase):
+
+    greg_type : TypeAlias = x86_greg
+    freg_type : TypeAlias = avx_freg
+    vreg_type : TypeAlias = xmm_vreg
+    treg_type : TypeAlias = treg
 
     def __init__(self):
         super(fma128,self).__init__()
@@ -365,28 +367,31 @@ class fma128(avxbase):
     def simd_size(self):
         return 16
 
-    def zero_vreg(self,reg,datatype):
-        preg = prefix_if_raw_reg(reg)
+    def zero_vreg(self, vreg : vreg_type, dt : adt):
+        preg = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vpxor {preg},{preg},{preg}")
 
     def vreg(self, reg_idx):
         return xmm_vreg(reg_idx)
 
-    def load_vector_dist1(self, a, ignored_offset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        suf = 's'+self.dt_suffixes[datatype]
-        pa = prefix_if_raw_reg(a)
-        pv = self.xmm_to_ymm(prefix_if_raw_reg(v))
+    def load_vector_dist1(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+        suf = 's'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pv = self.xmm_to_ymm(prefix_if_raw_reg(vreg))
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_boff(self, a, offset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        suf = 's'+self.dt_suffixes[datatype]
-        pa = prefix_if_raw_reg(a)
-        pv = self.xmm_to_ymm(prefix_if_raw_reg(v))
+    def load_vector_dist1_boff(self, areg : greg_type, offset : int, vreg : vreg_type, dt : adt):
+        suf = 's'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pv = self.xmm_to_ymm(prefix_if_raw_reg(vreg))
         return self.asmwrap(f"vbroadcast{suf} {offset}({pa}),{pv}")
 
 class fma256(avxbase):
+
+    greg_type : TypeAlias = x86_greg
+    freg_type : TypeAlias = avx_freg
+    vreg_type : TypeAlias = ymm_vreg
+    treg_type : TypeAlias = treg
 
     def __init__(self):
         super(fma256,self).__init__()
@@ -419,30 +424,28 @@ class fma256(avxbase):
     def simd_size(self):
         return 32
 
-    def zero_vreg(self,reg,datatype):
-        preg = prefix_if_raw_reg(reg)
+    def zero_vreg(self, vreg : vreg_type, dt : adt):
+        preg = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vpxor {preg},{preg},{preg}")
 
     def vreg(self, reg_idx : int):
         return ymm_vreg(reg_idx)
 
-    def load_vector_dist1(self, a, ignored_offset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        suf = 's'+self.dt_suffixes[datatype]
-        pa = prefix_if_raw_reg(a)
-        pv = prefix_if_raw_reg(v)
+    def load_vector_dist1(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+        suf = 's'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_boff(self, a, offset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        suf = 's'+self.dt_suffixes[datatype]
-        pa = prefix_if_raw_reg(a)
-        pv = prefix_if_raw_reg(v)
+    def load_vector_dist1_boff(self, areg : greg_type, offset : int, vreg : vreg_type, dt : adt):
+        suf = 's'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} {offset}({pa}),{pv}")
 
 class avx512(avxbase):
 
-    greg_type : TypeAlias = greg
+    greg_type : TypeAlias = x86_greg
     freg_type : TypeAlias = freg
     vreg_type : TypeAlias = vreg
 
@@ -477,31 +480,29 @@ class avx512(avxbase):
     def simd_size(self):
         return 64
 
-    def zero_vreg(self, reg, datatype):
-        preg = prefix_if_raw_reg(reg)
+    def zero_vreg(self, vreg : vreg_type, dt : adt):
+        preg = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vpxorq {preg},{preg},{preg}")
 
     def vreg(self, reg_idx : int):
         return zmm_vreg(reg_idx)
 
-    def load_vector_dist1(self, a, ignored_offset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        suf = 's'+self.dt_suffixes[datatype]
-        pa = prefix_if_raw_reg(a)
-        pv = prefix_if_raw_reg(v)
+    def load_vector_dist1(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+        suf = 's'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_boff(self, a, offset, v, datatype):
-        assert isinstance(datatype, adt), f"Not an adt: {datatype}"
-        suf = 's'+self.dt_suffixes[datatype]
-        pa = prefix_if_raw_reg(a)
-        pv = prefix_if_raw_reg(v)
+    def load_vector_dist1_boff(self, areg : greg_type, offset : int, vreg : vreg_type, dt : adt):
+        suf = 's'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} {offset}({pa}),{pv}")
 
     def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
-                           vreg : vreg_type, datatype : adt,
+                           vreg : vreg_type, dt : adt,
                            indextype : ait):
-        suf = 's'+self.dt_suffixes[datatype]
+        suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
         pov = prefix_if_raw_reg(offvreg)

@@ -49,10 +49,10 @@ class rvv071(riscv64):
          return "v" in extensions
 
     def isaquirks(self, rt : reg_tracker, dt : adt):
-        tmpreg_idx = rt.reserve_any_greg()
+        tmpreg_idx = rt.reserve_any_reg("greg")
         tmpreg = self.greg(tmpreg_idx)
         asmblock = self.vsetvlmax(tmpreg, dt)
-        rt.unuse_greg(tmpreg_idx)
+        rt.unuse_reg("greg", tmpreg_idx)
         return asmblock
 
     def jvzero(self, vreg1 : vreg_type, freg : freg_type,

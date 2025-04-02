@@ -1,5 +1,4 @@
 from ...registers import (
-    reg_tracker,
     asm_data_type as adt,
     adt_triple,
     adt_size,

@@ -20,18 +20,18 @@ class vec_test_generator:
 
         asmblock += testcase.gen.isaquirks(rt, dt.SINGLE)
 
-        areg_idx = rt.reserve_any_greg()
+        areg_idx = rt.reserve_any_reg(type_tag="greg")
         areg = testcase.gen.greg(areg_idx)
         asmblock += testcase.gen.zero_greg(areg)
         asmblock += testcase.gen.mov_param_to_greg(varname, areg)
 
-        vreg_idx = rt.reserve_any_vreg()
+        vreg_idx = rt.reserve_any_reg(type_tag="vreg")
         vreg = testcase.gen.vreg(vreg_idx)
         asmblock += testcase.gen.zero_vreg(vreg, dt.SINGLE)
         asmblock += testcase.gen.load_vector(areg, 0, vreg, dt.SINGLE)
 
-        rt.unuse_greg(areg_idx)
-        rt.unuse_vreg(vreg_idx)
+        rt.unuse_reg(type_tag="greg", idx=areg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=vreg_idx)
 
         check_function = always_true(f"check_{test_name}")
         testcase.add_test(test_name, rt, vg,
@@ -53,18 +53,18 @@ class vec_test_generator:
         asmblock = ""
         asmblock += testcase.gen.isaquirks(rt, dt.DOUBLE)
 
-        areg_idx = rt.reserve_any_greg()
+        areg_idx = rt.reserve_any_reg(type_tag="greg")
         areg = testcase.gen.greg(areg_idx)
         asmblock += testcase.gen.zero_greg(areg)
         asmblock += testcase.gen.mov_param_to_greg(varname, areg)
 
-        vreg_idx = rt.reserve_any_vreg()
+        vreg_idx = rt.reserve_any_reg(type_tag="vreg")
         vreg = testcase.gen.vreg(vreg_idx)
         asmblock += testcase.gen.zero_vreg(vreg, dt.DOUBLE)
         asmblock += testcase.gen.load_vector(areg, 0, vreg, dt.DOUBLE)
 
-        rt.unuse_greg(areg_idx)
-        rt.unuse_vreg(vreg_idx)
+        rt.unuse_reg(type_tag="greg", idx=areg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=vreg_idx)
 
         check_function = always_true(f"check_{test_name}")
         testcase.add_test(test_name, rt, vg,
@@ -95,11 +95,11 @@ class vec_test_generator:
                              imm3,
                              vt=vio_type.INPUT)
 
-        avreg_idx = rt.reserve_any_vreg()
+        avreg_idx = rt.reserve_any_reg(type_tag="vreg")
         avreg = testcase.gen.vreg(avreg_idx)
-        bvreg_idx = rt.reserve_any_vreg()
+        bvreg_idx = rt.reserve_any_reg(type_tag="vreg")
         bvreg = testcase.gen.vreg(bvreg_idx)
-        cvreg_idx = rt.reserve_any_vreg()
+        cvreg_idx = rt.reserve_any_reg(type_tag="vreg")
         cvreg = testcase.gen.vreg(cvreg_idx)
 
         asmblock  = testcase.gen.isaquirks(rt, dt.SINGLE)
@@ -109,29 +109,29 @@ class vec_test_generator:
         asmblock += testcase.gen.zero_vreg(cvreg, dt.SINGLE)
 
 
-        aareg_idx = rt.reserve_any_greg()
+        aareg_idx = rt.reserve_any_reg(type_tag="greg")
         aareg = testcase.gen.greg(aareg_idx)
         asmblock += testcase.gen.mov_param_to_greg(avec, aareg)
         asmblock += testcase.gen.load_vector(aareg, 0, avreg, dt.SINGLE)
-        rt.unuse_greg(aareg_idx)
+        rt.unuse_reg(type_tag="greg", idx=aareg_idx)
 
-        bareg_idx = rt.reserve_any_greg()
+        bareg_idx = rt.reserve_any_reg(type_tag="greg")
         bareg = testcase.gen.greg(bareg_idx)
         asmblock += testcase.gen.mov_param_to_greg(bvec, bareg)
         asmblock += testcase.gen.load_vector(bareg, 0, bvreg, dt.SINGLE)
-        rt.unuse_greg(bareg_idx)
+        rt.unuse_reg(type_tag="greg", idx=bareg_idx)
 
-        careg_idx = rt.reserve_any_greg()
+        careg_idx = rt.reserve_any_reg(type_tag="greg")
         careg = testcase.gen.greg(careg_idx)
         asmblock += testcase.gen.mov_param_to_greg(cvec, careg)
         asmblock += testcase.gen.load_vector(careg, 0, cvreg, dt.SINGLE)
         asmblock += testcase.gen.fma(avreg, bvreg, cvreg, dt.SINGLE, dt.SINGLE, dt.SINGLE)
         asmblock += testcase.gen.store_vector(careg, 0, cvreg, dt.SINGLE)
-        rt.unuse_greg(careg_idx)
+        rt.unuse_reg(type_tag="greg", idx=careg_idx)
 
-        rt.unuse_vreg(avreg_idx)
-        rt.unuse_vreg(bvreg_idx)
-        rt.unuse_vreg(cvreg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=avreg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=bvreg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=cvreg_idx)
 
         extra_prepare  = f"std::vector<float> result({simd_nelements});\n"
         # adding up in python will actually result in failures
@@ -167,11 +167,11 @@ class vec_test_generator:
                              imm3,
                              vt=vio_type.INPUT)
 
-        avreg_idx = rt.reserve_any_vreg()
+        avreg_idx = rt.reserve_any_reg(type_tag="vreg")
         avreg = testcase.gen.vreg(avreg_idx)
-        bvreg_idx = rt.reserve_any_vreg()
+        bvreg_idx = rt.reserve_any_reg(type_tag="vreg")
         bvreg = testcase.gen.vreg(bvreg_idx)
-        cvreg_idx = rt.reserve_any_vreg()
+        cvreg_idx = rt.reserve_any_reg(type_tag="vreg")
         cvreg = testcase.gen.vreg(cvreg_idx)
 
         asmblock  = testcase.gen.isaquirks(rt, dt.DOUBLE)
@@ -181,29 +181,29 @@ class vec_test_generator:
         asmblock += testcase.gen.zero_vreg(cvreg, dt.DOUBLE)
 
 
-        aareg_idx = rt.reserve_any_greg()
+        aareg_idx = rt.reserve_any_reg(type_tag="greg")
         aareg = testcase.gen.greg(aareg_idx)
         asmblock += testcase.gen.mov_param_to_greg(avec, aareg)
         asmblock += testcase.gen.load_vector(aareg, 0, avreg, dt.DOUBLE)
-        rt.unuse_greg(aareg_idx)
+        rt.unuse_reg(type_tag="greg", idx=aareg_idx)
 
-        bareg_idx = rt.reserve_any_greg()
+        bareg_idx = rt.reserve_any_reg(type_tag="greg")
         bareg = testcase.gen.greg(bareg_idx)
         asmblock += testcase.gen.mov_param_to_greg(bvec, bareg)
         asmblock += testcase.gen.load_vector(bareg, 0, bvreg, dt.DOUBLE)
-        rt.unuse_greg(bareg_idx)
+        rt.unuse_reg(type_tag="greg", idx=bareg_idx)
 
-        careg_idx = rt.reserve_any_greg()
+        careg_idx = rt.reserve_any_reg(type_tag="greg")
         careg = testcase.gen.greg(careg_idx)
         asmblock += testcase.gen.mov_param_to_greg(cvec, careg)
         asmblock += testcase.gen.load_vector(careg, 0, cvreg, dt.DOUBLE)
         asmblock += testcase.gen.fma(avreg, bvreg, cvreg, dt.DOUBLE, dt.DOUBLE, dt.DOUBLE)
         asmblock += testcase.gen.store_vector(careg, 0, cvreg, dt.DOUBLE)
-        rt.unuse_greg(careg_idx)
+        rt.unuse_reg(type_tag="greg", idx=careg_idx)
 
-        rt.unuse_vreg(avreg_idx)
-        rt.unuse_vreg(bvreg_idx)
-        rt.unuse_vreg(cvreg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=avreg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=bvreg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=cvreg_idx)
 
         extra_prepare  = f"std::vector<double> result({simd_nelements});\n"
         # adding up in python will actually result in failures
@@ -234,9 +234,9 @@ class vec_test_generator:
                              imm2,
                              vt=vio_type.INPUT)
 
-        avreg_idx = rt.reserve_any_vreg()
+        avreg_idx = rt.reserve_any_reg(type_tag="vreg")
         avreg = testcase.gen.vreg(avreg_idx)
-        bvreg_idx = rt.reserve_any_vreg()
+        bvreg_idx = rt.reserve_any_reg(type_tag="vreg")
         bvreg = testcase.gen.vreg(bvreg_idx)
 
         asmblock  = testcase.gen.isaquirks(rt, dt.SINGLE)
@@ -244,23 +244,23 @@ class vec_test_generator:
         asmblock += testcase.gen.zero_vreg(avreg, dt.SINGLE)
         asmblock += testcase.gen.zero_vreg(bvreg, dt.SINGLE)
 
-        aareg_idx = rt.reserve_any_greg()
+        aareg_idx = rt.reserve_any_reg(type_tag="greg")
         aareg = testcase.gen.greg(aareg_idx)
         asmblock += testcase.gen.mov_param_to_greg(avec, aareg)
         asmblock += testcase.gen.load_vector(aareg, 0, avreg, dt.SINGLE)
 
-        bareg_idx = rt.reserve_any_greg()
+        bareg_idx = rt.reserve_any_reg(type_tag="greg")
         bareg = testcase.gen.greg(bareg_idx)
         asmblock += testcase.gen.mov_param_to_greg(bvec, bareg)
         asmblock += testcase.gen.load_vector(bareg, 0, bvreg, dt.SINGLE)
-        rt.unuse_greg(bareg_idx)
+        rt.unuse_reg(type_tag="greg", idx=bareg_idx)
 
         asmblock += testcase.gen.fmul(avreg, bvreg, avreg, dt.SINGLE, dt.SINGLE, dt.SINGLE)
         asmblock += testcase.gen.store_vector(aareg, 0, avreg, dt.SINGLE)
-        rt.unuse_greg(aareg_idx)
+        rt.unuse_reg(type_tag="greg", idx=aareg_idx)
 
-        rt.unuse_vreg(avreg_idx)
-        rt.unuse_vreg(bvreg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=avreg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=bvreg_idx)
 
         extra_prepare  = f"std::vector<float> result({simd_nelements});\n"
         # adding up in python will actually result in failures
@@ -291,9 +291,9 @@ class vec_test_generator:
                              imm2,
                              vt=vio_type.INPUT)
 
-        avreg_idx = rt.reserve_any_vreg()
+        avreg_idx = rt.reserve_any_reg(type_tag="vreg")
         avreg = testcase.gen.vreg(avreg_idx)
-        bvreg_idx = rt.reserve_any_vreg()
+        bvreg_idx = rt.reserve_any_reg(type_tag="vreg")
         bvreg = testcase.gen.vreg(bvreg_idx)
 
         asmblock  = testcase.gen.isaquirks(rt, dt.DOUBLE)
@@ -301,23 +301,23 @@ class vec_test_generator:
         asmblock += testcase.gen.zero_vreg(avreg, dt.DOUBLE)
         asmblock += testcase.gen.zero_vreg(bvreg, dt.DOUBLE)
 
-        aareg_idx = rt.reserve_any_greg()
+        aareg_idx = rt.reserve_any_reg(type_tag="greg")
         aareg = testcase.gen.greg(aareg_idx)
         asmblock += testcase.gen.mov_param_to_greg(avec, aareg)
         asmblock += testcase.gen.load_vector(aareg, 0, avreg, dt.DOUBLE)
 
-        bareg_idx = rt.reserve_any_greg()
+        bareg_idx = rt.reserve_any_reg(type_tag="greg")
         bareg = testcase.gen.greg(bareg_idx)
         asmblock += testcase.gen.mov_param_to_greg(bvec, bareg)
         asmblock += testcase.gen.load_vector(bareg, 0, bvreg, dt.DOUBLE)
-        rt.unuse_greg(bareg_idx)
+        rt.unuse_reg(type_tag="greg", idx=bareg_idx)
 
         asmblock += testcase.gen.fmul(avreg, bvreg, avreg, dt.DOUBLE, dt.DOUBLE, dt.DOUBLE)
         asmblock += testcase.gen.store_vector(aareg, 0, avreg, dt.DOUBLE)
-        rt.unuse_greg(aareg_idx)
+        rt.unuse_reg(type_tag="greg", idx=aareg_idx)
 
-        rt.unuse_vreg(avreg_idx)
-        rt.unuse_vreg(bvreg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=avreg_idx)
+        rt.unuse_reg(type_tag="vreg", idx=bvreg_idx)
 
         extra_prepare  = f"std::vector<double> result({simd_nelements});\n"
         # adding up in python will actually result in failures

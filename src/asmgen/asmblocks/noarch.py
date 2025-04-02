@@ -106,12 +106,12 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def indexable_elements(self, datatype : asm_data_type) -> int:
+    def indexable_elements(self, dt : asm_data_type) -> int:
         raise NotImplementedError(NIE_MESSAGE)
 
     @property
     @abstractmethod
-    def max_tregs(self, datatype : asm_data_type) -> int:
+    def max_tregs(self, dt : asm_data_type) -> int:
         raise NotImplementedError(NIE_MESSAGE)
 
     @property
@@ -150,15 +150,15 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def min_load_immoff(self, datatype : asm_data_type) -> int:
+    def min_load_immoff(self, dt : asm_data_type) -> int:
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def max_load_immoff(self, datatype : asm_data_type) -> int:
+    def max_load_immoff(self, dt : asm_data_type) -> int:
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def max_fload_immoff(self, datatype : asm_data_type) -> int:
+    def max_fload_immoff(self, dt : asm_data_type) -> int:
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
@@ -176,13 +176,13 @@ class asmgen(ABC):
     @abstractmethod
     def jfzero(self, freg1 : freg_type, freg2 : freg_type,
                greg : greg_type, label : str,
-               datatype : asm_data_type) -> str:
+               dt : asm_data_type) -> str:
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def jvzero(self, vreg1 : vreg_type, freg : freg_type,
                vreg2 : vreg_type, greg : greg_type, label : str,
-               datatype : asm_data_type) -> str:
+               dt : asm_data_type) -> str:
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
@@ -206,11 +206,11 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def zero_vreg(self, vreg : vreg_type, datatype : asm_data_type) -> str:
+    def zero_vreg(self, vreg : vreg_type, dt : asm_data_type) -> str:
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def zero_treg(self, treg : treg_type, datatype : asm_data_type) -> str:
+    def zero_treg(self, treg : treg_type, dt : asm_data_type) -> str:
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
@@ -218,7 +218,7 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def mov_freg(self, src : freg_type, dst : freg_type, datatype : asm_data_type) -> str:
+    def mov_freg(self, src : freg_type, dst : freg_type, dt : asm_data_type) -> str:
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
@@ -253,7 +253,7 @@ class asmgen(ABC):
 
     @abstractmethod
     def add_greg_voff(self, reg : greg_type, offset : int,
-                      datatype : asm_data_type) -> str:
+                      dt : asm_data_type) -> str:
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
@@ -278,77 +278,77 @@ class asmgen(ABC):
 
     @abstractmethod
     def load_scalar_immoff(self, areg : greg_type, offset : int,
-                           freg : freg_type, datatype : asm_data_type):
+                           freg : freg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_voff(self, areg : greg_type, voffset : int,
-                         vreg : vreg_type, datatype : asm_data_type):
+                         vreg : vreg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector(self, areg : greg_type, ignored_offset : int,
-                    vreg : vreg_type, datatype : asm_data_type):
+                    vreg : vreg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : asm_data_type):
+                    vreg : vreg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : asm_data_type):
+                    vreg : vreg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
-                           vreg : vreg_type, datatype : asm_data_type,
+                           vreg : vreg_type, dt : asm_data_type,
                            indextype : asm_index_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_dist1(self, areg : greg_type, ignored_offset : int,
-                          vreg : vreg_type, datatype : asm_data_type):
+                          vreg : vreg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_dist1_boff(self, areg : greg_type, offset : int,
-                               vreg : vreg_type, datatype : asm_data_type):
+                               vreg : vreg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def load_vector_dist1_inc(self, areg : greg_type, ignored_offset : int,
-                              vreg : vreg_type, datatype : asm_data_type):
+                              vreg : vreg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def store_vector(self, areg : greg_type, ignored_offset : int,
-                     vreg : vreg_type, datatype : asm_data_type):
+                     vreg : vreg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def store_vector_voff(self, areg : greg_type, voffset : int,
-                          vreg : vreg_type, datatype : asm_data_type):
+                          vreg : vreg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def store_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : asm_data_type):
+                    vreg : vreg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : asm_data_type):
+                    vreg : vreg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
-                             vreg : vreg_type, datatype : asm_data_type,
+                             vreg : vreg_type, dt : asm_data_type,
                              indextype : asm_index_type):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
     def store_tile(self, areg : greg_type, ignored_offset : int,
-                   treg : treg_type, datatype : asm_data_type):
+                   treg : treg_type, dt : asm_data_type):
         raise NotImplementedError(NIE_MESSAGE)

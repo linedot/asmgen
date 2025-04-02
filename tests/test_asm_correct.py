@@ -1,5 +1,6 @@
-from asmgen.asmblocks.noarch import asmgen,reg_tracker
-from asmgen.asmblocks.noarch import asm_data_type as dt
+from asmgen.registers import reg_tracker
+from asmgen.registers import asm_data_type as dt
+from asmgen.asmblocks.noarch import asmgen
 from asmgen.asmblocks.avx_fma import fma128,fma256,avx512
 from asmgen.asmblocks.neon import neon
 from asmgen.asmblocks.sve import sve
@@ -77,7 +78,12 @@ class asm_correctness_test(unittest.TestCase,testcase):
 
         # Generating test sources
         vg = vargen()
-        rt = reg_tracker(cls.gen.max_gregs, cls.gen.max_vregs, cls.gen.max_fregs)
+        reg_init_list = [
+                ("greg", cls.gen.max_gregs),
+                ("vreg", cls.gen.max_vregs),
+                ("freg", cls.gen.max_fregs)
+                ]
+        rt = reg_tracker(reg_type_init_list=reg_init_list)
 
         # Run all generators
         generators = [getattr(asm_test_generator,name) for name in dir(asm_test_generator) if name.startswith("generate_")]
@@ -157,8 +163,8 @@ class asm_correctness_test(unittest.TestCase,testcase):
         preparation = vg.get_declarations()
         preparation += "\n"
         preparation += extra_prepare
-        clobbered_gregs = [cls.gen.greg(i) for i in rt.get_clobbered_gregs()]
-        clobbered_vregs = [cls.gen.vreg(i) for i in rt.get_clobbered_vregs()]
+        clobbered_gregs = [cls.gen.greg(i) for i in rt.get_clobbered_regs(type_tag="greg")]
+        clobbered_vregs = [cls.gen.vreg(i) for i in rt.get_clobbered_regs(type_tag="vreg")]
 
         inputs : list[tuple[str,str,str]] = \
                 [(varname,"m",init) for varname,init,vt in vg.get_variables() \
