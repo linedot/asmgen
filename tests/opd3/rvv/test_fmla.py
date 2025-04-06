@@ -1,3 +1,6 @@
+"""
+Tests RVV fma instruction code generation
+"""
 import unittest
 
 from asmgen.asmblocks.rvv import rvv
@@ -6,7 +9,13 @@ from asmgen.registers import asm_data_type as adt
 from asmgen.asmblocks.operations import modifier as mod
 
 class test_rvv_opd3(unittest.TestCase):
+    """
+    Tests RVV opd3 operations
+    """
     def test_fmla(self):
+        """
+        Tests that the RVV generator generates correct FMA instructions
+        """
         gen = rvv()
         gen.set_output_inline(yesno=False)
 
@@ -37,6 +46,6 @@ class test_rvv_opd3(unittest.TestCase):
 
         self.assertEqual(
             "vfwnmsac.vf v0,v2,f0\n",
-            gen.fma(adreg=gen.vreg(2),bdreg=gen.freg(0),cdreg=gen.vreg(0),
+            gen.fma(adreg=gen.vreg(2),bdreg=gen.freg(0,adt.FP16),cdreg=gen.vreg(0),
                     a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32,
-                    modifiers={mod.np,mod.vf}))
+                    modifiers={mod.NP,mod.VF}))

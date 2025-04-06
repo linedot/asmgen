@@ -1,3 +1,6 @@
+"""
+Tests NEON/ASIMD fmul instruction code generation
+"""
 import unittest
 
 from asmgen.asmblocks.neon import neon
@@ -6,7 +9,13 @@ from asmgen.registers import asm_data_type as adt
 from asmgen.asmblocks.operations import modifier as mod
 
 class test_neon_opd3(unittest.TestCase):
+    """
+    Tests NEON/ASIMD opd3 operations
+    """
     def test_fmul(self):
+        """
+        Tests that the NEON/ASIMD generator generates correct FMUL instructions
+        """
         gen = neon()
         gen.set_output_inline(yesno=False)
 
@@ -33,4 +42,4 @@ class test_neon_opd3(unittest.TestCase):
         with self.assertRaises(ValueError):
             gen.fmul(adreg=gen.vreg(1),bdreg=gen.vreg(2),cdreg=gen.vreg(0),
                      a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32,
-                     modifiers={mod.part}, part=0)
+                     modifiers={mod.PART}, part=0)

@@ -1,98 +1,117 @@
+"""
+Generator for tests of SIMD/vector ASM
+"""
+
 from asmgen.asmblocks.noarch import asm_data_type as dt, reg_tracker
 from asmgen.cppgen.checkers import always_true, vec_fp64_close, vec_fp32_close
 from asmgen.cppgen.expressions import identity
 from asmgen.cppgen.declarations import vargen, vio_type
-import logging
+
+
+# These will always be complex
+# pylint: disable=too-many-locals
 
 class vec_test_generator:
+    """
+    Generator of tests of operations on SIMD/vector registers
+    """
     @classmethod
     def generate_mov_fp32_to_vreg(cls, testcase, rt : reg_tracker, vg : vargen):
-        log = logging.getLogger("ASMCORTEST")
+        """
+        Tests correctness of an ASM block that moves FP32 values from
+        memory to a SIMD/vector register
+        """
         test_name = "mov_fp32_to_vreg"
         imm = testcase.random_fimmediate()
-        varname = vg.new_vector("float",
-                                "get_simd_size()/sizeof(float)",
-                                imm,
+        varname = vg.new_vector(cpp_type="float",
+                                size="get_simd_size()/sizeof(float)",
+                                fillwith=imm,
                                 vt=vio_type.INPUT)
 
 
         asmblock = ""
 
-        asmblock += testcase.gen.isaquirks(rt, dt.SINGLE)
+        asmblock += testcase.gen.isaquirks(rt=rt, dt=dt.SINGLE)
 
         areg_idx = rt.reserve_any_reg(type_tag="greg")
         areg = testcase.gen.greg(areg_idx)
-        asmblock += testcase.gen.zero_greg(areg)
-        asmblock += testcase.gen.mov_param_to_greg(varname, areg)
+        asmblock += testcase.gen.zero_greg(greg=areg)
+        asmblock += testcase.gen.mov_param_to_greg(param=varname, dst=areg)
 
         vreg_idx = rt.reserve_any_reg(type_tag="vreg")
         vreg = testcase.gen.vreg(vreg_idx)
-        asmblock += testcase.gen.zero_vreg(vreg, dt.SINGLE)
-        asmblock += testcase.gen.load_vector(areg, 0, vreg, dt.SINGLE)
+        asmblock += testcase.gen.zero_vreg(vreg=vreg, dt=dt.SINGLE)
+        asmblock += testcase.gen.load_vector(areg=areg, vreg=vreg, dt=dt.SINGLE)
 
         rt.unuse_reg(type_tag="greg", idx=areg_idx)
         rt.unuse_reg(type_tag="vreg", idx=vreg_idx)
 
         check_function = always_true(f"check_{test_name}")
-        testcase.add_test(test_name, rt, vg,
-                      asmblock, 
-                      check_function,
-                      f"check_{test_name}()")
+        testcase.add_test(name=test_name, rt=rt, vg=vg,
+                          asmblock=asmblock,
+                          check_function_definition=check_function,
+                          check=f"check_{test_name}()")
 
     @classmethod
     def generate_mov_fp64_to_vreg(cls, testcase, rt : reg_tracker, vg : vargen):
-        log = logging.getLogger("ASMCORTEST")
+        """
+        Tests correctness of an ASM block that moves FP64 values from
+        memory to a SIMD/vector register
+        """
         test_name = "mov_fp64_to_vreg"
         imm = testcase.random_fimmediate()
-        varname = vg.new_vector("double",
-                                "get_simd_size()/sizeof(double)",
-                                imm,
+        varname = vg.new_vector(cpp_type="double",
+                                size="get_simd_size()/sizeof(double)",
+                                fillwith=imm,
                                 vt=vio_type.INPUT)
 
 
         asmblock = ""
-        asmblock += testcase.gen.isaquirks(rt, dt.DOUBLE)
+        asmblock += testcase.gen.isaquirks(rt=rt, dt=dt.DOUBLE)
 
         areg_idx = rt.reserve_any_reg(type_tag="greg")
         areg = testcase.gen.greg(areg_idx)
-        asmblock += testcase.gen.zero_greg(areg)
-        asmblock += testcase.gen.mov_param_to_greg(varname, areg)
+        asmblock += testcase.gen.zero_greg(greg=areg)
+        asmblock += testcase.gen.mov_param_to_greg(param=varname, dst=areg)
 
         vreg_idx = rt.reserve_any_reg(type_tag="vreg")
         vreg = testcase.gen.vreg(vreg_idx)
-        asmblock += testcase.gen.zero_vreg(vreg, dt.DOUBLE)
-        asmblock += testcase.gen.load_vector(areg, 0, vreg, dt.DOUBLE)
+        asmblock += testcase.gen.zero_vreg(vreg=vreg, dt=dt.DOUBLE)
+        asmblock += testcase.gen.load_vector(areg=areg, vreg=vreg, dt=dt.DOUBLE)
 
         rt.unuse_reg(type_tag="greg", idx=areg_idx)
         rt.unuse_reg(type_tag="vreg", idx=vreg_idx)
 
         check_function = always_true(f"check_{test_name}")
-        testcase.add_test(test_name, rt, vg,
-                      asmblock, 
-                      check_function,
-                      f"check_{test_name}()")
+        testcase.add_test(name=test_name, rt=rt, vg=vg,
+                          asmblock=asmblock,
+                          check_function_definition=check_function,
+                          check=f"check_{test_name}()")
 
     @classmethod
     def generate_vec_fma_fp32(cls, testcase, rt : reg_tracker, vg : vargen):
-        log = logging.getLogger("ASMCORTEST")
+        """
+        Tests correctness of an ASM block that performs an FMA instruction
+        on SIMD/vector registers filled with FP32 elements
+        """
         test_name = "vec_fma_fp32"
 
         simd_nelements = "get_simd_size()/sizeof(float)"
 
         imm1 = testcase.random_fimmediate()
-        avec = vg.new_vector("float",
-                             simd_nelements,
-                             imm1,
+        avec = vg.new_vector(cpp_type="float",
+                             size=simd_nelements,
+                             fillwith=imm1,
                              vt=vio_type.INPUT)
         imm2 = testcase.random_fimmediate()
-        bvec = vg.new_vector("float",
-                             simd_nelements,
-                             imm2,
+        bvec = vg.new_vector(cpp_type="float",
+                             size=simd_nelements,
+                             fillwith=imm2,
                              vt=vio_type.INPUT)
         imm3 = testcase.random_fimmediate()
-        cvec = vg.new_vector("float",
-                             simd_nelements,
-                             imm3,
+        cvec = vg.new_vector(cpp_type="float",
+                             size=simd_nelements,
+                             fillwith=imm3,
                              vt=vio_type.INPUT)
 
         avreg_idx = rt.reserve_any_reg(type_tag="vreg")
@@ -102,31 +121,32 @@ class vec_test_generator:
         cvreg_idx = rt.reserve_any_reg(type_tag="vreg")
         cvreg = testcase.gen.vreg(cvreg_idx)
 
-        asmblock  = testcase.gen.isaquirks(rt, dt.SINGLE)
+        asmblock  = testcase.gen.isaquirks(rt=rt, dt=dt.SINGLE)
 
-        asmblock += testcase.gen.zero_vreg(avreg, dt.SINGLE)
-        asmblock += testcase.gen.zero_vreg(bvreg, dt.SINGLE)
-        asmblock += testcase.gen.zero_vreg(cvreg, dt.SINGLE)
+        asmblock += testcase.gen.zero_vreg(vreg=avreg, dt=dt.SINGLE)
+        asmblock += testcase.gen.zero_vreg(vreg=bvreg, dt=dt.SINGLE)
+        asmblock += testcase.gen.zero_vreg(vreg=cvreg, dt=dt.SINGLE)
 
 
         aareg_idx = rt.reserve_any_reg(type_tag="greg")
         aareg = testcase.gen.greg(aareg_idx)
-        asmblock += testcase.gen.mov_param_to_greg(avec, aareg)
-        asmblock += testcase.gen.load_vector(aareg, 0, avreg, dt.SINGLE)
+        asmblock += testcase.gen.mov_param_to_greg(param=avec, dst=aareg)
+        asmblock += testcase.gen.load_vector(areg=aareg, vreg=avreg, dt=dt.SINGLE)
         rt.unuse_reg(type_tag="greg", idx=aareg_idx)
 
         bareg_idx = rt.reserve_any_reg(type_tag="greg")
         bareg = testcase.gen.greg(bareg_idx)
-        asmblock += testcase.gen.mov_param_to_greg(bvec, bareg)
-        asmblock += testcase.gen.load_vector(bareg, 0, bvreg, dt.SINGLE)
+        asmblock += testcase.gen.mov_param_to_greg(param=bvec, dst=bareg)
+        asmblock += testcase.gen.load_vector(areg=bareg, vreg=bvreg, dt=dt.SINGLE)
         rt.unuse_reg(type_tag="greg", idx=bareg_idx)
 
         careg_idx = rt.reserve_any_reg(type_tag="greg")
         careg = testcase.gen.greg(careg_idx)
-        asmblock += testcase.gen.mov_param_to_greg(cvec, careg)
-        asmblock += testcase.gen.load_vector(careg, 0, cvreg, dt.SINGLE)
-        asmblock += testcase.gen.fma(avreg, bvreg, cvreg, dt.SINGLE, dt.SINGLE, dt.SINGLE)
-        asmblock += testcase.gen.store_vector(careg, 0, cvreg, dt.SINGLE)
+        asmblock += testcase.gen.mov_param_to_greg(param=cvec, dst=careg)
+        asmblock += testcase.gen.load_vector(areg=careg, vreg=cvreg, dt=dt.SINGLE)
+        asmblock += testcase.gen.fma(adreg=avreg, bdreg=bvreg, cdreg=cvreg,
+                                     a_dt=dt.SINGLE, b_dt=dt.SINGLE, c_dt=dt.SINGLE)
+        asmblock += testcase.gen.store_vector(areg=careg, vreg=cvreg, dt=dt.SINGLE)
         rt.unuse_reg(type_tag="greg", idx=careg_idx)
 
         rt.unuse_reg(type_tag="vreg", idx=avreg_idx)
@@ -138,33 +158,36 @@ class vec_test_generator:
         extra_prepare += f"std::fill(result.begin(), result.end(), {imm3}+{imm1}*{imm2});\n"
 
         check_function = vec_fp32_close(f"check_{test_name}", identity)
-        testcase.add_test(test_name, rt, vg,
-                      asmblock, 
-                      check_function,
-                      f"check_{test_name}({cvec}, result)",
-                      extra_prepare=extra_prepare)
+        testcase.add_test(name=test_name, rt=rt, vg=vg,
+                          asmblock=asmblock,
+                          check_function_definition=check_function,
+                          check=f"check_{test_name}({cvec}, result)",
+                          extra_prepare=extra_prepare)
 
     @classmethod
     def generate_vec_fma_fp64(cls, testcase, rt : reg_tracker, vg : vargen):
-        log = logging.getLogger("ASMCORTEST")
+        """
+        Tests correctness of an ASM block that performs an FMA instruction
+        on SIMD/vector registers filled with FP64 elements
+        """
         test_name = "vec_fma_fp64"
 
         simd_nelements = "get_simd_size()/sizeof(double)"
 
         imm1 = testcase.random_fimmediate()
-        avec = vg.new_vector("double",
-                             simd_nelements,
-                             imm1,
+        avec = vg.new_vector(cpp_type="double",
+                             size=simd_nelements,
+                             fillwith=imm1,
                              vt=vio_type.INPUT)
         imm2 = testcase.random_fimmediate()
-        bvec = vg.new_vector("double",
-                             simd_nelements,
-                             imm2,
+        bvec = vg.new_vector(cpp_type="double",
+                             size=simd_nelements,
+                             fillwith=imm2,
                              vt=vio_type.INPUT)
         imm3 = testcase.random_fimmediate()
-        cvec = vg.new_vector("double",
-                             simd_nelements,
-                             imm3,
+        cvec = vg.new_vector(cpp_type="double",
+                             size=simd_nelements,
+                             fillwith=imm3,
                              vt=vio_type.INPUT)
 
         avreg_idx = rt.reserve_any_reg(type_tag="vreg")
@@ -174,31 +197,32 @@ class vec_test_generator:
         cvreg_idx = rt.reserve_any_reg(type_tag="vreg")
         cvreg = testcase.gen.vreg(cvreg_idx)
 
-        asmblock  = testcase.gen.isaquirks(rt, dt.DOUBLE)
+        asmblock  = testcase.gen.isaquirks(rt=rt, dt=dt.DOUBLE)
 
-        asmblock += testcase.gen.zero_vreg(avreg, dt.DOUBLE)
-        asmblock += testcase.gen.zero_vreg(bvreg, dt.DOUBLE)
-        asmblock += testcase.gen.zero_vreg(cvreg, dt.DOUBLE)
+        asmblock += testcase.gen.zero_vreg(vreg=avreg, dt=dt.DOUBLE)
+        asmblock += testcase.gen.zero_vreg(vreg=bvreg, dt=dt.DOUBLE)
+        asmblock += testcase.gen.zero_vreg(vreg=cvreg, dt=dt.DOUBLE)
 
 
         aareg_idx = rt.reserve_any_reg(type_tag="greg")
         aareg = testcase.gen.greg(aareg_idx)
-        asmblock += testcase.gen.mov_param_to_greg(avec, aareg)
-        asmblock += testcase.gen.load_vector(aareg, 0, avreg, dt.DOUBLE)
+        asmblock += testcase.gen.mov_param_to_greg(param=avec, dst=aareg)
+        asmblock += testcase.gen.load_vector(areg=aareg, vreg=avreg, dt=dt.DOUBLE)
         rt.unuse_reg(type_tag="greg", idx=aareg_idx)
 
         bareg_idx = rt.reserve_any_reg(type_tag="greg")
         bareg = testcase.gen.greg(bareg_idx)
-        asmblock += testcase.gen.mov_param_to_greg(bvec, bareg)
-        asmblock += testcase.gen.load_vector(bareg, 0, bvreg, dt.DOUBLE)
+        asmblock += testcase.gen.mov_param_to_greg(param=bvec, dst=bareg)
+        asmblock += testcase.gen.load_vector(areg=bareg, vreg=bvreg, dt=dt.DOUBLE)
         rt.unuse_reg(type_tag="greg", idx=bareg_idx)
 
         careg_idx = rt.reserve_any_reg(type_tag="greg")
         careg = testcase.gen.greg(careg_idx)
-        asmblock += testcase.gen.mov_param_to_greg(cvec, careg)
-        asmblock += testcase.gen.load_vector(careg, 0, cvreg, dt.DOUBLE)
-        asmblock += testcase.gen.fma(avreg, bvreg, cvreg, dt.DOUBLE, dt.DOUBLE, dt.DOUBLE)
-        asmblock += testcase.gen.store_vector(careg, 0, cvreg, dt.DOUBLE)
+        asmblock += testcase.gen.mov_param_to_greg(param=cvec, dst=careg)
+        asmblock += testcase.gen.load_vector(areg=careg, vreg=cvreg, dt=dt.DOUBLE)
+        asmblock += testcase.gen.fma(adreg=avreg, bdreg=bvreg, cdreg=cvreg,
+                                     a_dt=dt.DOUBLE, b_dt=dt.DOUBLE, c_dt=dt.DOUBLE)
+        asmblock += testcase.gen.store_vector(areg=careg, vreg=cvreg, dt=dt.DOUBLE)
         rt.unuse_reg(type_tag="greg", idx=careg_idx)
 
         rt.unuse_reg(type_tag="vreg", idx=avreg_idx)
@@ -210,28 +234,31 @@ class vec_test_generator:
         extra_prepare += f"std::fill(result.begin(), result.end(), {imm3}+{imm1}*{imm2});\n"
 
         check_function = vec_fp64_close(f"check_{test_name}", identity)
-        testcase.add_test(test_name, rt, vg,
-                      asmblock, 
-                      check_function,
-                      f"check_{test_name}({cvec}, result)",
-                      extra_prepare=extra_prepare)
+        testcase.add_test(name=test_name, rt=rt, vg=vg,
+                          asmblock=asmblock,
+                          check_function_definition=check_function,
+                          check=f"check_{test_name}({cvec}, result)",
+                          extra_prepare=extra_prepare)
 
     @classmethod
     def generate_vec_fmul_fp32(cls, testcase, rt : reg_tracker, vg : vargen):
-        log = logging.getLogger("ASMCORTEST")
+        """
+        Tests correctness of an ASM block that performs an FMUL instruction
+        on SIMD/vector registers filled with FP32 elements
+        """
         test_name = "vec_fmul_fp32"
 
         simd_nelements = "get_simd_size()/sizeof(float)"
 
         imm1 = testcase.random_fimmediate()
-        avec = vg.new_vector("float",
-                             simd_nelements,
-                             imm1,
+        avec = vg.new_vector(cpp_type="float",
+                             size=simd_nelements,
+                             fillwith=imm1,
                              vt=vio_type.INPUT)
         imm2 = testcase.random_fimmediate()
-        bvec = vg.new_vector("float",
-                             simd_nelements,
-                             imm2,
+        bvec = vg.new_vector(cpp_type="float",
+                             size=simd_nelements,
+                             fillwith=imm2,
                              vt=vio_type.INPUT)
 
         avreg_idx = rt.reserve_any_reg(type_tag="vreg")
@@ -239,24 +266,24 @@ class vec_test_generator:
         bvreg_idx = rt.reserve_any_reg(type_tag="vreg")
         bvreg = testcase.gen.vreg(bvreg_idx)
 
-        asmblock  = testcase.gen.isaquirks(rt, dt.SINGLE)
+        asmblock  = testcase.gen.isaquirks(rt=rt, dt=dt.SINGLE)
 
-        asmblock += testcase.gen.zero_vreg(avreg, dt.SINGLE)
-        asmblock += testcase.gen.zero_vreg(bvreg, dt.SINGLE)
+        asmblock += testcase.gen.zero_vreg(vreg=avreg, dt=dt.SINGLE)
+        asmblock += testcase.gen.zero_vreg(vreg=bvreg, dt=dt.SINGLE)
 
         aareg_idx = rt.reserve_any_reg(type_tag="greg")
         aareg = testcase.gen.greg(aareg_idx)
-        asmblock += testcase.gen.mov_param_to_greg(avec, aareg)
-        asmblock += testcase.gen.load_vector(aareg, 0, avreg, dt.SINGLE)
+        asmblock += testcase.gen.mov_param_to_greg(param=avec, dst=aareg)
+        asmblock += testcase.gen.load_vector(areg=aareg, vreg=avreg, dt=dt.SINGLE)
 
         bareg_idx = rt.reserve_any_reg(type_tag="greg")
         bareg = testcase.gen.greg(bareg_idx)
-        asmblock += testcase.gen.mov_param_to_greg(bvec, bareg)
-        asmblock += testcase.gen.load_vector(bareg, 0, bvreg, dt.SINGLE)
+        asmblock += testcase.gen.mov_param_to_greg(param=bvec, dst=bareg)
+        asmblock += testcase.gen.load_vector(areg=bareg, vreg=bvreg, dt=dt.SINGLE)
         rt.unuse_reg(type_tag="greg", idx=bareg_idx)
-
-        asmblock += testcase.gen.fmul(avreg, bvreg, avreg, dt.SINGLE, dt.SINGLE, dt.SINGLE)
-        asmblock += testcase.gen.store_vector(aareg, 0, avreg, dt.SINGLE)
+        asmblock += testcase.gen.fmul(adreg=avreg, bdreg=bvreg, cdreg=avreg,
+                                     a_dt=dt.SINGLE, b_dt=dt.SINGLE, c_dt=dt.SINGLE)
+        asmblock += testcase.gen.store_vector(areg=aareg, vreg=avreg, dt=dt.SINGLE)
         rt.unuse_reg(type_tag="greg", idx=aareg_idx)
 
         rt.unuse_reg(type_tag="vreg", idx=avreg_idx)
@@ -267,28 +294,31 @@ class vec_test_generator:
         extra_prepare += f"std::fill(result.begin(), result.end(), {imm1}*{imm2});\n"
 
         check_function = vec_fp32_close(f"check_{test_name}", identity)
-        testcase.add_test(test_name, rt, vg,
-                      asmblock, 
-                      check_function,
-                      f"check_{test_name}({avec}, result)",
-                      extra_prepare=extra_prepare)
+        testcase.add_test(name=test_name, rt=rt, vg=vg,
+                          asmblock=asmblock,
+                          check_function_definition=check_function,
+                          check=f"check_{test_name}({avec}, result)",
+                          extra_prepare=extra_prepare)
 
     @classmethod
     def generate_vec_fmul_fp64(cls, testcase, rt : reg_tracker, vg : vargen):
-        log = logging.getLogger("ASMCORTEST")
+        """
+        Tests correctness of an ASM block that performs an FMUL instruction
+        on SIMD/vector registers filled with FP64 elements
+        """
         test_name = "vec_fmul_fp64"
 
         simd_nelements = "get_simd_size()/sizeof(double)"
 
         imm1 = testcase.random_fimmediate()
-        avec = vg.new_vector("double",
-                             simd_nelements,
-                             imm1,
+        avec = vg.new_vector(cpp_type="double",
+                             size=simd_nelements,
+                             fillwith=imm1,
                              vt=vio_type.INPUT)
         imm2 = testcase.random_fimmediate()
-        bvec = vg.new_vector("double",
-                             simd_nelements,
-                             imm2,
+        bvec = vg.new_vector(cpp_type="double",
+                             size=simd_nelements,
+                             fillwith=imm2,
                              vt=vio_type.INPUT)
 
         avreg_idx = rt.reserve_any_reg(type_tag="vreg")
@@ -296,24 +326,25 @@ class vec_test_generator:
         bvreg_idx = rt.reserve_any_reg(type_tag="vreg")
         bvreg = testcase.gen.vreg(bvreg_idx)
 
-        asmblock  = testcase.gen.isaquirks(rt, dt.DOUBLE)
+        asmblock  = testcase.gen.isaquirks(rt=rt, dt=dt.DOUBLE)
 
-        asmblock += testcase.gen.zero_vreg(avreg, dt.DOUBLE)
-        asmblock += testcase.gen.zero_vreg(bvreg, dt.DOUBLE)
+        asmblock += testcase.gen.zero_vreg(vreg=avreg, dt=dt.DOUBLE)
+        asmblock += testcase.gen.zero_vreg(vreg=bvreg, dt=dt.DOUBLE)
 
         aareg_idx = rt.reserve_any_reg(type_tag="greg")
         aareg = testcase.gen.greg(aareg_idx)
-        asmblock += testcase.gen.mov_param_to_greg(avec, aareg)
-        asmblock += testcase.gen.load_vector(aareg, 0, avreg, dt.DOUBLE)
+        asmblock += testcase.gen.mov_param_to_greg(param=avec, dst=aareg)
+        asmblock += testcase.gen.load_vector(areg=aareg, vreg=avreg, dt=dt.DOUBLE)
 
         bareg_idx = rt.reserve_any_reg(type_tag="greg")
         bareg = testcase.gen.greg(bareg_idx)
-        asmblock += testcase.gen.mov_param_to_greg(bvec, bareg)
-        asmblock += testcase.gen.load_vector(bareg, 0, bvreg, dt.DOUBLE)
+        asmblock += testcase.gen.mov_param_to_greg(param=bvec, dst=bareg)
+        asmblock += testcase.gen.load_vector(areg=bareg, vreg=bvreg, dt=dt.DOUBLE)
         rt.unuse_reg(type_tag="greg", idx=bareg_idx)
 
-        asmblock += testcase.gen.fmul(avreg, bvreg, avreg, dt.DOUBLE, dt.DOUBLE, dt.DOUBLE)
-        asmblock += testcase.gen.store_vector(aareg, 0, avreg, dt.DOUBLE)
+        asmblock += testcase.gen.fmul(adreg=avreg, bdreg=bvreg, cdreg=avreg,
+                                     a_dt=dt.DOUBLE, b_dt=dt.DOUBLE, c_dt=dt.DOUBLE)
+        asmblock += testcase.gen.store_vector(areg=aareg, vreg=avreg, dt=dt.DOUBLE)
         rt.unuse_reg(type_tag="greg", idx=aareg_idx)
 
         rt.unuse_reg(type_tag="vreg", idx=avreg_idx)
@@ -324,8 +355,8 @@ class vec_test_generator:
         extra_prepare += f"std::fill(result.begin(), result.end(), {imm1}*{imm2});\n"
 
         check_function = vec_fp64_close(f"check_{test_name}", identity)
-        testcase.add_test(test_name, rt, vg,
-                      asmblock, 
-                      check_function,
-                      f"check_{test_name}({avec}, result)",
-                      extra_prepare=extra_prepare)
+        testcase.add_test(name=test_name, rt=rt, vg=vg,
+                          asmblock=asmblock,
+                          check_function_definition=check_function,
+                          check=f"check_{test_name}({avec}, result)",
+                          extra_prepare=extra_prepare)

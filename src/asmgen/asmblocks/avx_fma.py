@@ -1,44 +1,43 @@
-from ..registers import (
-    reg_tracker,
-    asm_data_type as adt,
-    adt_triple,
-    adt_size,
-    asm_index_type as ait,
-    data_reg,
-    treg,vreg,freg,greg
-)
-
-from .noarch import asmgen
+"""
+X86_64/AVX/FMA asm generator and related types
+"""
 
 from abc import abstractmethod
 
+from ..registers import (
+    reg_tracker,
+    asm_data_type as adt,
+    adt_size,
+    asm_index_type as ait,
+    treg_base, vreg_base, freg_base, greg_base
+)
 
-from typing import TypeAlias
+from .noarch import asmgen
 
 from .types.avx_types import x86_greg,avx_freg,xmm_vreg,ymm_vreg,zmm_vreg,prefix_if_raw_reg
 
 from .avx_opd3 import avx_fma,avx_fmul
 
 class avxbase(asmgen):
+    """
+    Base X86_64/AVX/FMA asmgem implementation
+    """
 
-    greg_type : TypeAlias = x86_greg
-    freg_type : TypeAlias = avx_freg
-    vreg_type : TypeAlias = vreg
-    treg_type : TypeAlias = treg
-
-    @property
     @abstractmethod
-    def req_flags(self) -> list[str]:
+    def get_req_flags(self) -> list[str]:
+        """
+        Return required flags in cpuinfo for this generator to be supported
+        """
         raise NotImplementedError("Not implemented for base class")
 
     def supportedby_cpuinfo(self, cpuinfo : str):
-         req_flags = self.req_flags
-         supported = True
-         for r in req_flags:
-             if -1 == cpuinfo.find(r):
-                 supported = False
-                 break
-         return supported
+        req_flags = self.get_req_flags()
+        supported = True
+        for r in req_flags:
+            if -1 == cpuinfo.find(r):
+                supported = False
+                break
+        return supported
 
     dt_suffixes = {
             adt.DOUBLE : "d",
@@ -52,68 +51,87 @@ class avxbase(asmgen):
             }
 
 
-    def isaquirks(self, rt : reg_tracker, dt : adt):
+    def isaquirks(self, *, rt : reg_tracker, dt : adt):
         return ""
 
-    def jzero(self, greg : greg_type, label : str) -> str:
-        preg = prefix_if_raw_reg(greg)
+    def jzero(self, *, reg : greg_base, label : str) -> str:
+        preg = prefix_if_raw_reg(reg)
         asmblock  = self.asmwrap(f"test {preg},{preg}")
         asmblock += self.asmwrap(f"jz .{label}%=")
         return asmblock
 
-    def jfzero(self, freg1 : freg_type, freg2 : freg_type,
-               greg : greg_type, label : str,
+    def jfzero(self, *, freg1 : freg_base, freg2 : freg_base,
+               greg : greg_base, label : str,
                dt : adt) -> str:
         suf = 's'+self.dt_suffixes[dt]
         pfreg1 = prefix_if_raw_reg(freg1)
         pfreg2 = prefix_if_raw_reg(freg2)
-        asmblock  = self.zero_freg(freg2, dt)
+        asmblock  = self.zero_freg(freg=freg2, dt=dt)
         asmblock += self.asmwrap(f"ucomi{suf} {pfreg2},{pfreg1}")
         asmblock += self.asmwrap(f"je .{label}%=")
         return asmblock
 
-    def jvzero(self, vreg1 : vreg_type, freg : freg_type,
-               vreg2 : vreg_type, greg : greg_type, label : str,
+    def jvzero(self, *, vreg1 : vreg_base, freg : freg_base,
+               vreg2 : vreg_base, greg : greg_base, label : str,
                dt : adt) -> str:
         suf = 'p'+self.dt_suffixes[dt]
         pvreg1 = prefix_if_raw_reg(vreg1)
         pvreg2 = prefix_if_raw_reg(vreg2)
-        asmblock  = self.zero_vreg(vreg2, dt)
+        asmblock  = self.zero_vreg(vreg=vreg2, dt=dt)
         asmblock += self.asmwrap(f"vcmpeq{suf} {pvreg2},{pvreg1},{pvreg2}")
         asmblock += self.asmwrap(f"vptest {pvreg2},{pvreg2}")
         asmblock += self.asmwrap(f"jne .{label}%=")
         return asmblock
 
-    def xmm_to_ymm(self, vreg : xmm_vreg):
-        return vreg.replace("xmm","ymm")
+    def xmm_to_ymm(self, vreg : vreg_base):
+        """
+        Returns the expanded ymm register from the specified xmm register
+        
+        :param vreg: XMM register to convert to YMM
+        :type vreg: class:`asmgen.asmblocks.types.avx_types.xmm_vreg`
+        :return: Corresponding YMM register
+        :rtype vreg: class:`asmgen.asmblocks.types.avx_types.ymm_vreg`
+        """
+        if not isinstance(vreg, xmm_vreg):
+            raise ValueError(f"{vreg} is not an XMM register")
+
+        idx = 0
+        xmm_str = f"{vreg}"
+        if xmm_str.startswith("xmm"):
+            idx = int(xmm_str[3:])
+        elif xmm_str.startswith("%%xmm"):
+            idx = int(xmm_str[5:])
+        else:
+            raise ValueError("Not an XMM register: {vreg}")
+        return ymm_vreg(idx)
 
     @property
     def are_fregs_in_vregs(self):
         return True
 
-    def label(self, label : str) -> str:
+    def label(self, *, label : str) -> str:
         asmblock = self.asmwrap(f".{label}%=:")
         return asmblock
 
-    def jump(self, label : str) -> str:
+    def jump(self, *, label : str) -> str:
         asmblock = self.asmwrap(f"jmp .{label}%=")
         return asmblock
 
-    def loopbegin(self, reg : greg_type, label : str):
+    def loopbegin(self, *, reg : greg_base, label : str):
         preg = prefix_if_raw_reg(reg)
         asmblock  = self.asmwrap(f".{label}%=:")
         asmblock += self.asmwrap(f"sub $1, {preg}")
         return asmblock
 
-    def loopbegin_nz(self, reg : greg_type, label : str, skiplabel : str):
+    def loopbegin_nz(self, *, reg : greg_base, label : str, labelskip : str):
         preg = prefix_if_raw_reg(reg)
         asmblock  = self.asmwrap(f"test {preg},{preg}")
-        asmblock += self.asmwrap(f"jz .{skiplabel}%=")
+        asmblock += self.asmwrap(f"jz .{labelskip}%=")
         asmblock += self.asmwrap(f".{label}%=:")
         asmblock += self.asmwrap(f"sub $1, {preg}")
         return asmblock
 
-    def loopend(self, reg : greg_type, label : str):
+    def loopend(self, *, reg : greg_base, label : str):
         preg = prefix_if_raw_reg(reg)
         asmblock  = self.asmwrap(f"cmp $0x0,{preg}")
         asmblock += self.asmwrap(f"jne .{label}%=")
@@ -136,46 +154,47 @@ class avxbase(asmgen):
         result  = f"size_t get_simd_size() {{ return {self.simd_size}; }}"
         return result
 
+    def simd_size_to_greg(self, *, reg: greg_base, dt: adt) -> str:
+        return self.mov_greg_imm(reg=reg, imm=self.simd_size//adt_size(dt))
 
-
-    def mov_greg(self, src : greg_type, dst : greg_type):
+    def mov_greg(self, *, src : greg_base, dst : greg_base):
         psrc = prefix_if_raw_reg(src)
         pdst = prefix_if_raw_reg(dst)
         return self.asmwrap(f"movq {psrc}, {pdst}")
 
-    def mov_freg(self, src : freg_type, dst : freg_type, dt : adt):
+    def mov_freg(self, *, src : freg_base, dst : freg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         return self.asmwrap(f"vmov{suf} {src}, {dst}")
 
-    def mov_greg_to_param(self, reg : greg_type, param : str):
-        preg = prefix_if_raw_reg(reg)
+    def mov_greg_to_param(self, *, src : greg_base, param : str):
+        preg = prefix_if_raw_reg(src)
         return self.asmwrap(f"movq {preg},%[{param}]")
 
-    def mov_param_to_greg(self, param : str, reg : greg_type):
-        preg = prefix_if_raw_reg(reg)
+    def mov_param_to_greg(self, *, param : str, dst : greg_base):
+        preg = prefix_if_raw_reg(dst)
         return self.asmwrap(f"movq %[{param}],{preg}")
 
-    def mov_param_to_greg_shift(self, param : str, dst : greg_type, offset : int):
+    def mov_param_to_greg_shift(self, *, param : str, dst : greg_base, bit_count : int):
         pdst = prefix_if_raw_reg(dst)
-        return self.asmwrap(f"leaq (,%[{param}],{1<<offset}),{pdst}")
+        return self.asmwrap(f"leaq (,%[{param}],{1<<bit_count}),{pdst}")
 
-    def mov_greg_imm(self, reg : greg_type, imm : int):
+    def mov_greg_imm(self, *, reg : greg_base, imm : int):
         preg = prefix_if_raw_reg(reg)
         return self.asmwrap(f"movq ${imm},{preg}")
 
-    def zero_greg(self, reg : greg_type):
-        return self.mov_greg_imm(reg, 0)
+    def zero_greg(self, *, greg : greg_base):
+        return self.mov_greg_imm(reg=greg, imm=0)
 
-    def add_greg_imm(self, reg : greg_type, offset : int):
+    def add_greg_imm(self, *, reg : greg_base, imm : int):
         preg = prefix_if_raw_reg(reg)
-        return self.asmwrap(f"addq ${offset},{preg}")
+        return self.asmwrap(f"addq ${imm},{preg}")
 
-    def mul_greg_imm(self, src : greg_type, dst : greg_type, offset : int):
+    def mul_greg_imm(self, *, src : greg_base, dst : greg_base, factor : int) -> str:
         pdst = prefix_if_raw_reg(dst)
         psrc = prefix_if_raw_reg(src)
-        return self.asmwrap(f"imulq ${offset},{psrc},{pdst}")
+        return self.asmwrap(f"imulq ${factor},{psrc},{pdst}")
 
-    def add_greg_greg(self, dst : greg_type, reg1 : greg_type, reg2 : greg_type):
+    def add_greg_greg(self, *, dst : greg_base, reg1 : greg_base, reg2 : greg_base) -> str:
         pdst = prefix_if_raw_reg(dst)
         preg1 = prefix_if_raw_reg(reg1)
         preg2 = prefix_if_raw_reg(reg2)
@@ -185,31 +204,36 @@ class avxbase(asmgen):
         asmblock += self.asmwrap(f"addq {preg2},{pdst}")
         return asmblock
 
-    @property
-    def has_add_greg_voff(self) -> bool:
-        return True
+    def sub_greg_greg(self, *, dst : greg_base, reg1 : greg_base, reg2 : greg_base) -> str:
+        pdst = prefix_if_raw_reg(dst)
+        preg1 = prefix_if_raw_reg(reg1)
+        preg2 = prefix_if_raw_reg(reg2)
+        asmblock  = self.asmwrap(f"movq {preg1},{pdst}")
+        asmblock += self.asmwrap(f"subq {preg2},{pdst}")
+        return asmblock
 
-    def add_greg_voff(self, reg : greg_type, offset : int, dt : adt):
+    def add_greg_voff(self, *, reg : greg_base, offset : int, dt : adt) -> str:
         offset = offset*self.simd_size
-        return self.add_greg_imm(reg=reg, offset=offset)
+        return self.add_greg_imm(reg=reg, imm=offset)
 
-    def shift_greg_left(self, reg : greg_type, offset : int):
+    def shift_greg_left(self, *, reg : greg_base, bit_count : int) -> str:
         preg = prefix_if_raw_reg(reg)
-        return self.asmwrap(f"shlq ${offset},{preg}")
+        return self.asmwrap(f"shlq ${bit_count},{preg}")
 
-    def shift_greg_right(self, reg : greg_type, offset : int):
+    def shift_greg_right(self, *, reg : greg_base, bit_count : int) -> str:
         preg = prefix_if_raw_reg(reg)
-        return self.asmwrap(f"shrq ${offset},{preg}")
+        return self.asmwrap(f"shrq ${bit_count},{preg}")
 
-    def greg(self, i : int):
-        return x86_greg.greg_names[i]
+    def greg(self, reg_idx : int) -> greg_base:
+        return x86_greg(reg_idx=reg_idx)
 
-    def freg(self, reg_idx : int) -> freg_type:
-        return avx_freg(reg_idx)
-        #return f"xmm{i}"
+    def freg(self, reg_idx : int, dt : adt) -> freg_base:
+        _ = dt # explicitly unused
+        return avx_freg(reg_idx=reg_idx)
 
-    def zero_freg(self, freg : freg_type, dt : adt):
-        return self.zero_vreg(vreg=freg, dt=dt)
+    def zero_freg(self, *, freg : freg_base, dt : adt) -> str:
+        preg = prefix_if_raw_reg(freg)
+        return self.asmwrap(f"vpxor {preg},{preg},{preg}")
 
     @property
     def min_prefetch_offset(self):
@@ -225,6 +249,9 @@ class avxbase(asmgen):
     def max_load_immoff(self, dt : adt):
         return 2**31
 
+    def min_fload_immoff(self, dt : adt):
+        return 0
+
     def max_fload_immoff(self, dt : adt):
         return 2**31
 
@@ -236,16 +263,16 @@ class avxbase(asmgen):
     def max_load_voff(self):
         return 2**31/self.simd_size
 
-    def prefetch_l1_boff(self, reg : greg_type, offset : int):
-        preg = prefix_if_raw_reg(reg)
+    def prefetch_l1_boff(self, *, areg : greg_base, offset : int):
+        preg = prefix_if_raw_reg(areg)
         return self.asmwrap(f"prefetcht0 {offset}({preg})")
 
-    def load_pointer(self, reg : greg_type, name : str):
-        preg = prefix_if_raw_reg(reg)
+    def load_pointer(self, *, areg : greg_base, name : str):
+        preg = prefix_if_raw_reg(areg)
         return self.asmwrap(f"mov %[{name}],{preg}")
 
 
-    def load_vector_voff(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+    def load_vector_voff(self, *, areg : greg_base, voffset : int, vreg : vreg_base, dt : adt):
         suf = 'p'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
@@ -254,22 +281,23 @@ class avxbase(asmgen):
             address = f"({pa})"
         return self.asmwrap(f"vmovu{suf} {address},{pv}")
 
-    def load_scalar_immoff(self, areg : greg_type, immoffset : int, vreg : vreg_type, dt : adt):
+    def load_scalar_immoff(self, *, areg : greg_base, offset : int, freg : freg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(vreg)
-        address = f"{immoffset}({pa})"
-        if 0 == immoffset:
+        pf = prefix_if_raw_reg(freg)
+        address = f"{offset}({pa})"
+        if 0 == offset:
             address = f"({pa})"
-        return self.asmwrap(f"vmov{suf} {address},{pv}")
+        return self.asmwrap(f"vmov{suf} {address},{pf}")
 
-    def load_vector(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+    def load_vector(self, *, areg : greg_base, vreg : vreg_base, dt : adt):
         return self.load_vector_voff(areg=areg, voffset=0, vreg=vreg, dt=dt)
 
-    def load_vector_dist1_inc(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
-        raise NotImplementedError("AVX doesn't have a post-index load, use load_vector_dist1_boff instead")
+    def load_vector_dist1_inc(self, *, areg : greg_base, offset : int, vreg : vreg_base, dt : adt):
+        raise NotImplementedError(
+                "AVX doesn't have a post-index load, use load_vector_dist1_boff instead")
 
-    def store_vector_voff(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+    def store_vector_voff(self, *, areg : greg_base, voffset : int, vreg : vreg_base, dt : adt):
         suf = 'p'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
@@ -278,39 +306,39 @@ class avxbase(asmgen):
             address = f"({pa})"
         return self.asmwrap(f"vmovu{suf} {pv},{address}")
 
-    def store_vector(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+    def store_vector(self, *, areg : greg_base, vreg : vreg_base, dt : adt):
         return self.store_vector_voff(areg=areg, voffset=0, vreg=vreg, dt=dt)
 
 
-    def load_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, dt : adt):
+    def load_vector_immstride(self, *, areg : greg_base, byte_stride : int,
+                    vreg : vreg_base, dt : adt):
         raise NotImplementedError("AVX has no load with immediate stride")
 
-    def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, dt : adt):
+    def load_vector_gregstride(self, *, areg : greg_base, sreg : greg_base,
+                    vreg : vreg_base, dt : adt):
         raise NotImplementedError("AVX has no load with scalar register stride")
 
-    def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
-                           vreg : vreg_type, dt : adt,
-                           indextype : ait):
+    def load_vector_gather(self, *, areg : greg_base, offvreg : vreg_base,
+                           vreg : vreg_base, dt : adt,
+                           it : ait):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
         pov = prefix_if_raw_reg(offvreg)
         address = f"({pa})"
-        isuf = self.it_suffixes[indextype]
+        isuf = self.it_suffixes[it]
         return self.asmwrap(f"vgather{isuf}{suf} {address},{pov},{pv}")
 
-    def store_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, dt : adt):
+    def store_vector_immstride(self, *, areg : greg_base, byte_stride : int,
+                    vreg : vreg_base, dt : adt):
         raise NotImplementedError("AVX has no store with immediate stride")
 
-    def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, dt : adt):
+    def store_vector_gregstride(self, *, areg : greg_base, sreg : greg_base,
+                    vreg : vreg_base, dt : adt):
         raise NotImplementedError("AVX has no store with scalar register stride")
 
-    def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
-                    vreg : vreg_type, dt : adt):
+    def store_vector_scatter(self, *, areg : greg_base, offvreg : vreg_base,
+                             vreg : vreg_base, dt : adt, it : ait):
         raise NotImplementedError("AVX has no store with vector register stride")
 
     # Unsupported functionality:
@@ -320,24 +348,21 @@ class avxbase(asmgen):
     def treg(self, reg_idx : int):
         raise NotImplementedError("SVE has no tiles, use SME")
 
-    def zero_treg(self, treg : treg_type, dt : adt):
+    def zero_treg(self, *, treg : treg_base, dt : adt):
         raise NotImplementedError("SVE has no tiles, use SME")
 
-    def store_tile(self, areg : greg_type,
-                   ignored_offset : int,
-                   treg : treg_type,
+    def store_tile(self, *, areg : greg_base,
+                   treg : treg_base,
                    dt : adt):
         raise NotImplementedError("SVE has no tiles, use SME")
 
 class fma128(avxbase):
-
-    greg_type : TypeAlias = x86_greg
-    freg_type : TypeAlias = avx_freg
-    vreg_type : TypeAlias = xmm_vreg
-    treg_type : TypeAlias = treg
+    """
+    X86_64/AVX/FMA 128 bit asmgem implementation
+    """
 
     def __init__(self):
-        super(fma128,self).__init__()
+        super().__init__()
         self.fma = avx_fma(
                      asmwrap=self.asmwrap,
                      dt_suffixes=self.dt_suffixes,
@@ -351,14 +376,13 @@ class fma128(avxbase):
                      has_fp16=False
                      )
 
-    @property
-    def req_flags(self):
+    def get_req_flags(self):
         return ['fma', 'avx']
 
     @property
     def max_fregs(self):
         return 16
-    
+
     @property
     def max_vregs(self):
         return 16
@@ -367,34 +391,34 @@ class fma128(avxbase):
     def simd_size(self):
         return 16
 
-    def zero_vreg(self, vreg : vreg_type, dt : adt):
+    def zero_vreg(self, *, vreg : vreg_base, dt : adt):
         preg = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vpxor {preg},{preg},{preg}")
 
     def vreg(self, reg_idx):
         return xmm_vreg(reg_idx)
 
-    def load_vector_dist1(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+    def load_vector_dist1(self, *, areg : greg_base,
+                          vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
-        pv = self.xmm_to_ymm(prefix_if_raw_reg(vreg))
+        pv = prefix_if_raw_reg(self.xmm_to_ymm(vreg))
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_boff(self, areg : greg_type, offset : int, vreg : vreg_type, dt : adt):
+    def load_vector_dist1_boff(self, *, areg : greg_base, offset : int,
+                               vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
-        pv = self.xmm_to_ymm(prefix_if_raw_reg(vreg))
+        pv = prefix_if_raw_reg(self.xmm_to_ymm(vreg))
         return self.asmwrap(f"vbroadcast{suf} {offset}({pa}),{pv}")
 
 class fma256(avxbase):
-
-    greg_type : TypeAlias = x86_greg
-    freg_type : TypeAlias = avx_freg
-    vreg_type : TypeAlias = ymm_vreg
-    treg_type : TypeAlias = treg
+    """
+    X86_64/AVX/FMA 256 bit asmgem implementation
+    """
 
     def __init__(self):
-        super(fma256,self).__init__()
+        super().__init__()
         self.fma = avx_fma(
                      asmwrap=self.asmwrap,
                      dt_suffixes=self.dt_suffixes,
@@ -408,8 +432,7 @@ class fma256(avxbase):
                      has_fp16=False
                      )
 
-    @property
-    def req_flags(self):
+    def get_req_flags(self):
         return ['fma', 'avx']
 
     @property
@@ -424,33 +447,34 @@ class fma256(avxbase):
     def simd_size(self):
         return 32
 
-    def zero_vreg(self, vreg : vreg_type, dt : adt):
+    def zero_vreg(self, *, vreg : vreg_base, dt : adt):
         preg = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vpxor {preg},{preg},{preg}")
 
     def vreg(self, reg_idx : int):
         return ymm_vreg(reg_idx)
 
-    def load_vector_dist1(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+    def load_vector_dist1(self, *, areg : greg_base,
+                          vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_boff(self, areg : greg_type, offset : int, vreg : vreg_type, dt : adt):
+    def load_vector_dist1_boff(self, *, areg : greg_base, offset : int,
+                               vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} {offset}({pa}),{pv}")
 
 class avx512(avxbase):
-
-    greg_type : TypeAlias = x86_greg
-    freg_type : TypeAlias = freg
-    vreg_type : TypeAlias = vreg
+    """
+    X86_64/AVX512 asmgem implementation
+    """
 
     def __init__(self):
-        super(avx512,self).__init__()
+        super().__init__()
         self.fma = avx_fma(
                      asmwrap=self.asmwrap,
                      dt_suffixes=self.dt_suffixes,
@@ -464,8 +488,7 @@ class avx512(avxbase):
                      has_fp16=True
                      )
 
-    @property
-    def req_flags(self):
+    def get_req_flags(self) -> list[str]:
         return ['avx512f']
 
     @property
@@ -480,33 +503,34 @@ class avx512(avxbase):
     def simd_size(self):
         return 64
 
-    def zero_vreg(self, vreg : vreg_type, dt : adt):
+    def zero_vreg(self, *, vreg : vreg_base, dt : adt):
         preg = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vpxorq {preg},{preg},{preg}")
 
     def vreg(self, reg_idx : int):
         return zmm_vreg(reg_idx)
 
-    def load_vector_dist1(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+    def load_vector_dist1(self, *, areg : greg_base,
+                          vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_boff(self, areg : greg_type, offset : int, vreg : vreg_type, dt : adt):
+    def load_vector_dist1_boff(self, *, areg : greg_base, offset : int,
+                               vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} {offset}({pa}),{pv}")
 
-    def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
-                           vreg : vreg_type, dt : adt,
-                           indextype : ait):
+    def store_vector_scatter(self, *, areg : greg_base, offvreg : vreg_base,
+                           vreg : vreg_base, dt : adt,
+                           it : ait):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
         pov = prefix_if_raw_reg(offvreg)
         address = f"({pa})"
-        isuf = self.it_suffixes[indextype]
+        isuf = self.it_suffixes[it]
         return self.asmwrap(f"vscatter{isuf}{suf} {address},{pov},{pv}")
-

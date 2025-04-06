@@ -1,25 +1,23 @@
+"""
+NEON/ASIMD asm generator and related types
+"""
 from ..registers import (
     reg_tracker,
     asm_data_type as adt,
-    adt_triple,
     adt_size,
     asm_index_type as ait,
-    data_reg,
-    treg,vreg,freg,greg
+    treg_base,vreg_base,freg_base,greg_base
 )
 from .aarch64 import aarch64
 
+from .types.aarch64_types import aarch64_freg
 from .types.neon_types import neon_vreg
 from .neon_opd3 import neon_fma,neon_fmul
 
-from typing import TypeAlias
-
 class neon(aarch64):
-
-    greg_type : TypeAlias = greg
-    freg_type : TypeAlias = freg
-    vreg_type : TypeAlias = neon_vreg
-    treg_type : TypeAlias = treg
+    """
+    NEON/ASIMD implementation of asmgen
+    """
 
     dt_suffixes = {
             adt.DOUBLE  : "2d",
@@ -61,7 +59,7 @@ class neon(aarch64):
             }
 
     def __init__(self):
-        super(neon, self).__init__()
+        super().__init__()
         self.fma = neon_fma(asmwrap=self.asmwrap,
                             dt_suffixes=self.dt_suffixes,
                             dt_idxsuffixes=self.dt_idxsuffixes)
@@ -69,39 +67,51 @@ class neon(aarch64):
                               dt_suffixes=self.dt_suffixes,
                               dt_idxsuffixes=self.dt_idxsuffixes)
 
-    def get_req_flags(self):
+    def get_req_flags(self) -> list[str]:
+        """
+        Return required flags in cpuinfo for this generator to be supported
+        """
         return ['asimd']
 
     def supportedby_cpuinfo(self, cpuinfo : str) -> bool:
-         req_flags = self.get_req_flags()
-         supported = True
-         for r in req_flags:
-             if -1 == cpuinfo.find(r):
-                 supported = False
-                 break
-         return supported
+        req_flags = self.get_req_flags()
+        supported = True
+        for r in req_flags:
+            if -1 == cpuinfo.find(r):
+                supported = False
+                break
+        return supported
 
-    def isaquirks(self, rt : reg_tracker, dt : adt):
+    def isaquirks(self, *, rt : reg_tracker, dt : adt):
         return ""
 
-    def jvzero(self, vreg1 : vreg_type, freg : freg_type,
-               vreg2 : vreg_type,
-               greg : greg_type, label : str,
-               datatype : adt):
-        suf = self.dt_suffixes[datatype]
+    def jvzero(self, *, vreg1 : vreg_base, freg : freg_base,
+               vreg2 : vreg_base,
+               greg : greg_base, label : str,
+               dt : adt) -> str:
+        suf = self.dt_suffixes[dt]
         asmblock  = self.asmwrap(f"fmaxv {freg}, {vreg2}.{suf}")
         asmblock += self.asmwrap(f"fcmp {freg}, #0.0")
         asmblock += self.asmwrap(f"b.eq .{label}")
         return asmblock
 
-    def vreg_to_qreg(self, vreg : neon_vreg):
-        return vreg.reg_str.replace('v','q')
+    def vreg_to_qreg(self, vreg : neon_vreg) -> aarch64_freg:
+        """
+        Returns the AArch64 128 FP register register corresponding to
+        the specified vector register
+
+        :param vreg: NEON/ASIMD vector register
+        :type vreg: class:`asmgen.asmblocks.types.neon_types.neon_vreg`
+        :return: 128 bit FP reg
+        :rtype: class:`asmgen.asmblocks.types.aarch64_types.aarch64_freg`
+        """
+        return aarch64_freg(reg_idx=vreg.idx, dt=adt.FP128)
 
     @property
-    def is_vla(self):
+    def is_vla(self) -> bool:
         return False
 
-    def indexable_elements(self, dt : adt):
+    def indexable_elements(self, dt : adt) -> int:
         return self.simd_size//adt_size(dt)
 
     @property
@@ -112,108 +122,132 @@ class neon(aarch64):
     def simd_size(self):
         return 16
 
+    def simd_size_to_greg(self, *, reg: greg_base, dt: adt) -> str:
+        return self.mov_greg_imm(reg=reg, imm=16//adt_size(dt))
+
     @property
     def c_simd_size_function(self):
         return f"size_t get_simd_size() {{ return {self.simd_size}; }}"
 
-    def add_greg_voff(self, reg : greg_type, offset : int, dt : adt):
+    def add_greg_voff(self, *, reg : greg_base, offset : int, dt : adt):
         byte_offset = self.simd_size*offset
         return self.asmwrap(f"add {reg},{reg},#{byte_offset}")
-        
-    def zero_vreg(self, reg : greg_type, dt : adt):
+
+    def zero_vreg(self, *, vreg : vreg_base, dt : adt):
         suf = self.dt_suffixes[dt]
-        zeroreg = f"{self.dt_greg_pfx[dt]}zr" 
-        return self.asmwrap(f"dup {reg}.{suf},{zeroreg}")
+        zeroreg = f"{self.dt_greg_pfx[dt]}zr"
+        return self.asmwrap(f"dup {vreg}.{suf},{zeroreg}")
 
     def vreg(self, reg_idx : int) -> neon_vreg:
         return neon_vreg(reg_idx)
 
-    def qreg(self, i):
-        return f"q{i}"
+    def qreg(self, idx : int) -> aarch64_freg:
+        """
+        Returns the AArch64 128 FP register register corresponding to
+        the specified register id
+        :param idx: register id
+        :type idx: int
+        :return: 128 bit FP reg
+        :rtype: class:`asmgen.asmblocks.types.aarch64_types.aarch64_freg`
+        """
+        return aarch64_freg(reg_idx=idx, dt=adt.FP128)
 
-    def min_load_immoff(self, dt : adt):
+    def min_load_immoff(self, dt : adt) -> int:
+        _ = dt # explicitly unused
         return 0
 
-    def max_load_immoff(self, dt : adt):
+    def max_load_immoff(self, dt : adt) -> int:
         return 4095*adt_size(dt)*2
 
     @property
-    def min_load_voff(self):
+    def min_load_voff(self) -> int:
         return 0
 
     @property
-    def max_load_voff(self):
-        # TODO: The immediate can be 0 to 4095, but in add_greg_voff we multiply
-        #       with data size. We can  can LSL #12 when adding,
-        #       So you could split in large and small part and use 2 instructions
-        #       not sure what's up with the actual load. Investigate
-        return 4096/8
+    def max_load_voff(self) -> int:
+        return 4096//8
 
-    def load_vector(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+    def load_vector(self, *, areg : greg_base,
+                    vreg : vreg_base, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
         qv = self.vreg_to_qreg(vreg)
         return self.asmwrap(f"ldr {qv}, [{areg}]")
 
-    def load_vector_voff(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+    def load_vector_voff(self, *, areg : greg_base, voffset : int,
+                         vreg : vreg_base, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
         qv = self.vreg_to_qreg(vreg)
         return self.asmwrap(f"ldr {qv}, [{areg}, #{voffset*self.simd_size}]")
 
-    def load_vector_dist1(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
+    def load_vector_dist1(self, *, areg : greg_base,
+                          vreg : vreg_base, dt : adt) -> str:
         suf = self.dt_suffixes[dt]
         return self.asmwrap(f"ld1r {{{vreg}.{suf}}}, [{areg}]")
 
-    def load_vector_dist1_boff(self, areg : greg_type, offset : int, v : vreg_type, dt : adt):
-        raise NotImplementedError("load_vector_dist1_boff doesn't make sense with NEON, use load_vector_dist1_inc or load_vector_voff + fma_idx instead")
-    
-    def load_vector_dist1_inc(self, areg : greg_type, ignored_offset : int, vreg : vreg_type, dt : adt):
-        suf = self.dt_suffixes[dt]
-        return self.asmwrap(f"ld1r {{{vreg}.{suf}}}, [{areg}], #{adt_size(dt)}")
+    def load_vector_dist1_boff(self, *, areg : greg_base, offset : int,
+                               vreg : vreg_base, dt : adt) -> str:
+        raise NotImplementedError(
+                ("load_vector_dist1_boff doesn't make sense with NEON,"
+                 " use load_vector_dist1_inc or load_vector_voff + fma_idx instead"))
 
-    def store_vector_voff(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+    def load_vector_dist1_inc(self, *, areg : greg_base, offset : int,
+                              vreg : vreg_base, dt : adt) -> str:
+        suf = self.dt_suffixes[dt]
+        return self.asmwrap(f"ld1r {{{vreg}.{suf}}}, [{areg}], #{offset}")
+
+    def store_vector_voff(self, *, areg : greg_base, voffset : int,
+                          vreg : vreg_base, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
         qv = self.vreg_to_qreg(vreg)
         return self.asmwrap(f"str {qv}, [{areg}, #{voffset*self.simd_size}]")
 
-    def store_vector(self, areg : greg_type, voffset : int, vreg : vreg_type, dt : adt):
+    def store_vector(self, *, areg : greg_base,
+                     vreg : vreg_base, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
         qv = self.vreg_to_qreg(vreg)
         return self.asmwrap(f"str {qv}, [{areg}]")
 
-    def load_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : adt):
+    def load_vector_immstride(self, *, areg : greg_base, byte_stride : int,
+                    vreg : vreg_base, dt : adt) -> str:
         raise NotImplementedError("NEON has no load with immediate stride")
 
-    def load_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : adt):
+    def load_vector_gregstride(self, *, areg : greg_base, sreg : greg_base,
+                    vreg : vreg_base, dt : adt) -> str:
         raise NotImplementedError("NEON has no load with scalar register stride")
 
-    def load_vector_gather(self, areg : greg_type, offvreg : vreg_type,
-                           vreg : vreg_type, datatype : adt,
-                           indextype : ait):
+    def load_vector_gather(self, *, areg : greg_base, offvreg : vreg_base,
+                           vreg : vreg_base, dt : adt,
+                           it : ait) -> str:
         raise NotImplementedError("NEON has no load with vector register stride")
 
-    def store_vector_immstride(self, areg : greg_type, byte_stride : int,
-                    vreg : vreg_type, datatype : adt):
+    def store_vector_immstride(self, *, areg : greg_base, byte_stride : int,
+                    vreg : vreg_base, dt : adt) -> str:
         raise NotImplementedError("NEON has no store with immediate stride")
 
-    def store_vector_gregstride(self, areg : greg_type, sreg : greg_type,
-                    vreg : vreg_type, datatype : adt):
+    def store_vector_gregstride(self, *, areg : greg_base, sreg : greg_base,
+                    vreg : vreg_base, dt : adt) -> str:
         raise NotImplementedError("NEON has no store with scalar register stride")
 
-    def store_vector_scatter(self, areg : greg_type, offvreg : vreg_type,
-                             vreg : vreg_type, datatype : adt,
-                             indextype : ait):
+    def store_vector_scatter(self, *, areg : greg_base, offvreg : vreg_base,
+                             vreg : vreg_base, dt : adt,
+                             it : ait) -> str:
         raise NotImplementedError("NEON has no store with vector register stride")
 
     # Unsupported functionality:
-    def max_tregs(self, dt : adt):
+    def max_tregs(self, dt : adt) -> int:
         return 0
 
-    def treg(self, reg_idx : int):
+    def treg(self, reg_idx : int) -> treg_base:
         raise NotImplementedError("NEON has no tiles, use SME")
 
-    def zero_treg(self, treg : treg_type, datatype : adt):
+    def zero_treg(self, *, treg : treg_base, dt : adt) -> str:
         raise NotImplementedError("NEON has no tiles, use SME")
 
-    def store_tile(self, areg : greg_type,
-                   ignored_offset : int,
-                   treg : treg_type,
-                   datatype : adt):
+    def store_tile(self, *, areg : greg_base,
+                   treg : treg_base,
+                   dt : adt) -> str:
         raise NotImplementedError("NEON has no tiles, use SME")

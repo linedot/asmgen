@@ -1,21 +1,7 @@
-from asmgen.registers import reg_tracker
-from asmgen.registers import asm_data_type as dt
-from asmgen.asmblocks.noarch import asmgen
-from asmgen.asmblocks.avx_fma import fma128,fma256,avx512
-from asmgen.asmblocks.neon import neon
-from asmgen.asmblocks.sve import sve
-from asmgen.asmblocks.rvv import rvv
-from asmgen.asmblocks.rvv071 import rvv071
-from asmgen.cppgen.writers import write_test_asmblock_func
-from asmgen.cppgen.writers import write_test_func_declaration
-from asmgen.cppgen.declarations import vargen,vio_type
-from asmgen.compilation.tools import compiler
-from asmgen.compilation.compiler_presets import cross_archs,cross_cxx_flags
-
-from .testcase import testcase
-from .asm_test_generator import asm_test_generator
-
-from parameterized import parameterized, parameterized_class
+"""
+Test the asmgen implementations for different ISAs on whether they generate
+correct code
+"""
 
 import logging
 import os
@@ -23,18 +9,29 @@ import platform
 import random
 import shutil
 import unittest
-import sys
 
 from subprocess import Popen, PIPE
 from typing import Union
 
-# Adding tests:
-# Add test to one of the generators in tests/generators or create a new one
-# and make asm_test_generator inherit from it
-#
-# TODO: more tests
+from parameterized import parameterized, parameterized_class
 
-#TODO: armclang++ is arm only, so avx/armclang and rvv/armclang combos are unnecessary
+from asmgen.registers import reg_tracker
+from asmgen.asmblocks.noarch import asmgen
+from asmgen.asmblocks.avx_fma import fma128,fma256,avx512
+from asmgen.asmblocks.neon import neon
+from asmgen.asmblocks.sve import sve
+from asmgen.asmblocks.rvv import rvv
+from asmgen.cppgen.writers import write_test_asmblock_func
+from asmgen.cppgen.writers import write_test_func_declaration
+from asmgen.cppgen.declarations import vargen,vio_type
+from asmgen.compilation.tools import compiler
+from asmgen.compilation.compiler_presets import cross_archs,cross_cxx_flags
+from asmgen.emulation import get_emulator
+
+from .testcase import testcase
+from .asm_test_generator import asm_test_generator
+
+
 #NOTE: rvv071 will only work with special 0.7.1 EPI llvm, which will not work with RVV 1.0
 #      So let's remove testing it
 gens = [fma128(), fma256(), avx512(), neon(), sve(), rvv()]
@@ -50,15 +47,33 @@ parameters = [d1 | d2 for d1 in gen_dicts for d2 in cxx_dicts]
 
 @parameterized_class(parameters)
 class asm_correctness_test(unittest.TestCase,testcase):
+    """
+    Runs code correctness tests on ASM generators. To add a test, add it to one of the
+    generators in tests/generators or create a new one and make asm_test_generator in
+    asm_test_generator.py inherit from it
+    """
     test_root = "test_run/asm_correct/"
+
+    @classmethod
+    def clang_format_if_exists(cls, source : str) -> str:
+        """
+        Prettify the source with clang-format if the binary can be found
+        """
+        clang_format_exe = shutil.which("clang-format")
+        if None is not clang_format_exe:
+            cmd = f"{clang_format_exe}"
+            with Popen([cmd,"--style=llvm"],
+                stdin=PIPE, stdout=PIPE, stderr=PIPE) as p:
+                pretty_source = p.communicate(input=source.encode())[0].decode()
+                if 0 == p.returncode:
+                    return pretty_source
+        return source
+
     @classmethod
     def setUpClass(cls):
-        cls.name : str = cls.name
-        cls.cxx_name : str = cls.cxx_name
-        cls.gen : asmgen = cls.gen
         # only used for existence check
         compiler_exe = shutil.which(cls.cxx_name)
-        if None == compiler_exe:
+        if None is compiler_exe:
             raise unittest.SkipTest(f"Compiler {cls.cxx_name} not found, skipping")
 
         cls.testlib_name = f"libtest_asm_correct_{cls.name}.so"
@@ -86,23 +101,13 @@ class asm_correctness_test(unittest.TestCase,testcase):
         rt = reg_tracker(reg_type_init_list=reg_init_list)
 
         # Run all generators
-        generators = [getattr(asm_test_generator,name) for name in dir(asm_test_generator) if name.startswith("generate_")]
-        [generator(cls,rt,vg) for generator in generators]
+        generators = [getattr(asm_test_generator,name) for\
+            name in dir(asm_test_generator) if name.startswith("generate_")]
+        for generator in generators:
+            generator(cls,rt,vg)
 
-        # Easier to debug later
-        clang_format_exe = shutil.which("clang-format")
-        if not None == clang_format_exe:
-            cmd = f"{clang_format_exe}"
-            p = Popen([cmd,"--style=llvm"],stdin=PIPE, stdout=PIPE, stderr=PIPE)
-            pretty_testlib_source = p.communicate(input=cls.testlib_source.encode())[0].decode()
-            if 0 == p.returncode:
-                cls.testlib_source = pretty_testlib_source
-        if not None == clang_format_exe:
-            cmd = f"{clang_format_exe}"
-            p = Popen([cmd,"--style=llvm"],stdin=PIPE, stdout=PIPE, stderr=PIPE)
-            pretty_header_source = p.communicate(input=cls.header_source.encode())[0].decode()
-            if 0 == p.returncode:
-                cls.header_source = pretty_header_source
+        cls.testlib_source = cls.clang_format_if_exists(cls.testlib_source)
+        cls.header_source = cls.clang_format_if_exists(cls.header_source)
 
         if not os.path.exists(cls.test_root):
             os.makedirs(cls.test_root)
@@ -111,30 +116,36 @@ class asm_correctness_test(unittest.TestCase,testcase):
         source_path = os.path.join(cls.test_root, f"testlib_source_{cls.name}.cpp")
         header_path = os.path.join(cls.test_root, f"testlib_header_{cls.name}.hpp")
 
-        source_file = open(source_path, mode="w")
-        source_file.write(cls.testlib_source)
-        source_file.close()
+        with open(source_path, mode="w", encoding="utf-8") as source_file:
+            source_file.write(cls.testlib_source)
 
-        header_file = open(header_path, mode="w")
-        header_file.write(cls.header_source)
-        header_file.close()
+        with open(header_path, mode="w", encoding="utf-8") as header_file:
+            header_file.write(cls.header_source)
 
         cross_arch = cross_archs[cls.name]
 
         cls.compilation_failed = False
         if platform.machine() == cross_arch:
             cxx = compiler(cls.cxx_name,cls.name)
-            result = cxx.compile_lib(cls.testlib_source, os.path.join(cls.test_root, cls.testlib_name))
+            result = cxx.compile_lib(source=cls.testlib_source,
+                                     output_filename=os.path.join(
+                                         cls.test_root, cls.testlib_name))
             cls.compilation_failed = 0 == result
         else:
-            log.debug(f"code arch: {cross_arch}, platform arch: {platform.machine()}")
+            log.debug("code arch: %s, platform arch: %s",
+                cross_arch,platform.machine())
             # Look up if cxx flags exist for compiler
             if not cls.cxx_name in cross_cxx_flags[cross_arch]:
-                log.debug(f"skipping testlib compilation on generator {cls.name} because it's not supported on host and can't cross-compiler with {cls.cxx_name}")
+                log.debug(("skipping testlib compilation on generator %s"
+                           " because it's not supported on host and can't cross-compile"
+                           "with %s"), cls.name, cls.cxx_name)
                 return
-            log.debug(f"{cls.name} not supported on host, will cross compile and emulate")
+            log.debug("%s not supported on host, will cross compile and emulate",cls.name)
             cxx = compiler(cls.cxx_name,cls.name)
-            result = cxx.compile_lib(cls.testlib_source, os.path.join(cls.test_root, cls.testlib_name), cross_arch)
+            result = cxx.compile_lib(source=cls.testlib_source,
+                                     output_filename=os.path.join(
+                                         cls.test_root, cls.testlib_name),
+                                     cross_compile=cross_arch)
             cls.compilation_failed = 0 == result
 
     def setUp(self):
@@ -142,22 +153,39 @@ class asm_correctness_test(unittest.TestCase,testcase):
             self.fail(f"Compilation failed with {self.cxx_name}!")
 
     @staticmethod
-    def random_immediate():
-        # TODO: gen should have max_imm or something
+    def random_immediate() -> int:
+        """
+        Generate a random immediate/literal
+        """
         return random.randint(0,2**8)
 
     @staticmethod
     def random_fimmediate():
+        """
+        Generate a random FP immediate/literal
+        """
         return random.uniform(0.0,1.0)
 
     @classmethod
-    def add_test(cls, name : str,
+    def add_test(cls, *, name : str,
                  rt : reg_tracker,
                  vg : vargen,
                  asmblock : str,
                  check_function_definition : str,
                  check : str,
                  extra_prepare : str =""):
+        """
+        Adds a correctness test
+
+        :param name: Name of the test
+        :param rt: register tracker set up for the generator
+        :param vg: C++ variable generator
+        :param asmblock: String containing the inline ASM block to test
+        :param check_function_definition: String containing the C++ definition of 
+            the function that tests the outcome of the test
+        :param check: String containing the C++ source of the check
+        :param extra_prepare: Additional C++ source required to prepare the test
+        """
 
         header = vg.get_includes()
         preparation = vg.get_declarations()
@@ -172,7 +200,7 @@ class asm_correctness_test(unittest.TestCase,testcase):
         outputs : list[tuple[str,str,str]] = \
                 [(varname,"=m",init) for varname,init,vt in vg.get_variables() \
                 if vt == vio_type.OUTPUT]
-        asmblock += cls.gen.operands(inputs, outputs, 
+        asmblock += cls.gen.operands(inputs, outputs,
                                  clobbered_gregs+clobbered_vregs+["memory"])
         rt.reset()
         vg.reset_variables()
@@ -191,6 +219,13 @@ class asm_correctness_test(unittest.TestCase,testcase):
 
     @staticmethod
     def wrap_test_call(function_name):
+        """
+        Returns the C++ source of an executable that will just call the passed function
+        and return it's result
+
+        :param function_name: Name of the function to call
+        :return: C++ source of a standalone test for this function
+        """
         return f"""
         int main()
         {{
@@ -212,67 +247,69 @@ class asm_correctness_test(unittest.TestCase,testcase):
 #        ['mov_fp64_to_vreg'],
 #        ['fp32_fma'],
 #        ['fp64_fma'],
-#        ]) 
+#        ])
     @parameterized.expand([
-        [name.replace("generate_","")] for name in dir(asm_test_generator) if name.startswith("generate_")
-        ]) 
+        [name.replace("generate_","")] for name in dir(asm_test_generator)\
+            if name.startswith("generate_")])
     def test_asm(self, test_name):
+        """
+        Compiles an executable for the specified test and executes it
+        Fails if the compilation/execution of the test fails or the
+        test doesn't return 0
+
+        :param test_name: name of the test/function
+        """
         log = logging.getLogger("ASMCORTEST")
         source = self.header_source+"\n"+self.wrap_test_call(test_name)
         cxx = compiler(self.cxx_name,self.name)
         exe : str = ""
         exe_name = f"test_{test_name}_{self.name}"
 
-        log.debug(f"testing {test_name} with {self.name}")
+        log.debug("testing %s with %s",test_name,self.name)
 
         cross_arch = cross_archs[self.name]
         cmd = []
 
         if platform.machine() == cross_arch:
-            cxx.compile_exe(source, os.path.join(self.test_root,exe_name), [os.path.join(self.test_root,self.testlib_name)])
+            cxx.compile_exe(source=source,
+                            output_filename=os.path.join(self.test_root,exe_name),
+                            libs=[os.path.join(self.test_root,self.testlib_name)])
 
             exe = shutil.which(exe_name,path=self.test_root)
-            if None == exe:
+            if None is exe:
                 self.fail(f"Compilation failed with generator {self.name} for {test_name}")
             cmd = [exe]
         else:
             if not self.cxx_name in cross_cxx_flags[cross_arch]:
                 self.skipTest(f"Skipping: Can't cross-compile for {self.name} with {self.cxx_name}")
-            cxx.compile_exe(source, os.path.join(self.test_root,exe_name), [os.path.join(self.test_root,self.testlib_name)], cross_arch)
+            cxx.compile_exe(source=source,
+                            output_filename=os.path.join(self.test_root,exe_name),
+                            libs=[os.path.join(self.test_root,self.testlib_name)],
+                            cross_compile=cross_arch)
 
             exe = shutil.which(exe_name,path=self.test_root)
-            if None == exe:
+            if None is exe:
                 self.fail(f"Compilation failed with generator {self.name} for {test_name}")
         if not self.gen.supported_on_host():
-            #TODO: very OS specific, needs some logic
-            emulation_commands = {
-                    "rvv071" : ["qemu-riscv64-static", "-L", "/usr/riscv64-linux-gnu",
-                             "-cpu", "rv64,v=on,zba=on,vlen=512,vext_spec=v0.7.1"],
-                    "rvv" : ["qemu-riscv64-static", "-L", "/usr/riscv64-linux-gnu",
-                             "-cpu", "rv64,v=on,zba=on,vlen=512,vext_spec=v1.0"],
-                    "neon" : ["qemu-aarch64-static", "-L", "/usr/aarch64-linux-gnu",
-                              "-E","LD_LIBRARY_PATH=/usr/aarch64-linux-gnu/lib64"],
-                    "sve" : ["qemu-aarch64-static", "-L", "/usr/aarch64-linux-gnu",
-                              "-E","LD_LIBRARY_PATH=/usr/aarch64-linux-gnu/lib64",
-                             "-cpu", "max,sve=on,sve512=on"],
-                    "fma128" : ["sde", "-future", "--"],
-                    "fma256" : ["sde", "-future", "--"],
-                    "avx512" : ["sde", "-future", "--"],
-                    }
-            cmd = emulation_commands[self.name]+[exe]
-        log.debug(f"Running test {test_name} with: {' '.join(cmd)}")
-        p = Popen(cmd,stdin=PIPE,stdout=PIPE,stderr=PIPE)
-        process_out = p.communicate()
-        output = process_out[0].decode()
-        errout = process_out[1].decode()
-        log.debug(f"Execution stdout: {output}")
-        log.debug(f"Execution stderr: {errout}")
-        self.assertEqual(0, p.returncode)
+            emulator = get_emulator(platform.machine(), self.name)
+            emulator.run(exe)
+        else:
+            log.debug("Running test %s with: %s", test_name, ' '.join(cmd))
+            output = ""
+            errout = ""
+            with Popen(cmd,stdin=PIPE,stdout=PIPE,stderr=PIPE) as process:
+                process_out = process.communicate()
+                output = process_out[0].decode()
+                errout = process_out[1].decode()
+                self.assertEqual(0, process.returncode)
+            log.debug("Execution stdout: %s", output)
+            log.debug("Execution stderr: %s", errout)
 
-
-        
 
 def main():
+    """
+    Main function (setting log levels for debugging tests)
+    """
     # useful for debugging tests
     logging.basicConfig(level=logging.DEBUG, format='%(name)s %(levelname)s %(message)s')
     logging.getLogger("ASMCORTEST").setLevel(logging.DEBUG)

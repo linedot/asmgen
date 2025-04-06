@@ -1,27 +1,36 @@
+"""
+Abstract base classes for arithmetic operations/instructions
+"""
+
 from abc import ABC,abstractmethod
 from enum import Enum,auto
 
 from ..registers import (
     data_reg,
-    greg,freg,vreg,treg,
     asm_data_type as adt,
     adt_triple,
 )
 
 class widening_method(Enum):
-    none = auto()
-    vec_group = auto()
-    vec_multi = auto()
-    dot_neighbours = auto()
-    split_instructions = auto()
+    """
+    Possible methods ISAs can have for widening instructions
+    """
+    NONE = auto()
+    VEC_GROUP = auto()
+    VEC_MULTI = auto()
+    DOT_NEIGHBOURS = auto()
+    SPLIT_INSTRUCTIONS = auto()
 
-#TODO: masked modifier
 class modifier(Enum):
-    np = auto()
-    idx = auto()
-    regidx = auto()
-    part = auto()
-    vf = auto()
+    """
+    Possible modifiers for an instruction/operation
+    """
+    NP = auto()
+    IDX = auto()
+    REGIDX = auto()
+    PART = auto()
+    VF = auto()
+    MASK = auto()
 
 class opd3(ABC):
     """
@@ -48,24 +57,80 @@ class opd3(ABC):
     @property
     @abstractmethod
     def widening_method(self) -> widening_method:
+        """
+        Return the method used to deal with widening instructions
+        
+        :return : widening method
+        :rtype : class:`asmgen.asmblocks.operations.widening_method`
+        """
         raise NotImplementedError(self.NIE_MESSAGE)
 
     @abstractmethod
     def supported_triples(self) -> list[adt_triple]:
+        """
+        Return the list of supported data type combinations
+        
+        :return : list of supported data type combinations
+        :rtype : class:`asmgen.registers.adt_triple`
+        """
         raise NotImplementedError(self.NIE_MESSAGE)
 
     @abstractmethod
-    def __call__(self, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
-                 a_dt : adt, b_dt : adt, c_dt : adt, 
+    def check_modifiers(self, modifiers : set[modifier]):
+        """
+        Checks whether the operations supports the specified modifiers
+
+
+        :param modifiers: set containing the modifiers to check
+        :type modifiers: set[class:`asmgen.asmblocks.operations.modifier`]
+        :raises ValueError: If an unsupported modifier is in the specified set
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    @abstractmethod
+    def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+                 a_dt : adt, b_dt : adt, c_dt : adt,
                  modifiers : set[modifier], **kwargs) -> str:
+        """
+        Return the ASM/IR instruction
+        
+        :param adreg : Data register containing elements of the A component
+        :type adreg : class:`asmgen.registers.data_reg`
+        :param bdreg : Data register containing elements of the B component
+        :type bdreg : class:`asmgen.registers.data_reg`
+        :param cdreg : Data register containing elements of the C component
+        :type cdreg : class:`asmgen.registers.data_reg`
+        :param a_dt : Data type of the A component
+        :type a_dt : class:`asmgen.registers.asm_data_type`
+        :param b_dt : Data type of the B component
+        :type b_dt : class:`asmgen.registers.asm_data_type`
+        :param c_dt : Data type of the C component
+        :type c_dt : class:`asmgen.registers.asm_data_type`
+        :return : ASM/IR instruction corresponding to the operation
+        :rtype : str
+        """
         raise NotImplementedError(self.NIE_MESSAGE)
 
     def check_triple(self, a_dt : adt, b_dt : adt, c_dt : adt):
+        """
+        Check if the operation supports the specified data type combination
+        
+        :param a_dt : Data type of the A component
+        :type a_dt : class:`asmgen.registers.asm_data_type`
+        :param b_dt : Data type of the B component
+        :type b_dt : class:`asmgen.registers.asm_data_type`
+        :param c_dt : Data type of the C component
+        :type c_dt : class:`asmgen.registers.asm_data_type`
+        :raises ValueError: if an unsupported datatype combination is passed
+        """
         triple = adt_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
         if triple not in self.supported_triples():
             raise ValueError("Unsupported type combination")
 
 class dummy_opd3(opd3):
+    """
+    Dummy opd3 operation; ISAs assign this by default to operations they do not support
+    """
 
     @property
     def widening_method(self) -> widening_method:
@@ -74,6 +139,9 @@ class dummy_opd3(opd3):
     def supported_triples(self) -> list[adt_triple]:
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    def __call__(self, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
-                 a_dt : adt, b_dt : adt, c_dt : adt) -> str:
+    def check_modifiers(self, modifiers : set[modifier]):
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+                 a_dt : adt, b_dt : adt, c_dt : adt, modifiers : set[modifier], **kwargs) -> str:
         raise NotImplementedError(self.NIE_MESSAGE)

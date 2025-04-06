@@ -1,7 +1,15 @@
-from typing import Union
-from asmgen.asmblocks.noarch import asmgen, freg, greg, vreg
-from asmgen.asmblocks.noarch import asm_data_type as dt
-from asmgen.asmblocks.noarch import asm_index_type as it
+"""
+Test the asmgen implementations for different ISAs on whether they implement
+required methods
+"""
+import unittest
+import inspect
+
+from parameterized import parameterized, parameterized_class
+
+from asmgen.asmblocks.noarch import asmgen
+from asmgen.registers import asm_data_type as adt
+from asmgen.registers import asm_index_type as ait
 
 from asmgen.asmblocks.avx_fma import fma128,fma256,avx512
 from asmgen.asmblocks.neon import neon
@@ -9,9 +17,7 @@ from asmgen.asmblocks.sve import sve
 from asmgen.asmblocks.rvv import rvv
 from asmgen.asmblocks.rvv071 import rvv071
 
-import unittest
-import re
-from parameterized import parameterized, parameterized_class
+from .testcase import testcase
 
 
 allowed_not_implemented = {
@@ -87,6 +93,138 @@ allowed_not_implemented = {
                     ]
 }
 
+
+function_tests = [
+        ['simd_size', None],
+        ['c_simd_size_function', None],
+        ['is_vla', None],
+        ['indexable_elements', {'dt' : lambda gen : adt.DOUBLE} ],
+        ['max_vregs', None],
+        ['max_gregs', None],
+        ['max_fregs', None],
+        ['min_prefetch_offset', None],
+        ['max_prefetch_offset', None],
+        ['min_load_voff', None],
+        ['max_load_voff', None],
+        ['min_load_immoff', {'dt' : lambda gen : adt.DOUBLE} ],
+        ['max_load_immoff', {'dt' : lambda gen : adt.DOUBLE} ],
+        ['min_load_immoff', {'dt' : lambda gen : adt.SINGLE} ],
+        ['max_load_immoff', {'dt' : lambda gen : adt.SINGLE} ],
+        ['freg', { 'reg_idx' : lambda gen :  0, 'dt' : lambda gen : adt.DOUBLE} ],
+        ['greg', { 'reg_idx' : lambda gen :  0} ],
+        ['vreg', { 'reg_idx' : lambda gen :  0} ],
+        # We start doing a little trick, because we can't use self here:
+        # g0 -> self.gen.greg(0), v0 -> self.gen.vreg(0), f0 -> self.gen.freg(0)
+        ['loopbegin', {'reg' : lambda gen: gen.greg(0),
+                       'label' : lambda gen : 'someloop'}],
+        ['loopbegin_nz', {'reg' : lambda gen: gen.greg(0),
+                         'label' : lambda gen : 'someloop',
+                         'labelskip' : lambda gen : 'someloop_nz'}],
+        ['loopend', {'reg' : lambda gen: gen.greg(0),
+                     'label' : lambda gen : 'someloop'}],
+        ['zero_greg', {'greg' : lambda gen : gen.greg(0)}],
+        ['mov_greg', {'src' : lambda gen : gen.greg(0),
+                      'dst' : lambda gen : gen.greg(1)}],
+        ['mov_greg_to_param', {'src' : lambda gen : gen.greg(0),
+                               'param' : lambda gen : 'someparam'}],
+        ['mov_param_to_greg', {'dst' : lambda gen : gen.greg(0),
+                               'param' : lambda gen : 'someparam'}],
+        ['mov_param_to_greg_shift', {'dst' : lambda gen : gen.greg(0),
+                                     'param' : lambda gen : 'someparam',
+                                     'bit_count' : lambda gen : 2}],
+        ['mov_greg_imm', {'reg' : lambda gen : gen.greg(0),
+                          'imm' : lambda gen : 40}],
+        ['add_greg_imm', {'reg' : lambda gen : gen.greg(0),
+                          'imm' : lambda gen : 40}],
+        ['add_greg_greg', {'dst' : lambda gen : gen.greg(0),
+                           'reg1' : lambda gen : gen.greg(1),
+                           'reg2' : lambda gen : gen.greg(2)}],
+        ['sub_greg_greg', {'dst' : lambda gen : gen.greg(0),
+                           'reg1' : lambda gen : gen.greg(1),
+                           'reg2' : lambda gen : gen.greg(2)}],
+        ['add_greg_voff', {'reg' : lambda gen : gen.greg(0),
+                           'offset' : lambda gen : 40,
+                           'dt' : lambda gen : adt.DOUBLE}],
+        ['add_greg_voff', {'reg' : lambda gen : gen.greg(0),
+                           'offset' : lambda gen : 40,
+                           'dt' : lambda gen : adt.SINGLE}],
+        ['mul_greg_imm', {'dst' : lambda gen : gen.greg(0),
+                          'src' : lambda gen : gen.greg(1),
+                          'factor' : lambda gen : 40}],
+        ['shift_greg_left', {'reg' : lambda gen : gen.greg(0),
+                             'bit_count' : lambda gen : 4}],
+        ['shift_greg_right', {'reg' : lambda gen : gen.greg(0),
+                             'bit_count' : lambda gen : 4}],
+        ['zero_vreg', {'vreg' : lambda gen : gen.vreg(0),
+                       'dt' : lambda gen : adt.DOUBLE}],
+        ['zero_vreg', {'vreg' : lambda gen : gen.vreg(0),
+                       'dt' : lambda gen : adt.SINGLE}],
+        ['prefetch_l1_boff', {'areg'   : lambda gen : gen.greg(0),
+                              'offset' : lambda gen : 256}],
+        ['load_pointer', {'areg' : lambda gen : gen.greg(0),
+                          'name' : lambda gen : 'someparam'}],
+        ['load_vector_voff', {'areg' : lambda gen : gen.greg(0),
+                              'voffset' : lambda gen : 4,
+                              'vreg' : lambda gen : gen.vreg(0),
+                              'dt' :  lambda gen : adt.DOUBLE}],
+        ['load_vector_voff', {'areg' : lambda gen : gen.greg(0),
+                              'voffset' : lambda gen : 4,
+                              'vreg' : lambda gen : gen.vreg(0),
+                              'dt' :  lambda gen : adt.SINGLE}],
+        ['load_scalar_immoff', {'areg' : lambda gen : gen.greg(0),
+                                'offset' : lambda gen : 4,
+                                'freg' : lambda gen : gen.freg(0, adt.DOUBLE),
+                                'dt' :  lambda gen : adt.DOUBLE}],
+        ['load_vector_dist1', {'areg' : lambda gen : gen.greg(0),
+                               'vreg' : lambda gen : gen.vreg(0),
+                               'dt' :  lambda gen : adt.DOUBLE}],
+        ['load_vector_dist1', {'areg' : lambda gen : gen.greg(0),
+                               'vreg' : lambda gen : gen.vreg(0),
+                               'dt' :  lambda gen : adt.SINGLE}],
+        ['load_vector_dist1_boff', {'areg' : lambda gen : gen.greg(0),
+                                    'offset' : lambda gen : 8,
+                                    'vreg' : lambda gen : gen.vreg(0),
+                                    'dt' :  lambda gen : adt.DOUBLE}],
+        ['load_vector_dist1_boff', {'areg' : lambda gen : gen.greg(0),
+                                    'offset' : lambda gen : 4,
+                                    'vreg' : lambda gen : gen.vreg(0),
+                                    'dt' :  lambda gen : adt.SINGLE}],
+        ['load_vector_dist1_inc', {'areg' : lambda gen : gen.greg(0),
+                                   'offset' : lambda gen : 8,
+                                   'vreg' : lambda gen : gen.vreg(0),
+                                   'dt' :  lambda gen : adt.DOUBLE}],
+        ['load_vector_dist1_inc', {'areg' : lambda gen : gen.greg(0),
+                                   'offset' : lambda gen : 4,
+                                   'vreg' : lambda gen : gen.vreg(0),
+                                   'dt' :  lambda gen : adt.SINGLE}],
+        ['load_vector_immstride', {'areg' : lambda gen : gen.greg(0),
+                                   'byte_stride' : lambda gen : 4,
+                                   'vreg' : lambda gen : gen.vreg(0),
+                                   'dt' :  lambda gen : adt.SINGLE}],
+        ['load_vector_gregstride', {'areg' : lambda gen : gen.greg(0),
+                                    'sreg' : lambda gen : gen.greg(1),
+                                    'vreg' : lambda gen : gen.vreg(0),
+                                    'dt' :  lambda gen : adt.SINGLE}],
+        ['load_vector_gather', {'areg' : lambda gen : gen.greg(0),
+                                'offvreg' : lambda gen : gen.vreg(1),
+                                'vreg' : lambda gen : gen.vreg(0),
+                                'dt' :  lambda gen : adt.SINGLE,
+                                'it' :  lambda gen : ait.INT32}],
+        ['store_vector_immstride', {'areg' : lambda gen : gen.greg(0),
+                                    'byte_stride' : lambda gen : 4,
+                                    'vreg' : lambda gen : gen.vreg(0),
+                                    'dt' :  lambda gen : adt.SINGLE}],
+        ['store_vector_gregstride', {'areg' : lambda gen : gen.greg(0),
+                                     'sreg' : lambda gen : gen.greg(1),
+                                     'vreg' : lambda gen : gen.vreg(0),
+                                     'dt' :  lambda gen : adt.SINGLE}],
+        ['store_vector_scatter', {'areg' : lambda gen : gen.greg(0),
+                                  'offvreg' : lambda gen : gen.vreg(1),
+                                  'vreg' : lambda gen : gen.vreg(0),
+                                  'dt' :  lambda gen : adt.SINGLE,
+                                  'it' :  lambda gen : ait.INT32}],
+    ]
+
 @parameterized_class([
     {"name": "fma128", "gen": fma128(), "allowed": allowed_not_implemented['fma128']},
     {"name": "fma256", "gen": fma256(), "allowed": allowed_not_implemented['fma256']},
@@ -96,83 +234,54 @@ allowed_not_implemented = {
     {"name": "rvv", "gen": rvv(), "allowed": allowed_not_implemented['rvv']},
     {"name": "rvv071", "gen": rvv071(), "allowed": allowed_not_implemented['rvv071']},
 ])
-class asm_implementation_test(unittest.TestCase):
-    @parameterized.expand([
-        ['simd_size'],
-        ['c_simd_size_function'],
-        ['is_vla'],
-        ['indexable_elements', dt.DOUBLE],
-        ['max_vregs'],
-        ['max_gregs'],
-        ['max_fregs'],
-        ['min_prefetch_offset'],
-        ['max_prefetch_offset'],
-        ['min_load_voff'],
-        ['max_load_voff'],
-        ['min_load_immoff', dt.DOUBLE],
-        ['max_load_immoff', dt.DOUBLE],
-        ['min_load_immoff', dt.SINGLE],
-        ['max_load_immoff', dt.SINGLE],
-        ['freg', 0],
-        ['greg', 0],
-        ['vreg', 0],
-        # We start doing a little trick, because we can't use self here:
-        # g0 -> self.gen.greg(0), v0 -> self.gen.vreg(0), f0 -> self.gen.freg(0)
-        ['loopbegin', 'g0', 'someloop'],
-        ['loopend', 'g0', 'someloop'],
-        ['zero_greg', 'g0'],
-        ['mov_greg', 'g0', 'g1'],
-        ['mov_greg_to_param', 'g0', 'someparam'],
-        ['mov_param_to_greg', 'someparam', 'g0'],
-        ['mov_param_to_greg_shift', 'someparam', 'g0', 2],
-        ['mov_greg_imm', 'g0', 40],
-        ['add_greg_imm', 'g0', 40],
-        ['add_greg_greg', 'g0', 'g1', 'g2'],
-        ['add_greg_voff', 'g0', 40, dt.DOUBLE],
-        ['add_greg_voff', 'g0', 40, dt.SINGLE],
-        ['mul_greg_imm', 'g0', 'g1', 8],
-        ['shift_greg_left', 'g0', 4],
-        ['shift_greg_right', 'g0', 4],
-        ['zero_vreg', 'v0', dt.DOUBLE],
-        ['zero_vreg', 'v0', dt.SINGLE],
-        ['prefetch_l1_boff', 'g0', 256],
-        ['load_pointer', 'g0', 'someparam'],
-        ['load_vector_voff', 'g0', 4, 'v0', dt.DOUBLE],
-        ['load_vector_voff', 'g0', 4, 'v0', dt.SINGLE],
-        ['load_scalar_immoff', 'g0', 4, 'f0', dt.DOUBLE],
-        ['load_scalar_immoff', 'g0', 4, 'f0', dt.SINGLE],
-        ['load_vector_dist1', 'g0', 4, 'v0', dt.DOUBLE],
-        ['load_vector_dist1', 'g0', 4, 'v0', dt.SINGLE],
-        ['load_vector_dist1_boff', 'g0', 4, 'v0', dt.DOUBLE],
-        ['load_vector_dist1_boff', 'g0', 4, 'v0', dt.SINGLE],
-        ['load_vector_dist1_inc', 'g0', 4, 'v0', dt.DOUBLE],
-        ['load_vector_dist1_inc', 'g0', 4, 'v0', dt.SINGLE],
-        ['load_vector_immstride', 'g0', 4, 'v0', dt.SINGLE],
-        ['load_vector_gregstride', 'g0', 'g1', 'v0', dt.SINGLE],
-        ['load_vector_gather', 'g0', 'v1', 'v0', dt.SINGLE, it.INT32],
-        ['store_vector_immstride', 'g0', 4, 'v0', dt.SINGLE],
-        ['store_vector_gregstride', 'g0', 'g1', 'v0', dt.SINGLE],
-        ['store_vector_scatter', 'g0', 'v1', 'v0', dt.SINGLE, it.INT32],
-    ])
-    def test_asmgen_method_implemented(self, name, *argv):
+class asm_implementation_test(unittest.TestCase, testcase):
+    """
+    Parameterized test that tests implementation of multiple methods in multiple generators 
+    """
+    @parameterized.expand(function_tests)
+    def test_asmgen_method_implemented(self, name, args):
+        """
+        Tests whether a method is implemented in a generator by calling it with
+        reasonable arguments, resulting in a fail if the call fails
+        """
         if name in self.allowed:
             self.skipTest(f"Generator allowed to not implement {name}")
-        args_list = []
-        def regparam_to_reg(param : str) -> Union[greg,freg,vreg,str]:
-                m = re.match(r"v(\d)", arg)
-                if m:
-                    return self.gen.vreg(int(m[1]))
-                m = re.match(r"g(\d)", arg)
-                if m:
-                    return self.gen.greg(int(m[1]))
-                m = re.match(r"f(\d)", arg)
-                if m:
-                    return self.gen.freg(int(m[1]))
-                return param
-        for arg in argv:
-            if type(arg) == str:
-                arg = regparam_to_reg(arg)
-            args_list.append(arg)
+
+        copy_args = {}
+        if args:
+            for k in args.keys():
+                copy_args[k] = args[k](self.gen)
+
         method = getattr(self.gen, name)
         if callable(method):
-            method(*args_list)
+            method(**copy_args)
+
+class asm_test_implementation_tests(unittest.TestCase):
+    """
+    Tests the implementation tester for completeness
+    """
+    def test_all_funcs_tested(self):
+        """
+        Tests whether all methods that the base asmgen class declares
+        are being tested
+        """
+
+        allowed_not_tested= [
+            '__init__',
+            'operands',
+            'set_output_inline',
+            'asmwrap',
+        ]
+
+        existing_methods = inspect.getmembers(asmgen,
+                                              predicate=inspect.isfunction)
+        existing_methods = [method[0] for method in existing_methods if \
+                            method[0] not in allowed_not_tested]
+        tested_methods = [method[0] for method in function_tests]
+
+        untested = 0
+        for method in existing_methods:
+            if method not in tested_methods:
+                untested += 1
+                print(f"Implementation test for asmgen method {method} missing")
+        self.assertEqual(untested, 0)

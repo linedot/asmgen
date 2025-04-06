@@ -1,4 +1,7 @@
-test_func = """
+"""
+C++ templates for tests and benchmarks
+"""
+TEST_FUNC = """
             ${header}
 
             ${checkfun_definition}
@@ -19,10 +22,10 @@ test_func = """
                 }
             }
 """
-test_func_declaration = """
+TEST_FUNC_DECLARATION = """
             int ${function_name}(${function_params});
 """
-simple_func = """
+SIMPLE_FUNC = """
             void ${function_name}(${function_params})
             {
                 ${prepare}
@@ -32,7 +35,7 @@ simple_func = """
             }
 """
 
-simple_test = """
+SIMPLE_TEST = """
            ${header}
 
            ${checkfun_definition}
@@ -60,7 +63,7 @@ simple_test = """
            }"""
 
 
-benchmark = """
+BENCHMARK = """
             $HEADER
 
             $VALIDFUN_DEF
@@ -103,7 +106,7 @@ benchmark = """
                 }
             }"""
 
-benchmark_separated = """
+BENCHMARK_SEPARATED = """
                 $BENCHPREPARE
                 $DATAPREPARE
 
@@ -130,7 +133,7 @@ benchmark_separated = """
                 }
 """
 
-benchmark_multi = """
+BENCHMARK_MULTI = """
             $HEADER
 
             $VALIDFUN_DEF
