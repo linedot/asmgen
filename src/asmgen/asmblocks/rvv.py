@@ -124,6 +124,10 @@ class rvv(riscv64):
     def max_load_voff(self) -> int:
         return 0
 
+    @property
+    def max_add_voff(self) -> int:
+        return 0
+
     def load_vector(self, *, areg : greg_base,
                     vreg : vreg_base, dt : adt) -> str:
         dt_suf = self.dt_suffixes[dt]

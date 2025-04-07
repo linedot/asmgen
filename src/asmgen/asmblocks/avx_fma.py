@@ -260,8 +260,13 @@ class avxbase(asmgen):
         return 0
 
     @property
-    def max_load_voff(self):
-        return 2**31/self.simd_size
+    def max_load_voff(self) -> int:
+        return 2**31//self.simd_size
+
+
+    @property
+    def max_add_voff(self) -> int:
+        return 2**31//self.simd_size
 
     def prefetch_l1_boff(self, *, areg : greg_base, offset : int):
         preg = prefix_if_raw_reg(areg)

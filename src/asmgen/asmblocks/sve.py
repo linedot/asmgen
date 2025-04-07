@@ -143,6 +143,10 @@ class sve(aarch64):
     def max_load_voff(self) -> int:
         return 7
 
+    @property
+    def max_add_voff(self) -> int:
+        return 16
+
     def load_vector(self, *, areg : greg_base,
                     vreg : vreg_base, dt : adt) -> str:
         suf = self.dt_suffixes[dt]

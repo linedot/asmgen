@@ -350,6 +350,18 @@ class asmgen(ABC):
         """
         raise NotImplementedError(NIE_MESSAGE)
 
+    @property
+    @abstractmethod
+    def max_add_voff(self) -> int:
+        """
+        Returns the maximum immediate value in number of SIMD/vector registers
+        for adding vector-length-based byte-size-offsets to a GP register
+
+        :return: Maximum immediate value
+        :rtype: int
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
     @abstractmethod
     def min_load_immoff(self, dt : asm_data_type) -> int:
         """
