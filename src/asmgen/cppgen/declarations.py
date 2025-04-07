@@ -28,7 +28,7 @@ class vargen:
     :param cppvar_types: Dictionary mapping the variables onto their C++ types
     :type cppvar_types: dict[str,str]
     :param cppvar_inits: Dictionary mapping the variables onto C++ expressions
-        that will initialize them
+        that will initialize their respective inline ASM parameter
     :type cppvar_inits: dict[str,str]
     :param cppvar_vts: Dictionary mapping the variables onto their inline asm operand type
     :type cppvar_vts: dict[str,class:`asmgen.cppgen.declarations.vio_type`]
@@ -118,7 +118,8 @@ class vargen:
 
     def custom_var_init(self, *, name : str, init : str):
         """
-        Sets a custom C++ initialization expression for a variable
+        Sets a custom C++ initialization expression for the
+        inline ASM parameter corresponding to a variable
         
         :param name: Name of the variable
         :type name: str, optional

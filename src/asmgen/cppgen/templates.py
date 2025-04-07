@@ -64,97 +64,97 @@ SIMPLE_TEST = """
 
 
 BENCHMARK = """
-            $HEADER
+            ${header}
 
-            $VALIDFUN_DEF
+            ${validfun_def}
             int main(int argc, char* argv[])
             {
-                $TMPDEC
+                ${tmpdec}
 
-                $TMPASSIGN
+                ${tmpassign}
 
-                $INPARAMDEF
-                $OUTPARAMDEF
+                ${inparamdef}
+                ${outparamdef}
 
-                $BENCHPREPARE
-                $DATAPREPARE
+                ${benchprepare}
+                ${dataprepare}
 
                 for (std::uint64_t meas = 0; meas < measurements; meas++)
                 {
-                    $BENCHTIC
+                    ${benchtic}
                     for (std::uint64_t iter = 0; iter < iterations; iter++)
                     {
                         __asm__ volatile (
-                            $ASMBLOCK
+                            ${asmblock}
                         );
                     }
-                    $BENCHTOC
+                    ${benchtoc}
                 }
 
 
-                $BENCHRESULT
+                ${benchresult}
 
 
-                if($VALIDATE)
+                if(${validate})
                 {
                     return 0;
                 }
                 else
                 {
-                    $ANALYZE
+                    ${analyze}
                     return -1;
                 }
             }"""
 
 BENCHMARK_SEPARATED = """
-                $BENCHPREPARE
-                $DATAPREPARE
+                ${benchprepare}
+                ${dataprepare}
 
                 for (std::uint64_t iter = 0; iter < iterations; iter++)
                 {
-                    $BENCHTIC
+                    ${benchtic}
                     for (std::uint64_t meas = 0; meas < measurements; meas++)
                     {
                         __asm__ volatile (
-                            $ASMBLOCK
+                            ${asmblock}
                         );
                     }
-                    $BENCHTOC
+                    ${benchtoc}
                 }
-                $BENCHRESULT
+                ${benchresult}
 
-                if($VALIDATE)
+                if(${validate})
                 {
-                    benchmark_status[$BENCHNUM] = true
+                    benchmark_status[${benchnum}] = true
                 }
                 else
                 {
-                    $ANALYZE
+                    ${analyze}
                 }
 """
 
 BENCHMARK_MULTI = """
-            $HEADER
+            ${header}
 
-            $VALIDFUN_DEF
+            ${validfun_def}
             int main(int argc, char* argv[])
             {
-                $TMPDEC
+                ${tmpdec}
 
-                std::array<std::string, $BENCHCOUNT> benchmark_names    = $BENCHNAMELIST;
-                std::array<bool,        $BENCHCOUNT> benchmark_statuses = {false};
+                std::array<std::string, ${benchcount}> benchmark_names    = ${benchnamelist};
+                std::array<bool,        ${benchcount}> benchmark_statuses = {false};
 
-                $TMPASSIGN
+                ${tmpassign}
 
-                $INPARAMDEF
-                $OUTPARAMDEF
+                ${inparamdef}
+                ${outparamdef}
 
-                $BENCHMARKS
+                ${benchmarks}
 
 
-                for(std::size_t i = 0; i < $BENCHCOUNT; i++)
+                for(std::size_t i = 0; i < ${benchcount}; i++)
                 {
-                    std::cout << "Benchmark " << std::setw(30) << benchmark_names[i] << " (" << i << "/" << $BENCHCOUNT << "): "
+                    std::cout << "Benchmark " << std::setw(30) << benchmark_names[i] << " (" << i << "/" << ${benchcount} << "): "
                               << (benchmark_statuses[i] ? "Success" : "Failure") << "\n";
                 }
 
