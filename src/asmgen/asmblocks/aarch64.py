@@ -99,7 +99,7 @@ class aarch64(asmgen):
         return self.asmwrap(f"mov {reg},#{imm}")
 
     def mul_greg_imm(self, *, src : greg_base, dst : greg_base, factor):
-        assert(src != dst)
+        assert src != dst
         #Gotta do 2 instructions for this
         asmblock  = self.mov_greg_imm(reg=dst, imm=factor)
         asmblock += self.asmwrap(f"mul {dst},{src},{dst}")
