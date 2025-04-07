@@ -53,6 +53,8 @@ class avxbase(asmgen):
 
     def isaquirks(self, *, rt : reg_tracker, dt : adt):
         return ""
+    def isaendquirks(self, *, rt : reg_tracker, dt : adt):
+        return ""
 
     def jzero(self, *, reg : greg_base, label : str) -> str:
         preg = prefix_if_raw_reg(reg)

@@ -109,6 +109,21 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
+    def isaendquirks(self, *, rt : reg_tracker, dt : asm_data_type) -> str:
+        """
+        Returns a string containing instructions for ISA-specific tear-down, 
+        like the smstop instruction for SME
+
+        :param rt: register tracker for allowing to reserve and write specific registers
+        :type rt: class:`asmgen.registers.reg_tracker`
+        :param dt: Data type the kernel will be working with
+        :type dt: class:`asmgen.registers.asm_data_type`
+        :return: string containing ISA-specific tear-down instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
     def supportedby_cpuinfo(self, cpuinfo : str) -> bool:
         """
         Given a cpuinfo string, return whether this generator is compatible with the described CPU

@@ -67,6 +67,9 @@ class rvv(riscv64):
             asmblock = self.vsetvlmax(reg=vlreg, dt=dt)
         return asmblock
 
+    def isaendquirks(self, *, rt : reg_tracker, dt : adt) -> str:
+        return ""
+
     def vreg(self, reg_idx : int) -> vreg_base:
         return rvv_vreg(reg_idx)
 

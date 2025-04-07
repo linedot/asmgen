@@ -69,6 +69,9 @@ class sve(aarch64):
         asmblock = self.ptrue(self.preg(0), dt)
         return asmblock
 
+    def isaendquirks(self, *, rt : reg_tracker, dt : adt) -> str:
+        return ""
+
     def jvzero(self, *, vreg1 : vreg_base, freg : freg_base,
                vreg2 : vreg_base,
                greg : greg_base, label : str,

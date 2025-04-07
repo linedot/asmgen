@@ -170,6 +170,16 @@ class sme(sve):
         result += "}"
         return result
 
+    def isaquirks(self, *, rt : reg_tracker, dt : adt) -> str:
+        asmblock = self.asmwrap("smstart")
+        asmblock += super().isaquirks(rt=rt,dt=dt)
+        return asmblock
+
+    def isaendquirks(self, *, rt : reg_tracker, dt : adt) -> str:
+        asmblock = super().isaquirks(rt=rt,dt=dt)
+        asmblock += self.asmwrap("smstop")
+        return asmblock
+
     def max_tregs(self, dt : adt) -> int:
         return adt_size(dt)
 
