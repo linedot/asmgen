@@ -50,10 +50,21 @@ class rvv(riscv64):
         return "v" in extensions
 
     def isaquirks(self, *, rt : reg_tracker, dt : adt) -> str:
-        tmpreg_idx = rt.reserve_any_reg("greg")
-        tmpreg = self.greg(tmpreg_idx)
-        asmblock = self.vsetvlmax(reg=tmpreg, dt=dt)
-        rt.unuse_reg("greg", tmpreg_idx)
+
+        vlreg_idx = 0
+        if 'vlen' in rt.aliased_regs['greg'].keys():
+            vlreg_idx = rt.aliased_regs['greg']['vlen']
+        else:
+            vlreg_idx = rt.reserve_any_reg('greg')
+            rt.alias_reg('greg', 'vlen', vlreg_idx)
+        vlreg = self.greg(vlreg_idx)
+
+        if 'avl' in rt.aliased_regs['greg'].keys():
+            avlreg_idx = rt.aliased_regs['greg']['avl']
+            avlreg = self.greg(avlreg_idx)
+            asmblock = self.vsetvli(vlreg=vlreg, avlreg=avlreg, dt=dt)
+        else:
+            asmblock = self.vsetvlmax(reg=vlreg, dt=dt)
         return asmblock
 
     def vreg(self, reg_idx : int) -> vreg_base:
