@@ -6,6 +6,7 @@ from typing import Callable
 
 from ..registers import (
     asm_data_type as adt,
+    reg_tracker,
     adt_is_float,
     adt_is_int,
     adt_triple,
@@ -176,7 +177,7 @@ class sme(sve):
         return asmblock
 
     def isaendquirks(self, *, rt : reg_tracker, dt : adt) -> str:
-        asmblock = super().isaquirks(rt=rt,dt=dt)
+        asmblock = super().isaendquirks(rt=rt,dt=dt)
         asmblock += self.asmwrap("smstop")
         return asmblock
 
