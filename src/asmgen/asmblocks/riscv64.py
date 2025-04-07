@@ -106,6 +106,7 @@ class riscv64(asmgen):
         return self.asmwrap(f"li {reg},{imm}")
 
     def mul_greg_imm(self, *, src : greg_base, dst : greg_base, factor : int) -> str:
+        assert(src != dst)
         #Gotta do 2 instructions for this
         asmblock  = self.mov_greg_imm(reg=dst, imm=factor)
         asmblock += self.asmwrap(f"mul {dst},{src},{dst}")
