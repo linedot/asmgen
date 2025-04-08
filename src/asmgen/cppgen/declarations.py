@@ -17,6 +17,7 @@ class vio_type(Enum):
     """
     INPUT = 1
     OUTPUT = 2
+    NONE = 4
 
 class vargen:
     """
@@ -30,6 +31,9 @@ class vargen:
     :param cppvar_inits: Dictionary mapping the variables onto C++ expressions
         that will initialize their respective inline ASM parameter
     :type cppvar_inits: dict[str,str]
+    :param cppvar_cppinits: Dictionary mapping the variables onto C++ expressions
+        that will initialize their value in C++ code
+    :type cppvar_cppinits: dict[str,str]
     :param cppvar_vts: Dictionary mapping the variables onto their inline asm operand type
     :type cppvar_vts: dict[str,class:`asmgen.cppgen.declarations.vio_type`]
     :param required_headers: List of headers that must be included for the generated variables
@@ -46,11 +50,13 @@ class vargen:
         self.cppvars : list[str] = []
         self.cppvar_types : dict[str,str] = {}
         self.cppvar_inits : dict[str,str] = {}
+        self.cppvar_cppinits : dict[str,str] = {}
         self.cppvar_vts : dict[str,vio_type] = {}
         self.required_headers : list[str] = []
         self.extra_decl_init : str = ""
 
     def new_var(self, *, cpp_type : str, name : str ="#auto#",
+                cppinit : str = "",
                 vt : vio_type =vio_type.OUTPUT) -> str:
         """
         Generate a new variable
@@ -74,12 +80,14 @@ class vargen:
         self.cppvars.append(name)
         self.cppvar_types[name] = cpp_type
         self.cppvar_inits[name] = f"{name}"
+        self.cppvar_cppinits[name] = cppinit
         self.cppvar_vts[name] = vt
         return name
 
     def new_vector(self, *, cpp_type : str, size : Union[str,int]=1,
                    fillwith : Union[int,float]=0.0,
                    name : str ="#auto#",
+                   cppinit : str = "",
                    vt : vio_type =vio_type.OUTPUT) -> str:
         """
         Generate a new std::vector based variable
@@ -108,6 +116,7 @@ class vargen:
         self.cppvars.append(name)
         self.cppvar_types[name] = f"std::vector<{cpp_type}>"
         self.cppvar_inits[name] = f"{name}ptr"
+        self.cppvar_cppinits[name] = cppinit
         self.cppvar_vts[name] = vt
 
         self.extra_decl_init += f"{name}.resize({size});\n"
@@ -128,6 +137,17 @@ class vargen:
         """
         self.cppvar_inits[name] = init
 
+    def custom_var_cppinit(self, *, name : str, cppinit : str):
+        """
+        Sets a custom C++ initialization expression for the variable
+        
+        :param name: Name of the variable
+        :type name: str, optional
+        :param init: String containing a C++ expression for the initialization
+        :type init: str
+        """
+        self.cppvar_cppinits[name] = cppinit
+
     def get_declarations(self) -> str:
         """
         Returns the C++ code that declares all generated variables
@@ -135,7 +155,7 @@ class vargen:
         :return: String containing the C++ code containing all declarations
         :rtype: str
         """
-        declarations = "\n".join([f"{self.cppvar_types[name]} {name};" for name in self.cppvars])
+        declarations = "\n".join([f"{self.cppvar_types[name]} {name}{self.cppvar_cppinits[name]};" for name in self.cppvars])
         declarations += "\n"
         declarations += self.extra_decl_init
         return declarations

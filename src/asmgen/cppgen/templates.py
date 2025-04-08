@@ -82,12 +82,9 @@ BENCHMARK = """
                 for (std::uint64_t meas = 0; meas < measurements; meas++)
                 {
                     ${benchtic}
-                    for (std::uint64_t iter = 0; iter < iterations; iter++)
-                    {
-                        __asm__ volatile (
-                            ${asmblock}
-                        );
-                    }
+                    __asm__ volatile (
+                        ${asmblock}
+                    );
                     ${benchtoc}
                 }
 
