@@ -2,6 +2,8 @@
 ARM64/AArch64 asm generator and related types
 """
 
+from typing import Union
+
 from .noarch import asmgen
 from ..registers import (
     asm_data_type as adt,
@@ -21,6 +23,12 @@ class aarch64(asmgen):
             adt.SINGLE : "w",
             }
 
+
+    def get_parameters(self) -> list[str]:
+        return []
+
+    def set_parameter(self, name : str, value : Union[str,int]):
+        raise ValueError(f"Invalid name {name} or value {value}")
 
     @property
     def are_fregs_in_vregs(self) -> bool:

@@ -39,6 +39,30 @@ class asmgen(ABC):
         self.fmul = dummy_opd3()
         self.dota = dummy_opd3()
 
+    @abstractmethod
+    def get_parameters(self) -> list[str]:
+        """
+        Returns a list of parameter names that this generator supports
+
+        :return: List of parameter names
+        :rtype: list[str]
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
+    def set_parameter(self, name : str, value : Union[str,int]):
+        """
+        Sets a parameter in the generator, affecting the output, min/max values
+        and supported features
+
+        :param name: Name of the parameter
+        :type name: str
+        :param value: New value to set the parameter to
+        :type value: Union[str,int]
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+        
+
     def set_output_inline(self, yesno : bool):
         """
         Sets internal state that determines whether the generator emits normal ASM

@@ -2,6 +2,7 @@
 RISC-V RVV 1.0 asm generator and related types
 """
 
+from typing import Union
 from ..registers import (
     reg_tracker,
     asm_data_type as adt,
@@ -24,9 +25,11 @@ class rvv(riscv64):
     """
 
     dt_suffixes = {
-            adt.DOUBLE : "e64",
-            adt.SINGLE : "e32",
-            adt.HALF   : "e16",
+            adt.DOUBLE  : "e64",
+            adt.SINGLE  : "e32",
+            adt.HALF    : "e16",
+            adt.FP8E4M3 : "e8",
+            adt.FP8E5M2 : "e8",
             }
     it_suffixes = {
             ait.INT64 : "ei64",
@@ -39,6 +42,24 @@ class rvv(riscv64):
         super().__init__()
         self.fma = rvv_fma(asmwrap=self.asmwrap)
         self.fmul = rvv_fmul(asmwrap=self.asmwrap)
+
+        self.lmul = 1
+
+    def get_parameters(self) -> list[str]:
+        return ["LMUL"]
+
+    def set_parameter(self, name : str, value : Union[str,int]):
+        if "LMUL" == name:
+            if isinstance(value, str) and value.isdigit():
+                self.lmul = int(value)
+                if self.lmul.bit_count() != 1:
+                    raise ValueError(f"Invalid LMUL {value}")
+            elif isinstance(value, int):
+                self.lmul = value
+            else:
+                raise NotImplementedError("{value} is not an integer. Fractional LMUL is not implemented yet")
+        else:
+            raise ValueError(f"Invalid name {name} or value {value}")
 
     def supportedby_cpuinfo(self, cpuinfo : str) -> bool:
         isa_idx = cpuinfo.find("rv64")
@@ -71,7 +92,7 @@ class rvv(riscv64):
         return ""
 
     def vreg(self, reg_idx : int) -> vreg_base:
-        return rvv_vreg(reg_idx)
+        return rvv_vreg(reg_idx * self.lmul)
 
     def jvzero(self, *, vreg1 : vreg_base, freg : freg_base,
                vreg2 : vreg_base, greg : greg_base, label : str,
@@ -97,7 +118,7 @@ class rvv(riscv64):
 
     @property
     def max_vregs(self):
-        return 32
+        return 32//self.lmul
 
     @property
     def simd_size(self):
@@ -105,14 +126,15 @@ class rvv(riscv64):
 
     def simd_size_to_greg(self, *, reg : greg_base,
                           dt : adt) -> str:
-        return self.asmwrap(f"csrr {reg}, vlenb")
+        esfx = adt_size(dt)*8
+        return self.asmwrap(f"vsetvli {reg}, zero, e{esfx}, m{self.lmul}, ta, ma")
 
     @property
     def c_simd_size_function(self):
         result  = "size_t get_simd_size() {\n"
         result += "    size_t byte_size = 0;\n"
         result += "    __asm__ volatile(\n"
-        result += "        "+self.asmwrap("vsetvli %[byte_size], zero, e8, m1, ta, ma")
+        result += "        "+self.asmwrap(f"vsetvli %[byte_size], zero, e8, m{self.lmul}, ta, ma")
         result += "    : [byte_size] \"=r\" (byte_size)\n"
         result += "    :\n"
         result += "    :\n"
@@ -198,7 +220,7 @@ class rvv(riscv64):
         :rtype: str
         """
         dt_size = 'e'+str(adt_size(dt)*8)
-        return self.asmwrap(f"vsetvli {vlreg}, {avlreg}, {dt_size}, m1, ta, ma")
+        return self.asmwrap(f"vsetvli {vlreg}, {avlreg}, {dt_size}, m{self.lmul}, ta, ma")
 
     def vsetvlmax(self, *, reg : greg_base, dt : adt) -> str:
         """
@@ -212,7 +234,7 @@ class rvv(riscv64):
         :rtype: str
         """
         dt_size = 'e'+str(adt_size(dt)*8)
-        return self.asmwrap(f"vsetvli {reg}, zero, {dt_size}, m1, ta, ma")
+        return self.asmwrap(f"vsetvli {reg}, zero, {dt_size}, m{self.lmul}, ta, ma")
 
     def load_vector_immstride(self, *, areg : greg_base, byte_stride : int,
                     vreg : vreg_base, dt : adt) -> str:

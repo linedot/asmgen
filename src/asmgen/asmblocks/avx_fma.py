@@ -2,6 +2,7 @@
 X86_64/AVX/FMA asm generator and related types
 """
 
+from typing import Union
 from abc import abstractmethod
 
 from ..registers import (
@@ -22,6 +23,13 @@ class avxbase(asmgen):
     """
     Base X86_64/AVX/FMA asmgem implementation
     """
+
+
+    def get_parameters(self) -> list[str]:
+        return []
+
+    def set_parameter(self, name : str, value : Union[str,int]):
+        raise ValueError(f"Invalid name {name} or value {value}")
 
     @abstractmethod
     def get_req_flags(self) -> list[str]:

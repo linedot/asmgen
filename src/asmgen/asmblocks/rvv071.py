@@ -20,12 +20,17 @@ class rvv071(rvv):
             adt.FP8E5M2 : "b",
             }
 
+    def simd_size_to_greg(self, *, reg : greg_base,
+                          dt : adt) -> str:
+        esfx = adt_size(dt)*8
+        return self.asmwrap(f"vsetvli {reg}, zero, e{esfx}, m{self.lmul}")
+
     @property
     def c_simd_size_function(self):
         result  = "size_t get_simd_size() {\n"
         result += "    size_t byte_size = 0;\n"
         result += "    __asm__ volatile(\n"
-        result += "        "+self.asmwrap("vsetvli %[byte_size], zero, e8, m1")
+        result += "        "+self.asmwrap("vsetvli %[byte_size], zero, e8, m{self.lmul}")
         result += "    : [byte_size] \"=r\" (byte_size)\n"
         result += "    :\n"
         result += "    :\n"
