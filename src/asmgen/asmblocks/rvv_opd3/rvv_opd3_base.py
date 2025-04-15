@@ -26,6 +26,8 @@ class rvv_opd3_base(opd3):
                  asmwrap : Callable[[str],str]):
         self.asmwrap = asmwrap
 
+        self.operand_order = [2,0,1]
+
     @abstractmethod
     def get_base_inst(self, modifiers : set[modifier]) -> str:
         """
@@ -186,6 +188,10 @@ class rvv_opd3_base(opd3):
 
         inst = pref+mix_pref+base_inst+suf+"."+form_suf
 
-        inst_str = f"{inst} {cdreg},{adreg},{bdreg}"
+        operands=[f"{adreg}",f"{bdreg}",f"{cdreg}"]
+
+        operands_string = ','.join([operands[i] for i in self.operand_order])
+
+        inst_str = f"{inst} {operands_string}"
 
         return self.asmwrap(inst_str)
