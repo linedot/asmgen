@@ -22,11 +22,13 @@ class riscv64(asmgen):
     fdt_suffixes = {
             adt.DOUBLE : "d",
             adt.SINGLE : "w",
+            adt.HALF   : "h",
             }
 
     fcdt_suffixes = {
             adt.DOUBLE : "d",
             adt.SINGLE : "s",
+            adt.HALF   : "h",
             }
 
     def greg(self, reg_idx : int) -> greg_base:
