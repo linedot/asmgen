@@ -61,7 +61,6 @@ class asmgen(ABC):
         :type value: Union[str,int]
         """
         raise NotImplementedError(NIE_MESSAGE)
-        
 
     def set_output_inline(self, yesno : bool):
         """

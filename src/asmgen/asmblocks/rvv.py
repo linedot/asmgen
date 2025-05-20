@@ -57,7 +57,9 @@ class rvv(riscv64):
             elif isinstance(value, int):
                 self.lmul = value
             else:
-                raise NotImplementedError("{value} is not an integer. Fractional LMUL is not implemented yet")
+                raise NotImplementedError(
+                        ("{value} is not an integer. Fractional "
+                         "LMUL is not implemented yet"))
         else:
             raise ValueError(f"Invalid name {name} or value {value}")
 

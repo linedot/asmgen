@@ -155,7 +155,9 @@ class vargen:
         :return: String containing the C++ code containing all declarations
         :rtype: str
         """
-        declarations = "\n".join([f"{self.cppvar_types[name]} {name}{self.cppvar_cppinits[name]};" for name in self.cppvars])
+        declarations = "\n".join(
+                [f"{self.cppvar_types[name]} {name}{self.cppvar_cppinits[name]};"\
+                        for name in self.cppvars])
         declarations += "\n"
         declarations += self.extra_decl_init
         return declarations
