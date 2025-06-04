@@ -1,3 +1,8 @@
+# ------------------------------------------------------------------------------
+# SPDX-License-Identifier: MIT OR GPL-3.0-or-later
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
+# ------------------------------------------------------------------------------
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -6,22 +11,21 @@ build-backend = "hatchling.build"
 name = "asmgen"
 version = "0.3.10"
 authors = [
-  { name="linedot", email="linedot@linedot.org" },
+{ name="linedot", email="linedot@linedot.org" },
 ]
 description = "Assembly Generation tool for AVX/FMA, AVX2, AVX512, ARM NEON, ARM SVE, ARM SME, RISCV RVV"
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
 ]
 dependencies = [
-    "Mako"
+  "Mako"
 ]
 [project.optional-dependencies]
-test = [ 
-    "parameterized"
+test = [
+  "parameterized"
 ]
 
 [project.urls]
