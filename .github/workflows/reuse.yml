@@ -1,0 +1,21 @@
+# ------------------------------------------------------------------------------
+# SPDX-License-Identifier: MIT OR GPL-3.0-or-later
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
+# ------------------------------------------------------------------------------
+
+---
+name: REUSE Compliance Check
+on: [push, pull_request]
+
+permissions:
+  contents: read
+jobs:
+  reuse-compliance-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: REUSE Compliance Check
+        uses: fsfe/reuse-action@v5
