@@ -15,11 +15,13 @@ class riscv64_greg(greg_base):
     RISC-V 64bit general purpose register
     """
 
-    # according to calling convention: temporaries, saved, function arguments,
-    # leave the sp,gp, return address, etc... alone
+    # TODO: this is ordered in such a way that the register tracker wouldn't accidentally allocate
+    #       a reserved register. It's probably better to use 0 = x0, 1 = x1, etc.. and develop
+    #       a system where the special registers are automatically reserved (parameter to reg_tracker maybe?)
     names = [f't{i}' for i in range(7)] +\
             [f's{i}' for i in range(1,12)] +\
-            [f'a{i}' for i in range(8)]
+            [f'a{i}' for i in range(8)] +\
+            ['ra', 'sp', 'gp', 'tp', 's0', 'zero']
 
     def __init__(self, reg_idx : int):
         self.reg_str = riscv64_greg.names[reg_idx]
