@@ -35,7 +35,7 @@ class rvv071(rvv):
         result  = "size_t get_simd_size() {\n"
         result += "    size_t byte_size = 0;\n"
         result += "    __asm__ volatile(\n"
-        result += "        "+self.asmwrap("vsetvli %[byte_size], zero, e8, m{self.lmul}")
+        result += "        "+self.asmwrap(f"vsetvli %[byte_size], zero, e8, m{self.lmul}")
         result += "    : [byte_size] \"=r\" (byte_size)\n"
         result += "    :\n"
         result += "    :\n"
