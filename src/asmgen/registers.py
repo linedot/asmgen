@@ -8,6 +8,7 @@ Contains facilities to work with different ASM register types independently from
 """
 from abc import ABC,abstractmethod
 from enum import Enum,auto
+from typing import Union
 
 from .util import NIE_MESSAGE
 
@@ -326,6 +327,17 @@ class adt_triple:
         self.a = a_dt
         self.b = b_dt
         self.c = c_dt
+
+    def __getitem__(self, key : Union[int,str]):
+        if key in [0,'a']:
+            return self.a
+        if key in [1,'b']:
+            return self.b
+        if key in [2,'c']:
+            return self.c
+
+        raise ValueError(f"invalid triple key: {key}")
+
     def __eq__(self, other : object) -> bool:
         if not isinstance(other, adt_triple):
             return NotImplemented
