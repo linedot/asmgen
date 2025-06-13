@@ -674,6 +674,40 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
+    def load_greg(self, *, areg : greg_type, offset : int, dst : greg_type) -> str:
+        """
+        Returns the string containing the instruction(s) to load data from the address in
+        one GP register into another GP register
+
+        :param areg: GP register containing the data address
+        :type areg: class:`asmgen.register.greg_base`
+        :param offset: immediate offset in bytes
+        :type offset: int
+        :param dst: GP register to load data into
+        :type dst: class:`asmgen.register.greg_base`
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
+    def store_greg(self, *, areg : greg_type, offset : int, src : greg_type) -> str:
+        """
+        Returns the string containing the instruction(s) to store data from
+        one GP register to the memory address contained in another GP register
+
+        :param areg: GP register containing the data address
+        :type areg: class:`asmgen.register.greg_base`
+        :param offset: immediate offset in bytes
+        :type offset: int
+        :param src: GP register to store data from
+        :type src: class:`asmgen.register.greg_base`
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
     def mov_freg(self, *, src : freg_type, dst : freg_type, dt : asm_data_type) -> str:
         """
         Returns the string containing the instruction(s) to copy the content of one
@@ -912,6 +946,66 @@ class asmgen(ABC):
         :param offset: immediate offset in bytes
         :type offset: int
         :param freg: scalar register to load the value into
+        :type freg: class:`asmgen.registers.freg_base`
+        :param dt: Data type of the value
+        :type dt: class:`asmgen.registers.asm_data_type`
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+    
+    @abstractmethod
+    def store_scalar_immoff(self, *, areg : greg_type, offset : int,
+                            freg : freg_type, dt : asm_data_type):
+        """
+        Returns the string containing the instruction(s) to store the value of a scalar
+        register into memory
+
+        :param areg: GP register containing the base address
+        :type areg: class:`asmgen.registers.greg_base`
+        :param offset: immediate offset in bytes
+        :type offset: int
+        :param freg: scalar register containing the value to store
+        :type freg: class:`asmgen.registers.freg_base`
+        :param dt: Data type of the value
+        :type dt: class:`asmgen.registers.asm_data_type`
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
+    def load_freg(self, *, areg : greg_type, offset : int,
+                  dst : freg_type, dt : asm_data_type):
+        """
+        Returns the string containing the instruction(s) to load a scalar value
+        into a scalar register
+
+        :param areg: GP register containing the base address
+        :type areg: class:`asmgen.registers.greg_base`
+        :param offset: immediate offset in bytes
+        :type offset: int
+        :param freg: scalar register to load the value into
+        :type freg: class:`asmgen.registers.freg_base`
+        :param dt: Data type of the value
+        :type dt: class:`asmgen.registers.asm_data_type`
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+    
+    @abstractmethod
+    def store_freg(self, *, areg : greg_type, offset : int,
+                   src : freg_type, dt : asm_data_type):
+        """
+        Returns the string containing the instruction(s) to store the value of a scalar
+        register into memory
+
+        :param areg: GP register containing the base address
+        :type areg: class:`asmgen.registers.greg_base`
+        :param offset: immediate offset in bytes
+        :type offset: int
+        :param freg: scalar register containing the value to store
         :type freg: class:`asmgen.registers.freg_base`
         :param dt: Data type of the value
         :type dt: class:`asmgen.registers.asm_data_type`
