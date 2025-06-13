@@ -7,6 +7,7 @@
 ARM64/AArch64 asm generator and related types
 """
 
+from copy import deepcopy
 from typing import Union
 
 from .noarch import asmgen
@@ -16,6 +17,7 @@ from ..registers import (
 )
 
 from .types.aarch64_types import aarch64_greg,aarch64_freg
+from ..callconv.callconv import callconv
 
 
 class aarch64(asmgen):
@@ -28,6 +30,36 @@ class aarch64(asmgen):
             adt.SINGLE : "w",
             }
 
+    def __init__(self):
+        super().__init__()
+        self.callconvs = {
+            "aapcs64" : callconv(
+                param_regs={ 'greg' : list(range(0, 8)),
+                             'freg' : list(range(0, 8))},
+                caller_save_lists={ 'greg' : list(range(0, 8)) + # func args/return vals
+                                             [8] + # XR, indirect result reg
+                                             list(range(9,16)) + # locals
+                                             [18] # platform reg
+                                        ,
+                                    'freg' : list(range(0, 8)) +
+                                             list(range(16,32))
+                                   },
+                callee_save_lists={ 'greg' : list(range(19,29)) + # Callee-saved
+                                             [29, # Frame Pointer
+                                              30  # Link Register
+                                              ] +
+                                             [31], # SP
+                                    'freg' : list(range(8,16))},
+                spreg=31)
+            }
+        self.default_callconv = "aapcs64"
+
+    def create_callconv(self, name : str = "default"):
+
+        if "default" == name:
+            name = self.default_callconv
+
+        return deepcopy(self.callconvs[name])
 
     def get_parameters(self) -> list[str]:
         return []
@@ -98,6 +130,12 @@ class aarch64(asmgen):
         _ = dt # explicitly unused
         return self.asmwrap(f"fmov {freg},#0")
 
+    def load_greg(self, *, areg : greg_base, offset : int, dst : greg_base) -> str:
+        return self.asmwrap(f"ldr {dst},[{areg},#{offset}]")
+
+    def store_greg(self, *, areg : greg_base, offset : int, src : greg_base) -> str:
+        return self.asmwrap(f"str {src},[{areg},#{offset}]")
+
     def mov_param_to_greg(self, *, param : str, dst : greg_base) -> str:
         return self.asmwrap(f"ldr {dst},%[{param}]")
 
@@ -162,6 +200,17 @@ class aarch64(asmgen):
                            offset : int, freg : freg_base,
                            dt : adt) -> str:
         return self.asmwrap(f"ldr {freg},[{areg},#{offset}]")
+
+    def store_scalar_immoff(self, *, areg : greg_base,
+                            offset : int, freg : freg_base,
+                            dt : adt) -> str:
+        return self.asmwrap(f"str {freg},[{areg},#{offset}]")
+
+    def load_freg(self, *, areg : greg_base, offset : int, dst: freg_base, dt : adt):
+        return self.load_scalar_immoff(areg=areg, offset=offset, freg=dst, dt=dt)
+
+    def store_freg(self, *, areg : greg_base, offset : int, src: freg_base, dt : adt):
+        return self.store_scalar_immoff(areg=areg, offset=offset, freg=src, dt=dt)
 
     def prefetch_l1_boff(self, *, areg : greg_base,
                          offset : int) -> str:

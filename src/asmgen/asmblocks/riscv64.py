@@ -7,6 +7,8 @@
 RISC-V 64bit asm generator and related types
 """
 
+from copy import deepcopy
+
 from ..registers import (
     asm_data_type as adt,
     greg_base, freg_base
@@ -15,6 +17,7 @@ from ..registers import (
 from .noarch import asmgen
 
 from .types.riscv64_types import riscv64_freg, riscv64_greg
+from ..callconv.callconv import callconv
 
 
 # pylint: disable=too-many-public-methods
@@ -35,6 +38,36 @@ class riscv64(asmgen):
             adt.SINGLE : "s",
             adt.HALF   : "h",
             }
+
+    def __init__(self):
+        super().__init__()
+        self.callconvs = {
+            "rvg" : callconv(
+                param_regs={ 'greg' : [i for i in range(18, 26)],
+                             'freg' : [i for i in range(10, 18)]},
+                caller_save_lists={ 'greg' : [26, # ra
+                                              0, 1, 2, 3 , 4, 5, 6, # t0-t6
+                                              18, 19, 20, 21, 22, 23, 24, 25 # a0-a7
+                                              ],
+                                    'freg' : [0, 1, 2, 3, 4, 5, 6, 7,
+                                              10, 11, 12, 13, 14, 15, 16, 17,
+                                              28, 29, 30, 31]},
+                callee_save_lists={ 'greg' : [27, #sp
+                                              30, #s0
+                                              7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17 #s1-s11
+                                             ],
+                                    'freg' : [8, 9,
+                                              18, 19, 20, 21, 22, 23, 24, 25, 26, 27]},
+                spreg=27)
+            }
+        self.default_callconv = "rvg"
+
+    def create_callconv(self, name : str = "default"):
+
+        if "default" == name:
+            name = self.default_callconv
+
+        return deepcopy(self.callconvs[name])
 
     def greg(self, reg_idx : int) -> greg_base:
         return riscv64_greg(reg_idx)
@@ -109,6 +142,12 @@ class riscv64(asmgen):
     def mov_greg_to_param(self, *, src : greg_base, param : str) -> str:
         return self.asmwrap(f"sd {src},%[{param}]")
 
+    def load_greg(self, *, areg : greg_base, offset : int, dst : greg_base) -> str:
+        return self.asmwrap(f"ld {dst},{offset}({areg})")
+
+    def store_greg(self, *, areg : greg_base, offset : int, src : greg_base) -> str:
+        return self.asmwrap(f"sd {src},{offset}({areg})")
+
     def mov_greg_imm(self, *, reg : greg_base, imm : int) -> str:
         return self.asmwrap(f"li {reg},{imm}")
 
@@ -176,3 +215,20 @@ class riscv64(asmgen):
                            freg : freg_base,  dt : adt) -> str:
         dt_suf = self.fdt_suffixes[dt]
         return self.asmwrap(f"fl{dt_suf} {freg}, {offset}({areg})")
+
+    def store_scalar_immoff(self, *, areg : greg_base, offset : int,
+                            freg : freg_base,  dt : adt) -> str:
+        dt_suf = self.fdt_suffixes[dt]
+        return self.asmwrap(f"fs{dt_suf} {freg}, {offset}({areg})")
+
+    def load_freg(self, *, areg : greg_base, offset : int,
+                           dst : freg_base,  dt : adt) -> str:
+        return self.load_scalar_immoff(areg=areg,
+            offset=offset,
+            freg=dst, dt=dt)
+
+    def store_freg(self, *, areg : greg_base, offset : int,
+                            src : freg_base,  dt : adt) -> str:
+        return self.store_scalar_immoff(areg=areg,
+            offset=offset,
+            freg=src, dt=dt)

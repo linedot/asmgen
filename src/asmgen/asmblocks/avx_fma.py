@@ -7,6 +7,7 @@
 X86_64/AVX/FMA asm generator and related types
 """
 
+from copy import deepcopy
 from typing import Union
 from abc import abstractmethod
 
@@ -19,6 +20,7 @@ from ..registers import (
 )
 
 from .noarch import asmgen
+from ..callconv.callconv import callconv
 
 from .types.avx_types import x86_greg,avx_freg,xmm_vreg,ymm_vreg,zmm_vreg,prefix_if_raw_reg
 
@@ -29,6 +31,34 @@ class avxbase(asmgen):
     Base X86_64/AVX/FMA asmgem implementation
     """
 
+    greg_names = [f'r{i}' for i in \
+            [str(j) for j in range(8,16)]+\
+            ['ax','bx','cx','dx','si','di','bp','sp']]
+
+    def __init__(self):
+        super().__init__()
+        self.callconvs = {
+            "systemv" : callconv(
+                param_regs={ 'greg' : [13,12,11,10, 0,1], # RDI, RSI, RDX, RCX, R8, R9
+                             'freg' : list(range(0, 8))},
+                caller_save_lists={ 'greg' : [13,12,11,10, 0,1],  # func args/return vals
+                                    'freg' : list(range(0, 8))
+                                   },
+                callee_save_lists={ 'greg' : list(range(4,8)) +# R12-R15
+                                        [9,   # BX
+                                         14,  # Frame Pointer
+                                         15], # SP
+                                    'freg' : list(range(8,16))},
+                spreg=15)
+            }
+        self.default_callconv = "systemv"
+
+    def create_callconv(self, name : str = "default"):
+
+        if "default" == name:
+            name = self.default_callconv
+
+        return deepcopy(self.callconvs[name])
 
     def get_parameters(self) -> list[str]:
         return []
@@ -181,6 +211,23 @@ class avxbase(asmgen):
         suf = 's'+self.dt_suffixes[dt]
         return self.asmwrap(f"vmov{suf} {src}, {dst}")
 
+
+    def load_greg(self, *, areg : greg_base, offset : int, dst : greg_base) -> str:
+        pareg = prefix_if_raw_reg(areg)
+        pdst = prefix_if_raw_reg(dst)
+        address = f"{offset}({pareg})"
+        if 0 == offset:
+            address = f"({pareg})"
+        return self.asmwrap(f"movq {address},{pdst}")
+
+    def store_greg(self, *, areg : greg_base, offset : int, src : greg_base) -> str:
+        pareg = prefix_if_raw_reg(areg)
+        psrc = prefix_if_raw_reg(src)
+        address = f"{offset}({pareg})"
+        if 0 == offset:
+            address = f"({pareg})"
+        return self.asmwrap(f"movq {psrc},{address}")
+
     def mov_greg_to_param(self, *, src : greg_base, param : str):
         preg = prefix_if_raw_reg(src)
         return self.asmwrap(f"movq {preg},%[{param}]")
@@ -309,6 +356,21 @@ class avxbase(asmgen):
         if 0 == offset:
             address = f"({pa})"
         return self.asmwrap(f"vmov{suf} {address},{pf}")
+
+    def store_scalar_immoff(self, *, areg : greg_base, offset : int, freg : freg_base, dt : adt):
+        suf = 's'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pf = prefix_if_raw_reg(freg)
+        address = f"{offset}({pa})"
+        if 0 == offset:
+            address = f"({pa})"
+        return self.asmwrap(f"vmov{suf} {pf},{address}")
+
+    def load_freg(self, *, areg : greg_base, offset : int, dst: freg_base, dt : adt):
+        return self.load_scalar_immoff(areg=areg, offset=offset, freg=dst, dt=dt)
+
+    def store_freg(self, *, areg : greg_base, offset : int, src: freg_base, dt : adt):
+        return self.store_scalar_immoff(areg=areg, offset=offset, freg=src, dt=dt)
 
     def load_vector(self, *, areg : greg_base, vreg : vreg_base, dt : adt):
         return self.load_vector_voff(areg=areg, voffset=0, vreg=vreg, dt=dt)

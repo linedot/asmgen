@@ -12,7 +12,10 @@ Base ASM generator class and ISA-independent utilities
 # pylint: disable=too-many-lines
 
 from abc import ABC, abstractmethod
-from typing import TypeAlias,Union
+from typing import TypeAlias,Union,TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..callconv.callconv import callconv
 
 from .operations import dummy_opd3
 from ..registers import (
@@ -43,6 +46,17 @@ class asmgen(ABC):
         self.fma = dummy_opd3()
         self.fmul = dummy_opd3()
         self.dota = dummy_opd3()
+
+    @abstractmethod
+    def create_callconv(self, name : str) -> "callconv":
+        """
+        Creates a callconv object that can be used to deal with register 
+        saving/restoring/function parameters in ASM
+        :param name: Name of the specific calling convention or "default"
+        :type name: str
+        :return: Calling convention object
+        :rtype: class:`asmgen.callconv.callconv.callconv`
+        """
 
     @abstractmethod
     def get_parameters(self) -> list[str]:
