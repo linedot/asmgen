@@ -245,6 +245,31 @@ class sme(sve):
         return self.asmwrap(
             f"mov {vdest}{opt_preg},{treg}h.{suf}[{rdreg},{roff_str}]")
 
+
+    def load_tile_row(self, *,
+                       areg : greg_base, 
+                       rreg : greg_base,
+                       roff : int,
+                       treg : treg_base,
+                       dt :adt):
+        suf = self.dt_suffixes[dt]
+        msuf = self.dt_mnem_suffixes[dt]
+        address = f"[{areg}]"
+        return self.asmwrap(
+            f"ld1{msuf} {{{treg}h.{suf}[{rdreg},{roff}]}},p0/z,{address}")
+
+    def store_tile_row(self, *,
+                       areg : greg_base, 
+                       rreg : greg_base,
+                       roff : int,
+                       treg : treg_base,
+                       dt :adt):
+        suf = self.dt_suffixes[dt]
+        msuf = self.dt_mnem_suffixes[dt]
+        address = f"[{areg}]"
+        return self.asmwrap(
+            f"st1{msuf} {{{treg}h.{suf}[{rdreg},{roff}]}},p0/m,{address}")
+
     def load_tile(self, *, areg : greg_base,
                    treg : treg_base, dt : adt) -> str:
         raise NotImplementedError("SME has no tile loading instruction, use load_vector* and insert_tile_row/column")
