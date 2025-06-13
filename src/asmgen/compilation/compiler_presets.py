@@ -80,7 +80,7 @@ cross_cxx_flags : dict[str,dict[str,list[str]]] = {
         'aarch64' : {
             'clang++' : [f'--sysroot={cross_paths["aarch64"]["sysroot"]}', 
                          '-B',f'{cross_paths["aarch64"]["sysroot"]}/bin',
-                         '-target','aarch64-pc-linux-gnu']
+                         '-target','aarch64-linux-gnu']
             }
         }
 
