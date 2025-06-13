@@ -187,6 +187,15 @@ class rvv(riscv64):
             raise NotImplementedError("RVV has no vector loads with address offset")
         return self.load_vector(areg=areg, vreg=vreg, dt=dt)
 
+    def load_vector_immoff(self, *, areg : greg_base, offset : int,
+                         vreg : vreg_base, dt : adt) -> str:
+        #raise NotImplementedError("RVV has no vector loads with address offset")
+        # We can still load the vector - with max_load_{imm,v}off being 0, the generator will
+        # just always pass an offset of 0 and add any offset to the address register after
+        if voffset != 0:
+            raise NotImplementedError("RVV has no vector loads with address offset")
+        return self.load_vector(areg=areg, vreg=vreg, dt=dt)
+
     def load_vector_dist1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt) -> str:
         dt_suf = self.dt_suffixes[dt]
@@ -277,13 +286,20 @@ class rvv(riscv64):
     def max_tregs(self, dt : adt) -> int:
         return 0
 
-    def treg(self, reg_idx : int) -> treg_base:
-        raise NotImplementedError("RVV has no tiles (for now)")
+    rvv_no_tile_message = "RVV has no tiles (wait for IME/AME support)"
+
+    def treg(self, reg_idx : int, dt : adt) -> treg_base:
+        raise NotImplementedError(rvv_no_tile_message)
 
     def zero_treg(self, *, treg : treg_base, dt : adt) -> str:
-        raise NotImplementedError("RVV has no tiles (for now)")
+        raise NotImplementedError(rvv_no_tile_message)
+
+    def load_tile(self, *, areg : greg_base,
+                   treg : treg_base,
+                   dt : adt) -> str:
+        raise NotImplementedError(rvv_no_tile_message)
 
     def store_tile(self, *, areg : greg_base,
                    treg : treg_base,
                    dt : adt) -> str:
-        raise NotImplementedError("RVV has no tiles (for now)")
+        raise NotImplementedError(rvv_no_tile_message)

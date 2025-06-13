@@ -15,8 +15,9 @@ from ..registers import (
     adt_is_float,
     adt_is_int,
     adt_triple,
+    adt_size,
     data_reg,
-    treg_base, greg_base,
+    treg_base, vreg_base, greg_base,
     adt_size
 )
 from .sve import sve
@@ -28,7 +29,16 @@ class sme_treg(treg_base):
     """
     SME tile register
     """
-    def __init__(self, reg_idx : int):
+    def __init__(self, reg_idx : int, dt : adt):
+        # FP64,I64 : 8
+        # FP32,I32 : 4
+        # FP16,I16 : 2
+        # FP8,I8 : 1
+        max_tiles = adt_size(dt)
+
+        if reg_idx > max_tiles:
+            raise ValueError(f"SME has no tile {reg_idx} for data type {dt}")
+
         self.reg_str = f"za{reg_idx}"
 
     def __str__(self) -> str:
@@ -117,7 +127,7 @@ class sme_fmopa(opd3):
         if a_dt in [adt.UINT8, adt.UINT16] and b_dt in [adt.SINT8, adt.SINT16]:
             return f"usmop{suf}"
 
-        raise ValueError("Unsupported datatypes")
+        raise ValueError("Unsupported datatypes a={a_dt},b={b_dt}")
 
     # modfier set is only read, therefore a mutable default is ok
     # pylint: disable-next=dangerous-default-value
@@ -126,6 +136,7 @@ class sme_fmopa(opd3):
                  modifiers : set[modifier] = set(),
                  **kwargs) -> str:
         self.check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
+        self.check_modifiers(modifiers=modifiers)
 
         if a_dt != b_dt:
             raise ValueError("A and B must have same type")
@@ -189,14 +200,55 @@ class sme(sve):
     def max_tregs(self, dt : adt) -> int:
         return adt_size(dt)
 
-    def treg(self, reg_idx : int) -> treg_base:
-        return sme_treg(reg_idx)
+    def treg(self, reg_idx : int, dt : adt) -> treg_base:
+        return sme_treg(reg_idx, dt)
 
     def zero_treg(self, *, treg : treg_base, dt : adt) -> str:
         suf = self.dt_suffixes[dt]
         return self.asmwrap(f"zero {treg}.{suf}")
 
+    def insert_tile_rows(self, *,
+                       rreg : greg_base,
+                       roff_start : int, roff_end : int,
+                       treg : treg_base,
+                       vregs : list[vreg_base],
+                       dt :adt):
+        suf = self.dt_suffixes[dt]
+
+        vsrc = "{" + ", ".join([f"{vreg}.{suf}" for vreg in vregs]) + "}"
+
+        opt_preg = ""
+        roff_str = f"{roff_start}:{roff_end}"
+        if 1 == len(vregs):
+            opt_preg = ",p0/m"
+            roff_str = f"{roff_start}"
+
+        return self.asmwrap(
+            f"mov {treg}h.{suf}[{rdreg},{roff_str}]{opt_preg},{vdest}")
+
+    def extract_tile_rows(self, *,
+                       rreg : greg_base,
+                       roff_start : int, roff_end : int,
+                       treg : treg_base,
+                       vregs : list[vreg_base],
+                       dt :adt):
+        suf = self.dt_suffixes[dt]
+
+        vdest = "{" + ", ".join([f"{vreg}.{suf}" for vreg in vregs]) + "}"
+
+        opt_preg = ""
+        roff_str = f"{roff_start}:{roff_end}"
+        if 1 == len(vregs):
+            opt_preg = ",p0/m"
+            roff_str = f"{roff_start}"
+
+        return self.asmwrap(
+            f"mov {vdest}{opt_preg},{treg}h.{suf}[{rdreg},{roff_str}]")
+
+    def load_tile(self, *, areg : greg_base,
+                   treg : treg_base, dt : adt) -> str:
+        raise NotImplementedError("SME has no tile loading instruction, use load_vector* and insert_tile_row/column")
+
     def store_tile(self, *, areg : greg_base,
                    treg : treg_base, dt : adt) -> str:
-        #suf = self.dt_suffixes[dt]
-        raise NotImplementedError("Not implemented yet")
+        raise NotImplementedError("SME has no tile storing instruction, use extract_tile_row/column and store_vector*")

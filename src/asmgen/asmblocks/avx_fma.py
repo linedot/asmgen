@@ -348,6 +348,15 @@ class avxbase(asmgen):
             address = f"({pa})"
         return self.asmwrap(f"vmovu{suf} {address},{pv}")
 
+    def load_vector_immoff(self, *, areg : greg_base, offset : int, vreg : vreg_base, dt : adt):
+        suf = 'p'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pv = prefix_if_raw_reg(vreg)
+        address = f"{offset}({pa})"
+        if 0 == offset:
+            address = f"({pa})"
+        return self.asmwrap(f"vmovu{suf} {address},{pv}")
+
     def load_scalar_immoff(self, *, areg : greg_base, offset : int, freg : freg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
@@ -427,16 +436,24 @@ class avxbase(asmgen):
     def max_tregs(self, dt : adt):
         return 0
 
-    def treg(self, reg_idx : int):
-        raise NotImplementedError("SVE has no tiles, use SME")
+
+    avx_no_tile_message = "Not tile support in AVX (will be supported with AMX)"
+
+    def treg(self, reg_idx : int, dt : adt):
+        raise NotImplementedError(avx_no_tile_message)
 
     def zero_treg(self, *, treg : treg_base, dt : adt):
-        raise NotImplementedError("SVE has no tiles, use SME")
+        raise NotImplementedError(avx_no_tile_message)
+
+    def load_tile(self, *, areg : greg_base,
+                   treg : treg_base,
+                   dt : adt):
+        raise NotImplementedError(avx_no_tile_message)
 
     def store_tile(self, *, areg : greg_base,
                    treg : treg_base,
                    dt : adt):
-        raise NotImplementedError("SVE has no tiles, use SME")
+        raise NotImplementedError(avx_no_tile_message)
 
 class fma128(avxbase):
     """

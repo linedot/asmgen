@@ -230,13 +230,15 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def treg(self, reg_idx : int) -> treg_base:
+    def treg(self, reg_idx : int, dt : asm_data_type) -> treg_base:
         """
         Given a register index, returns the object describing the respective
         tile register for use as an argument to other methods
 
         :param reg_idx: Integer index of the tile register
         :type reg_idx: int
+        :param dt: Data type that is/will be contained in the register
+        :type dt: class:`asmgen.registers.asm_data_type`
         :return: object suitable for use in methods that accept a tile register
         :rtype: class:`asmgen.registers.treg_base`
         """
@@ -940,6 +942,27 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
+    def load_vector_immoff(self, *, areg : greg_type, offset : int,
+                           vreg : vreg_type, dt : asm_data_type):
+        """
+        Returns the string containing the instruction(s) to load contiguous elements
+        into a vector register, with an immediate offset being given in numbers of
+        vectors
+
+        :param areg: GP register containing the base address
+        :type areg: class:`asmgen.registers.greg_base`
+        :param offset: immediate offset in bytes
+        :type offset: int
+        :param vreg: vector register to load the values into
+        :type vreg: class:`asmgen.registers.vreg_base`
+        :param dt: Data type of the values
+        :type dt: class:`asmgen.registers.asm_data_type`
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
     def load_vector(self, *, areg : greg_type, vreg : vreg_type, dt : asm_data_type):
         """
         Returns the string containing the instruction(s) to load contiguous elements
@@ -1185,6 +1208,24 @@ class asmgen(ABC):
         :type dt: class:`asmgen.registers.asm_data_type`
         :param it: Index type of the offsets
         :type it: class:`asmgen.registers.asm_index_type`
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
+    def load_tile(self, *, areg : greg_type,
+                  treg : treg_type, dt : asm_data_type):
+        """
+        Returns the string containing the instruction(s) to load elements
+        into a tile register from memory
+
+        :param areg: GP register containing the base address
+        :type areg: class:`asmgen.registers.greg_base`
+        :param treg: tile register to load the values into
+        :type treg: class:`asmgen.registers.treg_base`
+        :param dt: Data type of the values
+        :type dt: class:`asmgen.registers.asm_data_type`
         :return: String containing the required ASM instructions
         :rtype: str
         """

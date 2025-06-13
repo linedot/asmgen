@@ -192,6 +192,13 @@ class neon(aarch64):
         qv = self.vreg_to_qreg(vreg)
         return self.asmwrap(f"ldr {qv}, [{areg}, #{voffset*self.simd_size}]")
 
+    def load_vector_immoff(self, *, areg : greg_base, offset : int,
+                           vreg : vreg_base, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
+        qv = self.vreg_to_qreg(vreg)
+        return self.asmwrap(f"ldr {qv}, [{areg}, #{offset}]")
+
     def load_vector_dist1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt) -> str:
         suf = self.dt_suffixes[dt]
@@ -252,10 +259,15 @@ class neon(aarch64):
     def max_tregs(self, dt : adt) -> int:
         return 0
 
-    def treg(self, reg_idx : int) -> treg_base:
+    def treg(self, reg_idx : int, dt : adt) -> treg_base:
         raise NotImplementedError("NEON has no tiles, use SME")
 
     def zero_treg(self, *, treg : treg_base, dt : adt) -> str:
+        raise NotImplementedError("NEON has no tiles, use SME")
+
+    def load_tile(self, *, areg : greg_base,
+                   treg : treg_base,
+                   dt : adt) -> str:
         raise NotImplementedError("NEON has no tiles, use SME")
 
     def store_tile(self, *, areg : greg_base,
