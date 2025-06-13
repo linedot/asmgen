@@ -130,7 +130,7 @@ class opd3(ABC):
         """
         triple = adt_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
         if triple not in self.supported_triples():
-            raise ValueError("Unsupported type combination")
+            raise ValueError(f"Unsupported type combination a={a_dt},b={b_dt},c={c_dt}")
 
 class dummy_opd3(opd3):
     """
