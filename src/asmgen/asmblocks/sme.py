@@ -167,6 +167,7 @@ class sme(sve):
 
     def __init__(self):
         super().__init__()
+        self.valid_rcregs = [str(self.greg(i)) for i in range(12,16)]
         self.fopa = sme_fmopa(asmwrap=self.asmwrap,
                               dt_suffixes=self.dt_suffixes)
 
@@ -207,6 +208,7 @@ class sme(sve):
         suf = self.dt_suffixes[dt]
         return self.asmwrap(f"zero {treg}.{suf}")
 
+
     def insert_tile_rows(self, *,
                        rreg : greg_base,
                        roff_start : int, roff_end : int,
@@ -214,6 +216,8 @@ class sme(sve):
                        vregs : list[vreg_base],
                        dt :adt):
         suf = self.dt_suffixes[dt]
+        if str(rreg) not in self.valid_rcregs:
+            raise ValueError(f"rreg {rreg} is not a valid row/column offset register (allowed: {','.join(self.valid_rcregs)})")
 
         vsrc = "{" + ", ".join([f"{vreg}.{suf}" for vreg in vregs]) + "}"
 
@@ -224,7 +228,7 @@ class sme(sve):
             roff_str = f"{roff_start}"
 
         return self.asmwrap(
-            f"mov {treg}h.{suf}[{rdreg},{roff_str}]{opt_preg},{vdest}")
+            f"mov {treg}h.{suf}[{rreg},{roff_str}]{opt_preg},{vdest}")
 
     def extract_tile_rows(self, *,
                        rreg : greg_base,
@@ -233,6 +237,8 @@ class sme(sve):
                        vregs : list[vreg_base],
                        dt :adt):
         suf = self.dt_suffixes[dt]
+        if str(rreg) not in self.valid_rcregs:
+            raise ValueError(f"rreg {rreg} is not a valid row/column offset register (allowed: {','.join(self.valid_rcregs)})")
 
         vdest = "{" + ", ".join([f"{vreg}.{suf}" for vreg in vregs]) + "}"
 
@@ -250,25 +256,39 @@ class sme(sve):
                        areg : greg_base, 
                        rreg : greg_base,
                        roff : int,
+                       voff : int,
                        treg : treg_base,
                        dt :adt):
+        if str(rreg) not in self.valid_rcregs:
+            raise ValueError(f"rreg {rreg} is not a valid row/column offset register (allowed: {','.join(self.valid_rcregs)})")
+
+        rreg_str = str(rreg).replace('x','w')
         suf = self.dt_suffixes[dt]
         msuf = self.dt_mnem_suffixes[dt]
         address = f"[{areg}]"
+        if voff > 0:
+            address = f"[{areg}, #{voff}, MUL VL]"
         return self.asmwrap(
-            f"ld1{msuf} {{{treg}h.{suf}[{rdreg},{roff}]}},p0/z,{address}")
+            f"ld1{msuf} {{{treg}h.{suf}[{rreg_str},{roff}]}},p0/z,{address}")
 
     def store_tile_row(self, *,
                        areg : greg_base, 
                        rreg : greg_base,
                        roff : int,
+                       voff : int,
                        treg : treg_base,
                        dt :adt):
+        if str(rreg) not in self.valid_rcregs:
+            raise ValueError(f"rreg {rreg} is not a valid row/column offset register (allowed: {','.join(self.valid_rcregs)})")
+
+        rreg_str = str(rreg).replace('x','w')
         suf = self.dt_suffixes[dt]
         msuf = self.dt_mnem_suffixes[dt]
         address = f"[{areg}]"
+        if voff > 0:
+            address = f"[{areg}, #{voff}, MUL VL]"
         return self.asmwrap(
-            f"st1{msuf} {{{treg}h.{suf}[{rdreg},{roff}]}},p0/m,{address}")
+            f"st1{msuf} {{{treg}h.{suf}[{rreg_str},{roff}]}},p0/m,{address}")
 
     def load_tile(self, *, areg : greg_base,
                    treg : treg_base, dt : adt) -> str:
