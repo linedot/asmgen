@@ -256,6 +256,13 @@ class avxbase(asmgen):
         psrc = prefix_if_raw_reg(src)
         return self.asmwrap(f"imulq ${factor},{psrc},{pdst}")
 
+    def mul_greg_greg(self, *, dst : greg_base, reg1 : greg_base, reg2 : greg_base) -> str:
+        pdst = prefix_if_raw_reg(dst)
+        preg1 = prefix_if_raw_reg(reg1)
+        preg2 = prefix_if_raw_reg(reg2)
+        asmblock = self.asmwrap(f"movq {preg1},{pdst}")
+        asmblock += self.asmwrap(f"imulq {preg2},{pdst}")
+
     def add_greg_greg(self, *, dst : greg_base, reg1 : greg_base, reg2 : greg_base) -> str:
         pdst = prefix_if_raw_reg(dst)
         preg1 = prefix_if_raw_reg(reg1)

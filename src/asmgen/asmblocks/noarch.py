@@ -806,6 +806,23 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
+    def mul_greg_greg(self, *, dst : greg_type, reg1 : greg_type, reg2 : greg_type) -> str:
+        """
+        Returns the string containing the instruction(s) to write the product of 2 GP registers
+        into a GP register
+        
+        :param dst: destination GP register
+        :type dst: greg_type
+        :param reg1: first multiplicand
+        :type reg1: greg_type
+        :param reg2: second multiplicand
+        :type reg2: greg_type
+        :return: ASM/IR of the operation
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
     def add_greg_imm(self, *, reg : greg_type, imm : int) -> str:
         """
         Returns the string containing the instruction(s) to write the sum

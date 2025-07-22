@@ -158,6 +158,17 @@ class riscv64(asmgen):
         asmblock += self.asmwrap(f"mul {dst},{src},{dst}")
         return asmblock
 
+    def mul_greg_greg(self, *, src : greg_base, dst : greg_base, factor : int) -> str:
+        assert src != dst
+        #Gotta do 2 instructions for this
+        asmblock  = self.mov_greg_imm(reg=dst, imm=factor)
+        #asmblock += self.asmwrap(f"mul {dst},{src},{dst}")
+        asmblock += self.mul_greg_greg(dst=dst,reg1=src,reg2=dst)
+        return asmblock
+
+    def mul_greg_greg(self, *, dst : greg_base, reg1 : greg_base, reg2 : greg_base) -> str:
+        return self.asmwrap(f"mul {dst},{reg1},{reg2}")
+
     def add_greg_imm(self, *, reg : greg_base, imm : int) -> str:
         return self.asmwrap(f"add {reg},{reg},{imm}")
 

@@ -153,8 +153,13 @@ class aarch64(asmgen):
         assert src != dst
         #Gotta do 2 instructions for this
         asmblock  = self.mov_greg_imm(reg=dst, imm=factor)
+        #asmblock += self.asmwrap(f"mul {dst},{src},{dst}")
         asmblock += self.asmwrap(f"mul {dst},{src},{dst}")
         return asmblock
+
+    def mul_greg_greg(self, *, dst : greg_base,
+                      reg1 : greg_base, reg2 : greg_base) -> str:
+        return self.asmwrap(f"mul {dst},{reg1},{reg2}")
 
     def add_greg_imm(self, *, reg : greg_base, imm : int) -> str:
         return self.asmwrap(f"add {reg},{reg},#{imm}")
