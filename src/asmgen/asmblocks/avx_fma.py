@@ -391,9 +391,9 @@ class avxbase(asmgen):
     def load_vector(self, *, areg : greg_base, vreg : vreg_base, dt : adt):
         return self.load_vector_voff(areg=areg, voffset=0, vreg=vreg, dt=dt)
 
-    def load_vector_dist1_inc(self, *, areg : greg_base, offset : int, vreg : vreg_base, dt : adt):
+    def load_vector_bcast1_inc(self, *, areg : greg_base, offset : int, vreg : vreg_base, dt : adt):
         raise NotImplementedError(
-                "AVX doesn't have a post-index load, use load_vector_dist1_immoff instead")
+                "AVX doesn't have a post-index load, use load_vector_bcast1_immoff instead")
 
     def store_vector_voff(self, *, areg : greg_base, voffset : int, vreg : vreg_base, dt : adt):
         suf = 'p'+self.dt_suffixes[dt]
@@ -504,14 +504,14 @@ class fma128(avxbase):
     def vreg(self, reg_idx):
         return xmm_vreg(reg_idx)
 
-    def load_vector_dist1(self, *, areg : greg_base,
+    def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(self.xmm_to_ymm(vreg))
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_immoff(self, *, areg : greg_base, offset : int,
+    def load_vector_bcast1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
@@ -560,14 +560,14 @@ class fma256(avxbase):
     def vreg(self, reg_idx : int):
         return ymm_vreg(reg_idx)
 
-    def load_vector_dist1(self, *, areg : greg_base,
+    def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_immoff(self, *, areg : greg_base, offset : int,
+    def load_vector_bcast1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
@@ -616,14 +616,14 @@ class avx512(avxbase):
     def vreg(self, reg_idx : int):
         return zmm_vreg(reg_idx)
 
-    def load_vector_dist1(self, *, areg : greg_base,
+    def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
         pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_immoff(self, *, areg : greg_base, offset : int,
+    def load_vector_bcast1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)

@@ -199,18 +199,18 @@ class neon(aarch64):
         qv = self.vreg_to_qreg(vreg)
         return self.asmwrap(f"ldr {qv}, [{areg}, #{offset}]")
 
-    def load_vector_dist1(self, *, areg : greg_base,
+    def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt) -> str:
         suf = self.dt_suffixes[dt]
         return self.asmwrap(f"ld1r {{{vreg}.{suf}}}, [{areg}]")
 
-    def load_vector_dist1_immoff(self, *, areg : greg_base, offset : int,
+    def load_vector_bcast1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt) -> str:
         raise NotImplementedError(
-                ("load_vector_dist1_immoff doesn't make sense with NEON,"
-                 " use load_vector_dist1_inc or load_vector_voff + fma_idx instead"))
+                ("load_vector_bcast1_immoff doesn't make sense with NEON,"
+                 " use load_vector_bcast1_inc or load_vector_voff + fma_idx instead"))
 
-    def load_vector_dist1_inc(self, *, areg : greg_base, offset : int,
+    def load_vector_bcast1_inc(self, *, areg : greg_base, offset : int,
                               vreg : vreg_base, dt : adt) -> str:
         suf = self.dt_suffixes[dt]
         return self.asmwrap(f"ld1r {{{vreg}.{suf}}}, [{areg}], #{offset}")

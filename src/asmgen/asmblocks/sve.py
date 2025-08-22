@@ -173,22 +173,22 @@ class sve(aarch64):
                            vreg : vreg_base, dt : adt) -> str:
         raise NotImplementedError("SVE has no vector loads with immediate offset, use load_vector_voff")
 
-    def load_vector_dist1(self, *, areg : greg_base,
+    def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt) -> str:
         suf = self.dt_suffixes[dt]
         msuf = self.dt_mnem_suffixes[dt]
         return self.asmwrap(f"ld1r{msuf} {vreg}.{suf}, p0/z, [{areg}]")
 
-    def load_vector_dist1_immoff(self, *, areg : greg_base, offset : int,
+    def load_vector_bcast1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt) -> str:
         suf = self.dt_suffixes[dt]
         msuf = self.dt_mnem_suffixes[dt]
         return self.asmwrap(f"ld1r{msuf} {vreg}.{suf}, p0/z, [{areg}, #{offset}]")
 
-    def load_vector_dist1_inc(self, *, areg : greg_base, offset : int,
+    def load_vector_bcast1_inc(self, *, areg : greg_base, offset : int,
                               vreg : vreg_base, dt : adt) -> str:
         raise NotImplementedError(
-                "SVE doesn't have a post-index ld1r{suf}, use load_vector_dist1_immoff instead")
+                "SVE doesn't have a post-index ld1r{suf}, use load_vector_bcast1_immoff instead")
 
     def store_vector_voff(self, *, areg : greg_base, voffset : int,
                           vreg : vreg_base, dt : adt) -> str:

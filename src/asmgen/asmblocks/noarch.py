@@ -1157,7 +1157,7 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def load_vector_dist1(self, *, areg : greg_type,
+    def load_vector_bcast1(self, *, areg : greg_type,
                           vreg : vreg_type, dt : asm_data_type):
         """
         Returns the string containing the instruction(s) to broadcast a single
@@ -1175,7 +1175,7 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def load_vector_dist1_immoff(self, *, areg : greg_type, offset : int,
+    def load_vector_bcast1_immoff(self, *, areg : greg_type, offset : int,
                                vreg : vreg_type, dt : asm_data_type):
         """
         Returns the string containing the instruction(s) to broadcast a single
@@ -1197,7 +1197,7 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def load_vector_dist1_inc(self, *, areg : greg_type, offset : int,
+    def load_vector_bcast1_inc(self, *, areg : greg_type, offset : int,
                               vreg : vreg_type, dt : asm_data_type):
         """
         Returns the string containing the instruction(s) to broadcast a single

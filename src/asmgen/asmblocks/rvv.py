@@ -196,18 +196,18 @@ class rvv(riscv64):
             raise NotImplementedError("RVV has no vector loads with address offset")
         return self.load_vector(areg=areg, vreg=vreg, dt=dt)
 
-    def load_vector_dist1(self, *, areg : greg_base,
+    def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt) -> str:
         dt_suf = self.dt_suffixes[dt]
         return self.asmwrap(f"vls{dt_suf}.v {vreg}, ({areg}), zero")
 
-    def load_vector_dist1_immoff(self, *, areg : greg_base, offset : int,
+    def load_vector_bcast1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt) -> str:
         if offset != 0:
             raise NotImplementedError("RVV has no vector loads with address offset")
-        return self.load_vector_dist1(areg=areg, vreg=vreg, dt=dt)
+        return self.load_vector_bcast1(areg=areg, vreg=vreg, dt=dt)
 
-    def load_vector_dist1_inc(self, *, areg : greg_base, offset : int,
+    def load_vector_bcast1_inc(self, *, areg : greg_base, offset : int,
                               vreg : vreg_base, dt : adt) -> str:
         raise NotImplementedError("RVV has no vector loads with address increment")
 
