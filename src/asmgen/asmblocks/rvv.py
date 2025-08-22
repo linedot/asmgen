@@ -201,7 +201,7 @@ class rvv(riscv64):
         dt_suf = self.dt_suffixes[dt]
         return self.asmwrap(f"vls{dt_suf}.v {vreg}, ({areg}), zero")
 
-    def load_vector_dist1_boff(self, *, areg : greg_base, offset : int,
+    def load_vector_dist1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt) -> str:
         if offset != 0:
             raise NotImplementedError("RVV has no vector loads with address offset")

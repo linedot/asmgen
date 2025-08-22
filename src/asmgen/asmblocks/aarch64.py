@@ -217,7 +217,7 @@ class aarch64(asmgen):
     def store_freg(self, *, areg : greg_base, offset : int, src: freg_base, dt : adt):
         return self.store_scalar_immoff(areg=areg, offset=offset, freg=src, dt=dt)
 
-    def prefetch_l1_boff(self, *, areg : greg_base,
+    def prefetch_l1_immoff(self, *, areg : greg_base,
                          offset : int) -> str:
         return self.asmwrap(f"prfm pldl1strm,[{areg},#{offset}]")
 

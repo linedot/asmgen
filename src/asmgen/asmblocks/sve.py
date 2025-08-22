@@ -179,7 +179,7 @@ class sve(aarch64):
         msuf = self.dt_mnem_suffixes[dt]
         return self.asmwrap(f"ld1r{msuf} {vreg}.{suf}, p0/z, [{areg}]")
 
-    def load_vector_dist1_boff(self, *, areg : greg_base, offset : int,
+    def load_vector_dist1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt) -> str:
         suf = self.dt_suffixes[dt]
         msuf = self.dt_mnem_suffixes[dt]
@@ -188,7 +188,7 @@ class sve(aarch64):
     def load_vector_dist1_inc(self, *, areg : greg_base, offset : int,
                               vreg : vreg_base, dt : adt) -> str:
         raise NotImplementedError(
-                "SVE doesn't have a post-index ld1r{suf}, use load_vector_dist1_boff instead")
+                "SVE doesn't have a post-index ld1r{suf}, use load_vector_dist1_immoff instead")
 
     def store_vector_voff(self, *, areg : greg_base, voffset : int,
                           vreg : vreg_base, dt : adt) -> str:

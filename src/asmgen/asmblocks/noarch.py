@@ -922,7 +922,7 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def prefetch_l1_boff(self, *, areg : greg_type, offset : int):
+    def prefetch_l1_immoff(self, *, areg : greg_type, offset : int):
         """
         Returns the string containing the instruction(s) to issue a prefetch 
         targeting the L1 cache
@@ -1058,7 +1058,7 @@ class asmgen(ABC):
         """
         Returns the string containing the instruction(s) to load contiguous elements
         into a vector register, with an immediate offset being given in numbers of
-        vectors
+        bytes
 
         :param areg: GP register containing the base address
         :type areg: class:`asmgen.registers.greg_base`
@@ -1175,7 +1175,7 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
-    def load_vector_dist1_boff(self, *, areg : greg_type, offset : int,
+    def load_vector_dist1_immoff(self, *, areg : greg_type, offset : int,
                                vreg : vreg_type, dt : asm_data_type):
         """
         Returns the string containing the instruction(s) to broadcast a single

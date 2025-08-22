@@ -215,7 +215,7 @@ class riscv64(asmgen):
         _ = dt # explicitly unused
         return (1<<11) -1
 
-    def prefetch_l1_boff(self, *, areg : greg_base, offset : int) -> str:
+    def prefetch_l1_immoff(self, *, areg : greg_base, offset : int) -> str:
         # Needs Zicbop
         return self.asmwrap(f"prefetch.r {offset}({areg})")
 

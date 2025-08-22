@@ -337,7 +337,7 @@ class avxbase(asmgen):
     def max_add_voff(self) -> int:
         return 2**31//self.simd_size
 
-    def prefetch_l1_boff(self, *, areg : greg_base, offset : int):
+    def prefetch_l1_immoff(self, *, areg : greg_base, offset : int):
         preg = prefix_if_raw_reg(areg)
         return self.asmwrap(f"prefetcht0 {offset}({preg})")
 
@@ -393,7 +393,7 @@ class avxbase(asmgen):
 
     def load_vector_dist1_inc(self, *, areg : greg_base, offset : int, vreg : vreg_base, dt : adt):
         raise NotImplementedError(
-                "AVX doesn't have a post-index load, use load_vector_dist1_boff instead")
+                "AVX doesn't have a post-index load, use load_vector_dist1_immoff instead")
 
     def store_vector_voff(self, *, areg : greg_base, voffset : int, vreg : vreg_base, dt : adt):
         suf = 'p'+self.dt_suffixes[dt]
@@ -511,7 +511,7 @@ class fma128(avxbase):
         pv = prefix_if_raw_reg(self.xmm_to_ymm(vreg))
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_boff(self, *, areg : greg_base, offset : int,
+    def load_vector_dist1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
@@ -567,7 +567,7 @@ class fma256(avxbase):
         pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_boff(self, *, areg : greg_base, offset : int,
+    def load_vector_dist1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
@@ -623,7 +623,7 @@ class avx512(avxbase):
         pv = prefix_if_raw_reg(vreg)
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
-    def load_vector_dist1_boff(self, *, areg : greg_base, offset : int,
+    def load_vector_dist1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
         pa = prefix_if_raw_reg(areg)
