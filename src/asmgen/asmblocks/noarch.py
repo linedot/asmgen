@@ -922,6 +922,23 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
+    def greg_to_voffs(self, *, streg : greg_type, vreg : vreg_type, dt : asm_data_type) -> str:
+        """
+        Returns the string containing the instruction(s) to create indices
+        for a gather/scatter instruction with the value in the GP register as stride
+
+        :param reg: GP register containing the stride
+        :type reg: class:`asmgen.register.greg_base`
+        :param reg: Vector register to write the indices to
+        :type reg: class:`asmgen.register.vreg_base`
+        :param dt: Data type of the value
+        :type dt: class:`asmgen.registers.asm_data_type`
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
     def prefetch_l1_immoff(self, *, areg : greg_type, offset : int):
         """
         Returns the string containing the instruction(s) to issue a prefetch 

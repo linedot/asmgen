@@ -337,6 +337,10 @@ class avxbase(asmgen):
     def max_add_voff(self) -> int:
         return 2**31//self.simd_size
 
+    def greg_to_voffs(self, *, streg : greg_type, vreg : vreg_type, dt : asm_data_type) -> str:
+        raise NotImplementedError(
+                "Missing AVX implementation of instruction for creating vector indices")
+
     def prefetch_l1_immoff(self, *, areg : greg_base, offset : int):
         preg = prefix_if_raw_reg(areg)
         return self.asmwrap(f"prefetcht0 {offset}({preg})")

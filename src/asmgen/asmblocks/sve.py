@@ -130,6 +130,11 @@ class sve(aarch64):
     def add_greg_voff(self, *, reg : greg_base, offset : int, dt : adt) -> str:
         return self.asmwrap(f"incb {reg}, ALL, MUL #{offset}")
 
+    def greg_to_voffs(self, *, streg : greg_type, vreg : vreg_type, dt : asm_data_type) -> str:
+        suf = self.dt_suffixes[dt]
+        return self.asmwrap(f"index {vreg}.{suf},#0,{streg}")
+
+
     def zero_vreg(self, *, vreg : vreg_base, dt : adt) -> str:
         suf = self.dt_suffixes[dt]
         return self.asmwrap(f"dup {vreg}.{suf},#0")

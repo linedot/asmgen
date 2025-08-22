@@ -171,6 +171,10 @@ class rvv(riscv64):
     def max_add_voff(self) -> int:
         return 0
 
+    def greg_to_voffs(self, *, streg : greg_type, vreg : vreg_type, dt : asm_data_type) -> str:
+        raise NotImplementedError(
+                "Index not required in RVV for constant strides, use {load,store}_vector_gregstride")
+
     def load_vector(self, *, areg : greg_base,
                     vreg : vreg_base, dt : adt) -> str:
         dt_suf = self.dt_suffixes[dt]
