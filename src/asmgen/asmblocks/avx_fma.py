@@ -337,7 +337,7 @@ class avxbase(asmgen):
     def max_add_voff(self) -> int:
         return 2**31//self.simd_size
 
-    def greg_to_voffs(self, *, streg : greg_type, vreg : vreg_type, dt : asm_data_type) -> str:
+    def greg_to_voffs(self, *, streg : greg_base, vreg : vreg_base, dt : adt) -> str:
         raise NotImplementedError(
                 "Missing AVX implementation of instruction for creating vector indices")
 

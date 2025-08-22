@@ -356,6 +356,18 @@ class asm_index_type(Enum):
     INT32   = 4
     INT64   = 8
 
+def it_from_dt_samesize(dt : asm_data_type) -> asm_index_type:
+    if adt_size(dt) == 1:
+        return asm_index_type.INT8
+    elif adt_size(dt) == 2:
+        return asm_index_type.INT16
+    elif adt_size(dt) == 4:
+        return asm_index_type.INT32
+    elif adt_size(dt) == 8:
+        return asm_index_type.INT64
+
+    raise ValueError(f"dt {dt} has no corresponding it")
+
 # pylint: disable=too-few-public-methods
 
 class greg_base(ABC):
