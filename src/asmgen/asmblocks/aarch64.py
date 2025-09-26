@@ -10,7 +10,7 @@ ARM64/AArch64 asm generator and related types
 from copy import deepcopy
 from typing import Union
 
-from .noarch import asmgen
+from .noarch import asmgen,comparison
 from ..registers import (
     asm_data_type as adt,
     greg_base, freg_base
@@ -28,6 +28,17 @@ class aarch64(asmgen):
     dt_greg_pfx = {
             adt.DOUBLE : "x",
             adt.SINGLE : "w",
+            }
+
+    cb_insts = {
+            'nz' : 'cbnz',
+            'ez' : 'cbz',
+            'ne' : 'b.ne',
+            'eq' : 'b.eq',
+            'le' : 'b.le',
+            'ge' : 'b.ge',
+            'lt' : 'b.lt',
+            'gt' : 'b.gt',
             }
 
     def __init__(self):
@@ -97,6 +108,15 @@ class aarch64(asmgen):
         asmblock  = self.asmwrap(f"cmp {reg},0")
         asmblock += self.asmwrap(f"b.ne .{label}%=")
         return asmblock
+
+    def cb(self, *, reg1: greg_base, reg2: greg_base,
+           cmp: comparison, label: str) -> str:
+        inst = self.cb_insts[cmp.name]
+        if reg2 is None:
+            return self.asmwrap(f"{inst} {reg1},.{label}%=")
+        else:
+            return self.asmwrap(f"cmp {reg2},{reg1}")+\
+                   self.asmwrap(f"{inst} {label}%=")
 
     def jzero(self, *, reg : greg_base,
               label : str) -> str:

@@ -19,7 +19,7 @@ from ..registers import (
     treg_base, vreg_base, freg_base, greg_base
 )
 
-from .noarch import asmgen
+from .noarch import asmgen,comparison
 from ..callconv.callconv import callconv
 
 from .types.avx_types import x86_greg,avx_freg,xmm_vreg,ymm_vreg,zmm_vreg,prefix_if_raw_reg
@@ -34,6 +34,17 @@ class avxbase(asmgen):
     greg_names = [f'r{i}' for i in \
             [str(j) for j in range(8,16)]+\
             ['ax','bx','cx','dx','si','di','bp','sp']]
+
+    cb_insts = {
+            'nz' : 'jnz',
+            'ez' : 'jz',
+            'ne' : 'jne',
+            'eq' : 'je',
+            'le' : 'jle',
+            'ge' : 'jge',
+            'lt' : 'jl',
+            'gt' : 'jg',
+            }
 
     def __init__(self):
         super().__init__()
@@ -127,6 +138,16 @@ class avxbase(asmgen):
         asmblock += self.asmwrap(f"vptest {pvreg2},{pvreg2}")
         asmblock += self.asmwrap(f"jne .{label}%=")
         return asmblock
+
+    def cb(self, *, reg1: greg_base, reg2: greg_base,
+           cmp: comparison, label: str) -> str:
+        inst = self.cb_insts[cmp.name]
+        if reg2 is None:
+            return self.asmwrap(f"test {reg1},{reg1}")+\
+                   self.asmwrap(f"{inst} .{label}%=")
+        else:
+            return self.asmwrap(f"cmp {reg2},{reg1}")+\
+                   self.asmwrap(f"{inst} {label}%=")
 
     def xmm_to_ymm(self, vreg : vreg_base):
         """
@@ -398,6 +419,15 @@ class avxbase(asmgen):
     def load_vector_bcast1_inc(self, *, areg : greg_base, offset : int, vreg : vreg_base, dt : adt):
         raise NotImplementedError(
                 "AVX doesn't have a post-index load, use load_vector_bcast1_immoff instead")
+
+    def store_vector_immoff(self, *, areg : greg_base, offset : int, vreg : vreg_base, dt : adt):
+        suf = 'p'+self.dt_suffixes[dt]
+        pa = prefix_if_raw_reg(areg)
+        pv = prefix_if_raw_reg(vreg)
+        address = f"{offset}({pa})"
+        if 0 == offset:
+            address = f"({pa})"
+        return self.asmwrap(f"vmovu{suf} {pv},{address}")
 
     def store_vector_voff(self, *, areg : greg_base, voffset : int, vreg : vreg_base, dt : adt):
         suf = 'p'+self.dt_suffixes[dt]

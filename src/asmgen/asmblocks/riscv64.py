@@ -14,7 +14,7 @@ from ..registers import (
     greg_base, freg_base
 )
 
-from .noarch import asmgen
+from .noarch import asmgen,comparison
 
 from .types.riscv64_types import riscv64_freg, riscv64_greg
 from ..callconv.callconv import callconv
@@ -37,6 +37,18 @@ class riscv64(asmgen):
             adt.DOUBLE : "d",
             adt.SINGLE : "s",
             adt.HALF   : "h",
+            }
+
+
+    cb_insts = {
+            'nz' : 'bne',
+            'ez' : 'beq',
+            'ne' : 'bne',
+            'eq' : 'beq',
+            'le' : 'ble',
+            'ge' : 'bge',
+            'lt' : 'blt',
+            'gt' : 'bgt',
             }
 
     def __init__(self):
@@ -85,6 +97,13 @@ class riscv64(asmgen):
 
     def jump(self, *, label : str) -> str:
         return self.asmwrap(f"j .{label}%=")
+
+    def cb(self, *, reg1: greg_base, reg2: greg_base, cmp: comparison, label: str) -> str:
+        inst = self.cb_insts[cmp.name]
+        if reg2 is None:
+            return self.asmwrap(f"{inst} {reg1},zero,.{label}%=")
+        else:
+            return self.asmwrap(f"{inst} {reg1},{reg2},{label}%=")
 
     def jzero(self, *, reg : greg_base, label : str) -> str:
         return self.asmwrap(f" beq {reg},zero,.{label}%=")

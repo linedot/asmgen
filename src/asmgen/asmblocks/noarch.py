@@ -11,6 +11,7 @@ Base ASM generator class and ISA-independent utilities
 # what was done with opd3, disable for now
 # pylint: disable=too-many-lines
 
+from enum import Enum,auto
 from abc import ABC, abstractmethod
 from typing import TypeAlias,Union,TYPE_CHECKING
 
@@ -27,6 +28,16 @@ from ..registers import (
 )
 
 from ..util import NIE_MESSAGE
+
+class comparison(Enum):
+    nz = auto()
+    ez = auto()
+    ne = auto()
+    eq = auto()
+    le = auto()
+    ge = auto()
+    lt = auto()
+    gt = auto()
 
 class asmgen(ABC):
     """
@@ -595,6 +606,24 @@ class asmgen(ABC):
 
         :param reg: GP register to use as loop counter
         :type reg: class:`asmgen.register.greg_base`
+        :param label: Label name
+        :type label: str
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
+    def cb(self, *, reg1 : greg_type, reg2 : greg_type, cmp : comparison, label : str) -> str:
+        """
+        Returns the string containing instructions to branch conditionally
+
+        :param reg: first GP register to compare
+        :type reg: class:`asmgen.register.greg_base`
+        :param reg: second GP register to compare
+        :type reg: class:`asmgen.register.greg_base`
+        :param comparison: How the register is compared (in case of nz or ez)
+        :type comparison: str
         :param label: Label name
         :type label: str
         :return: String containing the required ASM instructions
