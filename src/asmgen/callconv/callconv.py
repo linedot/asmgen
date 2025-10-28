@@ -128,11 +128,11 @@ class callconv:
 
     def save_or_restore(self,
              gen : asmgen,
-             regs : dict[list[int]],
-             save_lists : dict[list[int]],
-             action : Callable[[asmgen,dict[list[int]]], str]) -> str:
+             regs : dict[str,list[int]],
+             save_lists : dict[str,list[int]],
+             action : Callable[[asmgen,dict[str,list[int]]], str]) -> str:
 
-        reg_indices : dict[list[int]] = {
+        reg_indices : dict[str,list[int]] = {
                 k : [] for k in save_lists.keys()
                 }
 
@@ -146,7 +146,7 @@ class callconv:
 
     def save_before_call(self,
                       gen : asmgen,
-                      regs : dict[list[int]]) -> str:
+                      regs : dict[str,list[int]]) -> str:
 
         return self.save_or_restore(
                 gen=gen,
@@ -156,7 +156,7 @@ class callconv:
 
     def restore_after_call(self,
                            gen : asmgen,
-                           regs : dict[list[int]]) -> str:
+                           regs : dict[str,list[int]]) -> str:
         return self.save_or_restore(
                 gen=gen,
                 regs=regs,
@@ -165,7 +165,7 @@ class callconv:
 
     def save_in_call(self,
                      gen : asmgen,
-                     regs : dict[list[int]]) -> str:
+                     regs : dict[str,list[int]]) -> str:
         return self.save_or_restore(
                 gen=gen,
                 regs=regs,
@@ -174,8 +174,7 @@ class callconv:
 
     def restore_before_ret(self,
                      gen : asmgen,
-                     used_gregs : list[int],
-                     used_fregs : list[int]) -> str:
+                     regs : dict[str,list[int]]) -> str:
         return self.save_or_restore(
                 gen=gen,
                 regs=regs,
