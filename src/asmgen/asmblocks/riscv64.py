@@ -93,20 +93,20 @@ class riscv64(asmgen):
         return False
 
     def label(self, *, label : str) -> str:
-        return self.asmwrap(f".{label}%=:")
+        return self.asmwrap(f"{self.labelstr(label)}:")
 
     def jump(self, *, label : str) -> str:
-        return self.asmwrap(f"j .{label}%=")
+        return self.asmwrap(f"j {self.labelstr(label)}")
 
     def cb(self, *, reg1: greg_base, reg2: greg_base, cmp: comparison, label: str) -> str:
         inst = self.cb_insts[cmp.name]
         if reg2 is None:
-            return self.asmwrap(f"{inst} {reg1},zero,.{label}%=")
+            return self.asmwrap(f"{inst} {reg1},zero,{self.labelstr(label)}")
         else:
-            return self.asmwrap(f"{inst} {reg1},{reg2},{label}%=")
+            return self.asmwrap(f"{inst} {reg1},{reg2},{self.labelstr(label)}")
 
     def jzero(self, *, reg : greg_base, label : str) -> str:
-        return self.asmwrap(f" beq {reg},zero,.{label}%=")
+        return self.asmwrap(f" beq {reg},zero,{self.labelstr(label)}")
 
     def jfzero(self, *, freg1 : freg_base, freg2 : freg_base,
                greg : greg_base, label : str,
@@ -115,24 +115,24 @@ class riscv64(asmgen):
         cdt_suf = self.fcdt_suffixes[dt]
         asmblock  = self.asmwrap(f"fmv.{dt_suf}.x {freg2},zero")
         asmblock += self.asmwrap(f"feq.{cdt_suf} {greg},{freg1},{freg2}")
-        asmblock += self.asmwrap(f"bnez {greg},.{label}%=")
+        asmblock += self.asmwrap(f"bnez {greg},{self.labelstr(label)}")
         return asmblock
 
     def loopbegin(self, *, reg : greg_base, label : str) -> str:
-        asmblock  = self.asmwrap(f".{label}%=:")
+        asmblock  = self.asmwrap(f"{self.labelstr(label)}:")
         asmblock += self.asmwrap(f"addi {reg},{reg},-1")
 
         return asmblock
 
     def loopbegin_nz(self, *, reg : greg_base, label : str, labelskip : str) -> str:
-        asmblock  = self.asmwrap(f"beq {reg},zero,.{labelskip}%=")
-        asmblock += self.asmwrap(f".{label}%=:")
+        asmblock  = self.asmwrap(f"beq {reg},zero,{self.labelstr(labelskip)}")
+        asmblock += self.asmwrap(f"{self.labelstr(label)}:")
         asmblock += self.asmwrap(f"addi {reg},{reg},-1")
 
         return asmblock
 
     def loopend(self, *, reg : greg_base, label : str) -> str:
-        asmblock = f"\"bnez {reg}, .{label}%=\\n\\t\"\n"
+        asmblock = f"\"bnez {reg}, {self.labelstr(label)}\\n\\t\"\n"
 
         return asmblock
 

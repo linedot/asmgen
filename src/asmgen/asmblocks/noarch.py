@@ -102,6 +102,17 @@ class asmgen(ABC):
         """
         self.output_inline = yesno
 
+    def labelstr(self, label : str):
+        """
+        Return modified label string for inline or normal ASM use
+        :param label: label name
+        :type label: str
+        """
+
+        if self.output_inline:
+            return f".{label}%="
+        return f".{label}"
+
     def asmwrap(self, code : str) -> str:
         """
         Wrap the ASM instruction according according to output_inline

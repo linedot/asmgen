@@ -113,7 +113,7 @@ class avxbase(asmgen):
     def jzero(self, *, reg : greg_base, label : str) -> str:
         preg = prefix_if_raw_reg(reg)
         asmblock  = self.asmwrap(f"test {preg},{preg}")
-        asmblock += self.asmwrap(f"jz .{label}%=")
+        asmblock += self.asmwrap(f"jz {self.labelstr(label)}")
         return asmblock
 
     def jfzero(self, *, freg1 : freg_base, freg2 : freg_base,
@@ -124,7 +124,7 @@ class avxbase(asmgen):
         pfreg2 = prefix_if_raw_reg(freg2)
         asmblock  = self.zero_freg(freg=freg2, dt=dt)
         asmblock += self.asmwrap(f"ucomi{suf} {pfreg2},{pfreg1}")
-        asmblock += self.asmwrap(f"je .{label}%=")
+        asmblock += self.asmwrap(f"je {self.labelstr(label)}")
         return asmblock
 
     def jvzero(self, *, vreg1 : vreg_base, freg : freg_base,
@@ -136,7 +136,7 @@ class avxbase(asmgen):
         asmblock  = self.zero_vreg(vreg=vreg2, dt=dt)
         asmblock += self.asmwrap(f"vcmpeq{suf} {pvreg2},{pvreg1},{pvreg2}")
         asmblock += self.asmwrap(f"vptest {pvreg2},{pvreg2}")
-        asmblock += self.asmwrap(f"jne .{label}%=")
+        asmblock += self.asmwrap(f"jne {self.labelstr(label)}")
         return asmblock
 
     def cb(self, *, reg1: greg_base, reg2: greg_base,
@@ -144,10 +144,10 @@ class avxbase(asmgen):
         inst = self.cb_insts[cmp.name]
         if reg2 is None:
             return self.asmwrap(f"test {reg1},{reg1}")+\
-                   self.asmwrap(f"{inst} .{label}%=")
+                   self.asmwrap(f"{inst} {self.labelstr(label)}")
         else:
             return self.asmwrap(f"cmp {reg2},{reg1}")+\
-                   self.asmwrap(f"{inst} {label}%=")
+                   self.asmwrap(f"{inst} {self.labelstr(label)}")
 
     def xmm_to_ymm(self, vreg : vreg_base):
         """
@@ -176,31 +176,31 @@ class avxbase(asmgen):
         return True
 
     def label(self, *, label : str) -> str:
-        asmblock = self.asmwrap(f".{label}%=:")
+        asmblock = self.asmwrap(f"{self.labelstr(label)}:")
         return asmblock
 
     def jump(self, *, label : str) -> str:
-        asmblock = self.asmwrap(f"jmp .{label}%=")
+        asmblock = self.asmwrap(f"jmp {self.labelstr(label)}")
         return asmblock
 
     def loopbegin(self, *, reg : greg_base, label : str):
         preg = prefix_if_raw_reg(reg)
-        asmblock  = self.asmwrap(f".{label}%=:")
+        asmblock  = self.asmwrap(f"{self.labelstr(label)}:")
         asmblock += self.asmwrap(f"sub $1, {preg}")
         return asmblock
 
     def loopbegin_nz(self, *, reg : greg_base, label : str, labelskip : str):
         preg = prefix_if_raw_reg(reg)
         asmblock  = self.asmwrap(f"test {preg},{preg}")
-        asmblock += self.asmwrap(f"jz .{labelskip}%=")
-        asmblock += self.asmwrap(f".{label}%=:")
+        asmblock += self.asmwrap(f"jz {self.labelstr(labelskip)}")
+        asmblock += self.asmwrap(f"{self.labelstr(label)}:")
         asmblock += self.asmwrap(f"sub $1, {preg}")
         return asmblock
 
     def loopend(self, *, reg : greg_base, label : str):
         preg = prefix_if_raw_reg(reg)
         asmblock  = self.asmwrap(f"cmp $0x0,{preg}")
-        asmblock += self.asmwrap(f"jne .{label}%=")
+        asmblock += self.asmwrap(f"jne {self.labelstr(label)}")
 
         return asmblock
 
