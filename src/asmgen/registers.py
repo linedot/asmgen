@@ -351,10 +351,29 @@ class asm_index_type(Enum):
     """
     Index type for assembly instruction specialization and size/address computations
     """
-    INT8    = 1
-    INT16   = 2
-    INT32   = 4
-    INT64   = 8
+    INT8    = auto()
+    INT16   = auto()
+    INT32   = auto()
+    INT64   = auto()
+
+def ait_size(dt : asm_index_type) -> int:
+    """
+    Returns the storage size of an index type
+
+    :param dt : index type to return the storage size for
+    :type dt : class:`asmgen.registers.asm_index_type`
+    :return : Storage size in bytes
+    :rtype : int
+    """
+    size_map = {
+        asm_index_type.INT8   : 1,
+        asm_index_type.INT16  : 2,
+        asm_index_type.INT32  : 4,
+        asm_index_type.INT64  : 8,
+    }
+    if dt not in size_map:
+        raise RuntimeError(f"Invalid asm_index_type: {dt}")
+    return size_map[dt]
 
 def it_from_dt_samesize(dt : asm_data_type) -> asm_index_type:
     if adt_size(dt) == 1:

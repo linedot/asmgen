@@ -15,6 +15,14 @@ class aarch64_greg(greg_base):
     """
     def __init__(self, reg_idx : int):
         self.reg_str = f"x{reg_idx}"
+        if reg_idx == 31:
+            self.reg_str = "sp"
+        self.idx = reg_idx
+
+    def get_wreg(self):
+        if self.idx == 31:
+            return "sp"
+        return f"w{self.idx}"
 
     def __str__(self) -> str:
         return self.reg_str

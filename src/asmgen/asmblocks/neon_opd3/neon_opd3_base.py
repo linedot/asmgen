@@ -155,7 +155,7 @@ class neon_opd3_base(opd3):
 
         # This allows the SVE version to use the same codepath
         sve_preg=""
-        if 'sve_preg' in kwargs:
+        if ('sve_preg' in kwargs) and (modifier.PART not in modifiers):
             sve_preg=kwargs['sve_preg'] + ','
 
         # Add a/s suffix if instruction supports it

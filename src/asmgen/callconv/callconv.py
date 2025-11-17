@@ -49,11 +49,14 @@ class callconv:
         self.spadd = 8*sum([len(reg_list)\
             for _,reg_list in reg_indices.items()])
 
+        asmblock = ""
+
         spreg = gen.greg(self.spreg)
-        asmblock = gen.add_greg_imm(
-                reg=spreg,
-                imm=-self.spadd
-                )
+        if self.spadd > 0:
+            asmblock += gen.add_greg_imm(
+                    reg=spreg,
+                    imm=-self.spadd
+                    )
 
         rtype_off = 0
         for type_tag,reg_list in reg_indices.items():
@@ -101,10 +104,11 @@ class callconv:
                 kwargs['dst'] = reg
                 asmblock += load(**kwargs)
 
-        asmblock += gen.add_greg_imm(
-                reg=spreg,
-                imm=self.spadd
-                )
+        if self.spadd > 0:
+            asmblock += gen.add_greg_imm(
+                    reg=spreg,
+                    imm=self.spadd
+                    )
 
         self.spadd = 0
 

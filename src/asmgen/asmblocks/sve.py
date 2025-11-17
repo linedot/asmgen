@@ -14,6 +14,7 @@ from ..registers import (
     asm_data_type as adt,
     adt_size,
     asm_index_type as ait,
+    ait_size,
     treg_base, vreg_base, freg_base, greg_base
 )
 
@@ -132,7 +133,10 @@ class sve(aarch64):
 
     def greg_to_voffs(self, *, streg : greg_base, vreg : vreg_base, dt : adt) -> str:
         suf = self.dt_suffixes[dt]
-        return self.asmwrap(f"index {vreg}.{suf},#0,{streg}")
+        cstreg = str(streg)
+        if adt_size(dt) < 8:
+            cstreg = streg.get_wreg()
+        return self.asmwrap(f"index {vreg}.{suf},#0,{cstreg}")
 
 
     def zero_vreg(self, *, vreg : vreg_base, dt : adt) -> str:
@@ -247,10 +251,14 @@ class sve(aarch64):
     def load_vector_gather(self, *, areg : greg_base, offvreg : vreg_base,
                            vreg : vreg_base, dt : adt,
                            it : ait) -> str:
-        _ = it # explicitly unused
+        if ait_size(it) not in [4,8]:
+            raise ValueError(f"index size must be 4 or 8 bytes!")
         suf = self.dt_suffixes[dt]
         msuf = self.dt_mnem_suffixes[dt]
-        return self.asmwrap(f"ld1{msuf}.v {vreg}.{suf}, p0/z,[{areg}, {offvreg}]")
+        xtnd = ""
+        if (ait_size(it) == 4) and (adt_size(dt) == 4):
+            xtnd = ", SXTW"
+        return self.asmwrap(f"ld1{msuf} {vreg}.{suf}, p0/z,[{areg}, {offvreg}.{suf}{xtnd}]")
 
     def store_vector_immstride(self, *, areg : greg_base, byte_stride : int,
                     vreg : vreg_base, dt : adt) -> str:
@@ -263,10 +271,13 @@ class sve(aarch64):
     def store_vector_scatter(self, *, areg : greg_base, offvreg : vreg_base,
                              vreg : vreg_base, dt : adt,
                              it : ait) -> str:
-        _ = it # explicitly unused
+        if ait_size(it) not in [4,8]:
+            raise ValueError(f"index size must be 4 or 8 bytes!")
         suf = self.dt_suffixes[dt]
         msuf = self.dt_mnem_suffixes[dt]
-        return self.asmwrap(f"st1{msuf}.v {vreg}.{suf}, p0, [{areg}, {offvreg}]")
+        if (ait_size(it) == 4) and (adt_size(dt) == 4):
+            xtnd = ", SXTW"
+        return self.asmwrap(f"st1{msuf} {vreg}.{suf}, p0, [{areg}, {offvreg}.{suf}{xtnd}]")
 
 
     # Unsupported functionality:
