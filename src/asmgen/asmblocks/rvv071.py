@@ -32,6 +32,8 @@ class rvv071(rvv):
 
     @property
     def c_simd_size_function(self):
+        pre_oi = self.output_inline
+        self.set_output_inline(yesno=True)
         result  = "size_t get_simd_size() {\n"
         result += "    size_t byte_size = 0;\n"
         result += "    __asm__ volatile(\n"
@@ -42,6 +44,7 @@ class rvv071(rvv):
         result += "    );\n"
         result += "    return byte_size;\n"
         result += "}"
+        self.set_output_inline(yesno=pre_oi)
         return result
 
     def vsetvli(self, *, vlreg : greg_base, avlreg : greg_base, dt : adt) -> str:
