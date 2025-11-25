@@ -217,7 +217,7 @@ class avxbase(asmgen):
 
     @property
     def c_simd_size_function(self):
-        result  = f"size_t get_simd_size() {{ return {self.simd_size}; }}"
+        result  = f"inline size_t get_simd_size() {{ return {self.simd_size}; }}"
         return result
 
     def simd_size_to_greg(self, *, reg: greg_base, dt: adt) -> str:

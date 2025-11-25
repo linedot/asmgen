@@ -173,7 +173,9 @@ class sme(sve):
 
     @property
     def c_simd_size_function(self):
-        result  = "size_t get_simd_size() {\n"
+        pre_oi = self.output_inline
+        self.set_output_inline(yesno=True)
+        result  = "inline size_t get_simd_size() {\n"
         result += "    size_t byte_size = 0;\n"
         result += "    __asm__ volatile(\n"
         result += "        "+self.asmwrap("smstart")
@@ -186,6 +188,7 @@ class sme(sve):
         result += "    );\n"
         result += "    return byte_size;\n"
         result += "}"
+        self.set_output_inline(yesno=pre_oi)
         return result
 
     def isaquirks(self, *, rt : reg_tracker, dt : adt) -> str:

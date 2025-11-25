@@ -140,7 +140,7 @@ class rvv(riscv64):
     def c_simd_size_function(self):
         pre_oi = self.output_inline
         self.set_output_inline(yesno=True)
-        result  = "size_t get_simd_size() {\n"
+        result  = "inline size_t get_simd_size() {\n"
         result += "    size_t byte_size = 0;\n"
         result += "    __asm__ volatile(\n"
         result += "        "+self.asmwrap(f"vsetvli %[byte_size], zero, e8, m{self.lmul}, ta, ma")

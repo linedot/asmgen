@@ -134,7 +134,7 @@ class neon(aarch64):
 
     @property
     def c_simd_size_function(self):
-        return f"size_t get_simd_size() {{ return {self.simd_size}; }}"
+        return f"inline size_t get_simd_size() {{ return {self.simd_size}; }}"
 
     def add_greg_voff(self, *, reg : greg_base, offset : int, dt : adt):
         byte_offset = self.simd_size*offset
