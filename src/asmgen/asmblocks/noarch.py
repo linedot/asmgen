@@ -466,6 +466,30 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
+    def min_bcast_immoff(self, dt : asm_data_type) -> int:
+        """
+        Returns the minimum immediate offset in bytes
+        for broadcasting a value from memory into SIMD/vector
+        registers  (can be negative)
+
+        :return: Minimum immediate vector broadcasting offset in bytes
+        :rtype: int
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
+    def max_bcast_immoff(self, dt : asm_data_type) -> int:
+        """
+        Returns the maximum immediate offset in bytes
+        for broadcasting a value from memory into SIMD/vector
+        registers  (can be negative)
+
+        :return: Maximum immediate vector broadcasting offset in bytes
+        :rtype: int
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
     def min_fload_immoff(self, dt : asm_data_type) -> int:
         """
         Returns the minimum immediate offset in bytes

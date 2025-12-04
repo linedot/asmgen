@@ -166,6 +166,14 @@ class neon(aarch64):
     def max_load_immoff(self, dt : adt) -> int:
         return 4095*adt_size(dt)*2
 
+    def min_bcast_immoff(self, dt : adt) -> int:
+        _ = dt # explicitly unused
+        return 0
+
+    def max_bcast_immoff(self, dt : adt) -> int:
+        _ = dt # explicitly unused
+        return 0
+
     @property
     def min_load_voff(self) -> int:
         return 0
@@ -189,6 +197,27 @@ class neon(aarch64):
         qv = self.vreg_to_qreg(vreg)
         return self.asmwrap(f"ldr {qv}, [{areg}]")
 
+    def load_vector_lane(self, *, areg : greg_base,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
+        suf = self.dt_idxsuffixes[dt]
+        return self.asmwrap(f"ld1 {{{vreg}.{suf}}}[{lane}], [{areg}]")
+
+    def load_vector_lane_greginc(self, *, areg : greg_base, offreg : greg_base,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
+        suf = self.dt_idxsuffixes[dt]
+        return self.asmwrap(f"ld1 {{{vreg}.{suf}}}[{lane}], [{areg}], {offreg}")
+
+    def load_vector_lane_inc(self, *, areg : greg_base, offset : int,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
+        suf = self.dt_idxsuffixes[dt]
+        return self.asmwrap(f"ld1 {{{vreg}.{suf}}}[{lane}], [{areg}], #{offset}")
+
     def load_vector_voff(self, *, areg : greg_base, voffset : int,
                          vreg : vreg_base, dt : adt) -> str:
         if not isinstance(vreg, neon_vreg):
@@ -202,6 +231,13 @@ class neon(aarch64):
             raise ValueError(f"{vreg} is not a NEON vreg")
         qv = self.vreg_to_qreg(vreg)
         return self.asmwrap(f"ldr {qv}, [{areg}, #{offset}]")
+
+    def load_vector_inc(self, *, areg : greg_base, offset : int,
+                           vreg : vreg_base, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
+        qv = self.vreg_to_qreg(vreg)
+        return self.asmwrap(f"ldr {qv}, [{areg}], #{offset}")
 
     def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt) -> str:
@@ -226,12 +262,47 @@ class neon(aarch64):
         qv = self.vreg_to_qreg(vreg)
         return self.asmwrap(f"str {qv}, [{areg}, #{voffset*self.simd_size}]")
 
+    def store_vector_immoff(self, *, areg : greg_base, offset : int,
+                           vreg : vreg_base, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
+        qv = self.vreg_to_qreg(vreg)
+        return self.asmwrap(f"str {qv}, [{areg}, #{offset}]")
+
+    def store_vector_inc(self, *, areg : greg_base, offset : int,
+                           vreg : vreg_base, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
+        qv = self.vreg_to_qreg(vreg)
+        return self.asmwrap(f"str {qv}, [{areg}], #{offset}")
+
     def store_vector(self, *, areg : greg_base,
                      vreg : vreg_base, dt : adt) -> str:
         if not isinstance(vreg, neon_vreg):
             raise ValueError(f"{vreg} is not a NEON vreg")
         qv = self.vreg_to_qreg(vreg)
         return self.asmwrap(f"str {qv}, [{areg}]")
+
+    def store_vector_lane(self, *, areg : greg_base,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
+        suf = self.dt_idxsuffixes[dt]
+        return self.asmwrap(f"st1 {{{vreg}.{suf}}}[{lane}], [{areg}]")
+
+    def store_vector_lane_greginc(self, *, areg : greg_base, offreg : greg_base,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
+        suf = self.dt_idxsuffixes[dt]
+        return self.asmwrap(f"st1 {{{vreg}.{suf}}}[{lane}], [{areg}], {offreg}")
+
+    def store_vector_lane_inc(self, *, areg : greg_base, offset : int,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        if not isinstance(vreg, neon_vreg):
+            raise ValueError(f"{vreg} is not a NEON vreg")
+        suf = self.dt_idxsuffixes[dt]
+        return self.asmwrap(f"st1 {{{vreg}.{suf}}}[{lane}], [{areg}], #{offset}")
 
     def load_vector_immstride(self, *, areg : greg_base, byte_stride : int,
                     vreg : vreg_base, dt : adt) -> str:

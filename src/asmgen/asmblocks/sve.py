@@ -155,6 +155,12 @@ class sve(aarch64):
     def max_load_immoff(self, dt : adt) -> int:
         return 252
 
+    def min_bcast_immoff(self, dt : adt) -> int:
+        return self.min_load_immoff(dt)
+
+    def max_bcast_immoff(self, dt : adt) -> int:
+        return self.max_load_immoff(dt)
+
     @property
     def min_load_voff(self) -> int:
         return -8
