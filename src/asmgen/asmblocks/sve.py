@@ -103,7 +103,7 @@ class sve(aarch64):
 
 
     def simd_size_to_greg(self, *, reg: greg_base, dt: adt) -> str:
-        suf = self.dt_suffixes[dt]
+        suf = self.dt_mnem_suffixes[dt]
         result  = self.asmwrap(f"mov {reg},#0")
         result += self.asmwrap(f"inc{suf} {reg}")
 
@@ -284,6 +284,7 @@ class sve(aarch64):
             raise ValueError(f"index size must be 4 or 8 bytes!")
         suf = self.dt_suffixes[dt]
         msuf = self.dt_mnem_suffixes[dt]
+        xtnd = ""
         if (ait_size(it) == 4) and (adt_size(dt) == 4):
             xtnd = ", SXTW"
         return self.asmwrap(f"st1{msuf} {vreg}.{suf}, p0, [{areg}, {offvreg}.{suf}{xtnd}]")
