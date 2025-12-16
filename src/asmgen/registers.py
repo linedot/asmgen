@@ -376,13 +376,22 @@ def ait_size(dt : asm_index_type) -> int:
     return size_map[dt]
 
 def it_from_dt_samesize(dt : asm_data_type) -> asm_index_type:
+    """
+    Returns an index type with the same size as the data type
+
+    :param dt : data type to return the index type for
+    :type dt : class:`asmgen.registers.asm_data_type`
+    :return : Index type
+    :rtype : class:`asmgen.registers.asm_index_type`
+    :raises: ValueError if dt has no corresponding index type
+    """
     if adt_size(dt) == 1:
         return asm_index_type.INT8
-    elif adt_size(dt) == 2:
+    if adt_size(dt) == 2:
         return asm_index_type.INT16
-    elif adt_size(dt) == 4:
+    if adt_size(dt) == 4:
         return asm_index_type.INT32
-    elif adt_size(dt) == 8:
+    if adt_size(dt) == 8:
         return asm_index_type.INT64
 
     raise ValueError(f"dt {dt} has no corresponding it")
