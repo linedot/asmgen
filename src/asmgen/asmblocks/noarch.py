@@ -26,6 +26,7 @@ from ..registers import (
     data_reg,
     greg_base, freg_base, vreg_base, treg_base
 )
+from ..asmdata import asm_data
 
 from ..util import NIE_MESSAGE
 
@@ -57,6 +58,8 @@ class asmgen(ABC):
         self.fma = dummy_opd3()
         self.fmul = dummy_opd3()
         self.dota = dummy_opd3()
+
+        self.asmdata : dict[str,list[asm_data]] = dict()
 
     @abstractmethod
     def create_callconv(self, name : str) -> "callconv":
@@ -186,6 +189,34 @@ class asmgen(ABC):
         :rtype: str
         """
         raise NotImplementedError(NIE_MESSAGE)
+
+    def isadata(self) -> str:
+        """
+        Returns a string containing ISA-specific ISA data, like indices for a 
+        strided gather/scatter in AVX512. The generator is stateful wrt/ this data, i.e.
+        the internal storage containing the data will be populated if an instruction that
+        needs data is used. the internal data storaged can be cleared with the isaclear()
+        method.
+
+        :return: string with the ASM labels and definitions for the data
+        :rtype: str
+        """
+
+        result = ""
+
+        for name,datalist in self.asmdata.items():
+            label = self.labelstr(name)
+            result += self.asmwrap(f"{label}:")
+
+            for d in datalist:
+                result += self.asmwrap(f"  {str(d)}")
+
+    def isaclear(self):
+        """
+        Clears the internal isa data storage
+
+        """
+        self.asmdata.clear()
 
     @abstractmethod
     def supportedby_cpuinfo(self, cpuinfo : str) -> bool:
