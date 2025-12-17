@@ -11,6 +11,7 @@ from copy import deepcopy
 from typing import Union
 from abc import abstractmethod
 
+from ..asmdata import asm_data
 from ..registers import (
     reg_tracker,
     asm_data_type as adt,
@@ -97,12 +98,42 @@ class avxbase(asmgen):
             adt.DOUBLE : "d",
             adt.SINGLE : "s",
             adt.HALF   : "h",
+            adt.SINT8  : "b",
+            adt.SINT16 : "w",
+            adt.SINT32 : "d",
+            adt.SINT64 : "q",
             }
 
     it_suffixes = {
             ait.INT64 : "q",
             ait.INT32 : "d",
             }
+
+    def iota_label(self, size : int, count : int):
+        return f"iota_{size*8}x{count}"
+
+    def ensure_indices(self, dt : adt, count : int):
+        dt_size = adt_size(dt)
+        key = self.iota_label(dt_size, count)
+        if key in self.asmdata:
+            return
+
+        #TODO: Might want to rework this, maybe ait param and
+        #      then introduce ait_to_adt or something?
+        index_dt : adt = None
+        if dt_size == 1:
+            index_dt = adt.SINT8
+        elif dt_size == 2:
+            index_dt = adt.SINT16
+        elif dt_size == 4:
+            index_dt = adt.SINT32
+        elif dt_size == 8:
+            index_dt = adt.SINT64
+        else:
+            raise ValueError(f"Can't determine index type for {dt}")
+            
+
+        self.asmdata[key] = [asm_data(index_dt, i) for i in range(count)]
 
 
     def isaquirks(self, *, rt : reg_tracker, dt : adt):
@@ -366,8 +397,21 @@ class avxbase(asmgen):
         return 2**31//self.simd_size
 
     def greg_to_voffs(self, *, streg : greg_base, vreg : vreg_base, dt : adt) -> str:
-        raise NotImplementedError(
-                "Missing AVX implementation of instruction for creating vector indices")
+
+        dt_size = adt_size(dt)
+        index_count = self.simd_size/adt_size(dt)
+        self.ensure_indices(dt, index_count)
+        label = self.iota_label(dt_size, count)
+        label = self.labelstr(label)
+
+        pst = prefix_if_raw_reg(streg)
+        pv = prefix_if_raw_reg(vreg)
+
+        suf = self.dt_suffixes[dt]
+        result  = self.asmwrap(f"vpbroadcast{suf} {pst},{pv}")
+        result += self.asmwrap(f"vpmull{suf} {pv},{pv},{label}")
+
+        return result
 
     def prefetch_l1_immoff(self, *, areg : greg_base, offset : int):
         preg = prefix_if_raw_reg(areg)
