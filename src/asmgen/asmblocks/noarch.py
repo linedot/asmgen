@@ -211,6 +211,8 @@ class asmgen(ABC):
             for d in datalist:
                 result += self.asmwrap(f"  {str(d)}")
 
+        return result
+
     def isaclear(self):
         """
         Clears the internal isa data storage

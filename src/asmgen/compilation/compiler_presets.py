@@ -120,7 +120,7 @@ lib_flags : dict[str,list[str]] = {
         'armclang++' : ['-shared'],
         }
 
-output_flag : dict[str,list[str]] = {
+output_flag : dict[str,str] = {
         'g++' : '-o',
         'clang++' : '-o',
         'armclang++' : '-o',

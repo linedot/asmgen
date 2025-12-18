@@ -135,7 +135,7 @@ class asm_data:
             vhex = str(get_fp_hex_value(self.value, ebits, mbits, signbit))
         else:
             bits = adt_size(self.dt)*8
-            value = self.value & ((1 << bits) -1 )
+            value = int(self.value) & ((1 << bits) -1 )
             vhex = str(hex(value))
 
         return f"{tmacro} {vhex}"

@@ -8,10 +8,16 @@ from ..asmblocks.noarch import asmgen
 from ..registers import asm_data_type as adt, greg_base, data_reg
 
 class callconv:
+    """
+    ISA-independent calling-convention abstraction
+
+    To be used primarily in non-inline ASM, contains methods for
+    saving/restoring registers inside a function and when calling a function
+    """
     def __init__(self,
-                 param_regs : dict[list[int]],
-                 caller_save_lists : dict[list[int]],
-                 callee_save_lists : dict[list[int]],
+                 param_regs : dict[str,list[int]],
+                 caller_save_lists : dict[str,list[int]],
+                 callee_save_lists : dict[str,list[int]],
                  spreg : int
                  ):
         self.param_regs = param_regs
