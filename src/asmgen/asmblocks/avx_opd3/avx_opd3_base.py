@@ -13,11 +13,11 @@ from ...registers import (
     asm_data_type as adt,
     adt_triple,
     asm_index_type as ait,
-    data_reg
+    data_reg,
 )
 from ..operations import opd3,widening_method,modifier
 
-from ..types.avx_types import prefix_if_raw_reg
+from ..types.avx_types import reg_prefixer
 
 from ...util import NIE_MESSAGE
 
@@ -31,11 +31,13 @@ class avx_opd3_base(opd3):
                  asmwrap : Callable[[str],str],
                  dt_suffixes : dict[adt,str],
                  it_suffixes : dict[ait,str],
-                 has_fp16 : bool = False
+                 rpref : reg_prefixer,
+                 has_fp16 : bool = False,
                  ):
         self.asmwrap = asmwrap
         self.dt_suffixes = dt_suffixes
         self.it_suffixes = it_suffixes
+        self.rpref = rpref
         self.has_fp16 = has_fp16
 
     @abstractmethod
@@ -80,7 +82,7 @@ class avx_opd3_base(opd3):
                  a_dt : adt, b_dt : adt, c_dt : adt,
                  modifiers : set[modifier] = set(),
                  **kwargs) -> str:
-
+        self.check_modifiers(modifiers=modifiers)
         self.check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
         if (a_dt != b_dt) or (a_dt != c_dt):
             raise ValueError("A,B and C must have same type")
@@ -88,7 +90,7 @@ class avx_opd3_base(opd3):
         inst = self.get_base_inst(modifiers=modifiers)
 
         suf = 'p'+self.dt_suffixes[c_dt]
-        pa = prefix_if_raw_reg(adreg)
-        pb = prefix_if_raw_reg(bdreg)
-        pc = prefix_if_raw_reg(cdreg)
+        pa = self.rpref(adreg)
+        pb = self.rpref(bdreg)
+        pc = self.rpref(cdreg)
         return self.asmwrap(f"{inst}{suf} {pa},{pb},{pc}")

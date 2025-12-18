@@ -23,7 +23,7 @@ from ..registers import (
 from .noarch import asmgen,comparison
 from ..callconv.callconv import callconv
 
-from .types.avx_types import x86_greg,avx_freg,xmm_vreg,ymm_vreg,zmm_vreg,prefix_if_raw_reg
+from .types.avx_types import x86_greg,avx_freg,xmm_vreg,ymm_vreg,zmm_vreg,reg_prefixer
 
 from .avx_opd3 import avx_fma,avx_fmul
 
@@ -65,6 +65,9 @@ class avxbase(asmgen):
             }
         self.default_callconv = "systemv"
 
+        self.rpref = reg_prefixer(
+                output_inline_getter=lambda : self.output_inline)
+
     def create_callconv(self, name : str = "default"):
 
         if "default" == name:
@@ -102,6 +105,12 @@ class avxbase(asmgen):
             adt.SINT16 : "w",
             adt.SINT32 : "d",
             adt.SINT64 : "q",
+            }
+    size_suffixes = {
+            1 : 'b',
+            2 : 'w',
+            4 : 'd',
+            8 : 'q',
             }
 
     it_suffixes = {
@@ -142,7 +151,7 @@ class avxbase(asmgen):
         return ""
 
     def jzero(self, *, reg : greg_base, label : str) -> str:
-        preg = prefix_if_raw_reg(reg)
+        preg = self.rpref(reg)
         asmblock  = self.asmwrap(f"test {preg},{preg}")
         asmblock += self.asmwrap(f"jz {self.labelstr(label)}")
         return asmblock
@@ -151,8 +160,8 @@ class avxbase(asmgen):
                greg : greg_base, label : str,
                dt : adt) -> str:
         suf = 's'+self.dt_suffixes[dt]
-        pfreg1 = prefix_if_raw_reg(freg1)
-        pfreg2 = prefix_if_raw_reg(freg2)
+        pfreg1 = self.rpref(freg1)
+        pfreg2 = self.rpref(freg2)
         asmblock  = self.zero_freg(freg=freg2, dt=dt)
         asmblock += self.asmwrap(f"ucomi{suf} {pfreg2},{pfreg1}")
         asmblock += self.asmwrap(f"je {self.labelstr(label)}")
@@ -162,8 +171,8 @@ class avxbase(asmgen):
                vreg2 : vreg_base, greg : greg_base, label : str,
                dt : adt) -> str:
         suf = 'p'+self.dt_suffixes[dt]
-        pvreg1 = prefix_if_raw_reg(vreg1)
-        pvreg2 = prefix_if_raw_reg(vreg2)
+        pvreg1 = self.rpref(vreg1)
+        pvreg2 = self.rpref(vreg2)
         asmblock  = self.zero_vreg(vreg=vreg2, dt=dt)
         asmblock += self.asmwrap(f"vcmpeq{suf} {pvreg2},{pvreg1},{pvreg2}")
         asmblock += self.asmwrap(f"vptest {pvreg2},{pvreg2}")
@@ -174,10 +183,13 @@ class avxbase(asmgen):
            cmp: comparison, label: str) -> str:
         inst = self.cb_insts[cmp.name]
         if reg2 is None:
-            return self.asmwrap(f"test {reg1},{reg1}")+\
+            pr1 = self.rpref(reg1)
+            return self.asmwrap(f"test {pr1},{pr1}")+\
                    self.asmwrap(f"{inst} {self.labelstr(label)}")
         else:
-            return self.asmwrap(f"cmp {reg2},{reg1}")+\
+            pr1 = self.rpref(reg1)
+            pr2 = self.rpref(reg2)
+            return self.asmwrap(f"cmp {pr2},{pr1}")+\
                    self.asmwrap(f"{inst} {self.labelstr(label)}")
 
     def xmm_to_ymm(self, vreg : vreg_base):
@@ -196,6 +208,8 @@ class avxbase(asmgen):
         xmm_str = f"{vreg}"
         if xmm_str.startswith("xmm"):
             idx = int(xmm_str[3:])
+        elif xmm_str.startswith("%xmm"):
+            idx = int(xmm_str[4:])
         elif xmm_str.startswith("%%xmm"):
             idx = int(xmm_str[5:])
         else:
@@ -215,13 +229,13 @@ class avxbase(asmgen):
         return asmblock
 
     def loopbegin(self, *, reg : greg_base, label : str):
-        preg = prefix_if_raw_reg(reg)
+        preg = self.rpref(reg)
         asmblock  = self.asmwrap(f"{self.labelstr(label)}:")
         asmblock += self.asmwrap(f"sub $1, {preg}")
         return asmblock
 
     def loopbegin_nz(self, *, reg : greg_base, label : str, labelskip : str):
-        preg = prefix_if_raw_reg(reg)
+        preg = self.rpref(reg)
         asmblock  = self.asmwrap(f"test {preg},{preg}")
         asmblock += self.asmwrap(f"jz {self.labelstr(labelskip)}")
         asmblock += self.asmwrap(f"{self.labelstr(label)}:")
@@ -229,7 +243,7 @@ class avxbase(asmgen):
         return asmblock
 
     def loopend(self, *, reg : greg_base, label : str):
-        preg = prefix_if_raw_reg(reg)
+        preg = self.rpref(reg)
         asmblock  = self.asmwrap(f"cmp $0x0,{preg}")
         asmblock += self.asmwrap(f"jne {self.labelstr(label)}")
 
@@ -255,8 +269,8 @@ class avxbase(asmgen):
         return self.mov_greg_imm(reg=reg, imm=self.simd_size//adt_size(dt))
 
     def mov_greg(self, *, src : greg_base, dst : greg_base):
-        psrc = prefix_if_raw_reg(src)
-        pdst = prefix_if_raw_reg(dst)
+        psrc = self.rpref(src)
+        pdst = self.rpref(dst)
         return self.asmwrap(f"movq {psrc}, {pdst}")
 
     def mov_freg(self, *, src : freg_base, dst : freg_base, dt : adt):
@@ -265,61 +279,61 @@ class avxbase(asmgen):
 
 
     def load_greg(self, *, areg : greg_base, offset : int, dst : greg_base) -> str:
-        pareg = prefix_if_raw_reg(areg)
-        pdst = prefix_if_raw_reg(dst)
+        pareg = self.rpref(areg)
+        pdst = self.rpref(dst)
         address = f"{offset}({pareg})"
         if 0 == offset:
             address = f"({pareg})"
         return self.asmwrap(f"movq {address},{pdst}")
 
     def store_greg(self, *, areg : greg_base, offset : int, src : greg_base) -> str:
-        pareg = prefix_if_raw_reg(areg)
-        psrc = prefix_if_raw_reg(src)
+        pareg = self.rpref(areg)
+        psrc = self.rpref(src)
         address = f"{offset}({pareg})"
         if 0 == offset:
             address = f"({pareg})"
         return self.asmwrap(f"movq {psrc},{address}")
 
     def mov_greg_to_param(self, *, src : greg_base, param : str):
-        preg = prefix_if_raw_reg(src)
+        preg = self.rpref(src)
         return self.asmwrap(f"movq {preg},%[{param}]")
 
     def mov_param_to_greg(self, *, param : str, dst : greg_base):
-        preg = prefix_if_raw_reg(dst)
+        preg = self.rpref(dst)
         return self.asmwrap(f"movq %[{param}],{preg}")
 
     def mov_param_to_greg_shift(self, *, param : str, dst : greg_base, bit_count : int):
-        pdst = prefix_if_raw_reg(dst)
+        pdst = self.rpref(dst)
         return self.asmwrap(f"leaq (,%[{param}],{1<<bit_count}),{pdst}")
 
     def mov_greg_imm(self, *, reg : greg_base, imm : int):
-        preg = prefix_if_raw_reg(reg)
+        preg = self.rpref(reg)
         return self.asmwrap(f"movq ${imm},{preg}")
 
     def zero_greg(self, *, greg : greg_base):
         return self.mov_greg_imm(reg=greg, imm=0)
 
     def add_greg_imm(self, *, reg : greg_base, imm : int):
-        preg = prefix_if_raw_reg(reg)
+        preg = self.rpref(reg)
         return self.asmwrap(f"addq ${imm},{preg}")
 
     def mul_greg_imm(self, *, src : greg_base, dst : greg_base, factor : int) -> str:
-        pdst = prefix_if_raw_reg(dst)
-        psrc = prefix_if_raw_reg(src)
+        pdst = self.rpref(dst)
+        psrc = self.rpref(src)
         return self.asmwrap(f"imulq ${factor},{psrc},{pdst}")
 
     def mul_greg_greg(self, *, dst : greg_base, reg1 : greg_base, reg2 : greg_base) -> str:
-        pdst = prefix_if_raw_reg(dst)
-        preg1 = prefix_if_raw_reg(reg1)
-        preg2 = prefix_if_raw_reg(reg2)
+        pdst = self.rpref(dst)
+        preg1 = self.rpref(reg1)
+        preg2 = self.rpref(reg2)
         asmblock = self.asmwrap(f"movq {preg1},{pdst}")
         asmblock += self.asmwrap(f"imulq {preg2},{pdst}")
         return asmblock
 
     def add_greg_greg(self, *, dst : greg_base, reg1 : greg_base, reg2 : greg_base) -> str:
-        pdst = prefix_if_raw_reg(dst)
-        preg1 = prefix_if_raw_reg(reg1)
-        preg2 = prefix_if_raw_reg(reg2)
+        pdst = self.rpref(dst)
+        preg1 = self.rpref(reg1)
+        preg2 = self.rpref(reg2)
         # Eh... might be inefficient in some weird
         # cases but I can't be bothered to handle x86 differently
         asmblock  = self.asmwrap(f"movq {preg1},{pdst}")
@@ -327,9 +341,9 @@ class avxbase(asmgen):
         return asmblock
 
     def sub_greg_greg(self, *, dst : greg_base, reg1 : greg_base, reg2 : greg_base) -> str:
-        pdst = prefix_if_raw_reg(dst)
-        preg1 = prefix_if_raw_reg(reg1)
-        preg2 = prefix_if_raw_reg(reg2)
+        pdst = self.rpref(dst)
+        preg1 = self.rpref(reg1)
+        preg2 = self.rpref(reg2)
         asmblock  = self.asmwrap(f"movq {preg1},{pdst}")
         asmblock += self.asmwrap(f"subq {preg2},{pdst}")
         return asmblock
@@ -339,11 +353,11 @@ class avxbase(asmgen):
         return self.add_greg_imm(reg=reg, imm=offset)
 
     def shift_greg_left(self, *, reg : greg_base, bit_count : int) -> str:
-        preg = prefix_if_raw_reg(reg)
+        preg = self.rpref(reg)
         return self.asmwrap(f"shlq ${bit_count},{preg}")
 
     def shift_greg_right(self, *, reg : greg_base, bit_count : int) -> str:
-        preg = prefix_if_raw_reg(reg)
+        preg = self.rpref(reg)
         return self.asmwrap(f"shrq ${bit_count},{preg}")
 
     def greg(self, reg_idx : int) -> greg_base:
@@ -354,7 +368,7 @@ class avxbase(asmgen):
         return avx_freg(reg_idx=reg_idx)
 
     def zero_freg(self, *, freg : freg_base, dt : adt) -> str:
-        preg = prefix_if_raw_reg(freg)
+        preg = self.rpref(freg)
         return self.asmwrap(f"vpxor {preg},{preg},{preg}")
 
     @property
@@ -399,33 +413,37 @@ class avxbase(asmgen):
     def greg_to_voffs(self, *, streg : greg_base, vreg : vreg_base, dt : adt) -> str:
 
         dt_size = adt_size(dt)
-        index_count = self.simd_size/adt_size(dt)
+        index_count = self.simd_size//adt_size(dt)
         self.ensure_indices(dt, index_count)
-        label = self.iota_label(dt_size, count)
+        label = self.iota_label(dt_size, index_count)
         label = self.labelstr(label)
 
-        pst = prefix_if_raw_reg(streg)
-        pv = prefix_if_raw_reg(vreg)
+        pst = self.rpref(streg,size=dt_size)
+        pv = self.rpref(vreg)
 
-        suf = self.dt_suffixes[dt]
+        suf = self.size_suffixes[dt_size]
         result  = self.asmwrap(f"vpbroadcast{suf} {pst},{pv}")
-        result += self.asmwrap(f"vpmull{suf} {pv},{pv},{label}")
+        #TODO: properly handle RIP
+        rip = '%rip'
+        if self.output_inline:
+            rip = '%%rip'
+        result += self.asmwrap(f"vpmull{suf} {label}({rip}),{pv},{pv}")
 
         return result
 
     def prefetch_l1_immoff(self, *, areg : greg_base, offset : int):
-        preg = prefix_if_raw_reg(areg)
+        preg = self.rpref(areg)
         return self.asmwrap(f"prefetcht0 {offset}({preg})")
 
     def load_pointer(self, *, areg : greg_base, name : str):
-        preg = prefix_if_raw_reg(areg)
+        preg = self.rpref(areg)
         return self.asmwrap(f"mov %[{name}],{preg}")
 
 
     def load_vector_voff(self, *, areg : greg_base, voffset : int, vreg : vreg_base, dt : adt):
         suf = 'p'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(vreg)
+        pa = self.rpref(areg)
+        pv = self.rpref(vreg)
         address = f"{voffset*self.simd_size}({pa})"
         if 0 == voffset:
             address = f"({pa})"
@@ -433,8 +451,8 @@ class avxbase(asmgen):
 
     def load_vector_immoff(self, *, areg : greg_base, offset : int, vreg : vreg_base, dt : adt):
         suf = 'p'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(vreg)
+        pa = self.rpref(areg)
+        pv = self.rpref(vreg)
         address = f"{offset}({pa})"
         if 0 == offset:
             address = f"({pa})"
@@ -442,8 +460,8 @@ class avxbase(asmgen):
 
     def load_scalar_immoff(self, *, areg : greg_base, offset : int, freg : freg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pf = prefix_if_raw_reg(freg)
+        pa = self.rpref(areg)
+        pf = self.rpref(freg)
         address = f"{offset}({pa})"
         if 0 == offset:
             address = f"({pa})"
@@ -451,8 +469,8 @@ class avxbase(asmgen):
 
     def store_scalar_immoff(self, *, areg : greg_base, offset : int, freg : freg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pf = prefix_if_raw_reg(freg)
+        pa = self.rpref(areg)
+        pf = self.rpref(freg)
         address = f"{offset}({pa})"
         if 0 == offset:
             address = f"({pa})"
@@ -473,8 +491,8 @@ class avxbase(asmgen):
 
     def store_vector_immoff(self, *, areg : greg_base, offset : int, vreg : vreg_base, dt : adt):
         suf = 'p'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(vreg)
+        pa = self.rpref(areg)
+        pv = self.rpref(vreg)
         address = f"{offset}({pa})"
         if 0 == offset:
             address = f"({pa})"
@@ -482,8 +500,8 @@ class avxbase(asmgen):
 
     def store_vector_voff(self, *, areg : greg_base, voffset : int, vreg : vreg_base, dt : adt):
         suf = 'p'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(vreg)
+        pa = self.rpref(areg)
+        pv = self.rpref(vreg)
         address = f"{voffset*self.simd_size}({pa})"
         if 0 == voffset:
             address = f"({pa})"
@@ -504,10 +522,10 @@ class avxbase(asmgen):
     def load_vector_gather(self, *, areg : greg_base, offvreg : vreg_base,
                            vreg : vreg_base, dt : adt,
                            it : ait):
-        suf = 's'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(vreg)
-        pov = prefix_if_raw_reg(offvreg)
+        suf = 'p'+self.dt_suffixes[dt]
+        pa = self.rpref(areg)
+        pv = self.rpref(vreg)
+        pov = self.rpref(offvreg)
         address = f"({pa})"
         isuf = self.it_suffixes[it]
         return self.asmwrap(f"vgather{isuf}{suf} {address},{pov},{pv}")
@@ -558,12 +576,14 @@ class fma128(avxbase):
                      asmwrap=self.asmwrap,
                      dt_suffixes=self.dt_suffixes,
                      it_suffixes=self.it_suffixes,
+                     rpref=self.rpref,
                      has_fp16=False
                      )
         self.fmul = avx_fmul(
                      asmwrap=self.asmwrap,
                      dt_suffixes=self.dt_suffixes,
                      it_suffixes=self.it_suffixes,
+                     rpref=self.rpref,
                      has_fp16=False
                      )
 
@@ -583,7 +603,7 @@ class fma128(avxbase):
         return 16
 
     def zero_vreg(self, *, vreg : vreg_base, dt : adt):
-        preg = prefix_if_raw_reg(vreg)
+        preg = self.rpref(vreg)
         return self.asmwrap(f"vpxor {preg},{preg},{preg}")
 
     def vreg(self, reg_idx):
@@ -592,15 +612,15 @@ class fma128(avxbase):
     def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(self.xmm_to_ymm(vreg))
+        pa = self.rpref(areg)
+        pv = self.rpref(self.xmm_to_ymm(vreg))
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
     def load_vector_bcast1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(self.xmm_to_ymm(vreg))
+        pa = self.rpref(areg)
+        pv = self.rpref(self.xmm_to_ymm(vreg))
         return self.asmwrap(f"vbroadcast{suf} {offset}({pa}),{pv}")
 
 class fma256(avxbase):
@@ -614,12 +634,14 @@ class fma256(avxbase):
                      asmwrap=self.asmwrap,
                      dt_suffixes=self.dt_suffixes,
                      it_suffixes=self.it_suffixes,
+                     rpref=self.rpref,
                      has_fp16=False
                      )
         self.fmul = avx_fmul(
                      asmwrap=self.asmwrap,
                      dt_suffixes=self.dt_suffixes,
                      it_suffixes=self.it_suffixes,
+                     rpref=self.rpref,
                      has_fp16=False
                      )
 
@@ -639,7 +661,7 @@ class fma256(avxbase):
         return 32
 
     def zero_vreg(self, *, vreg : vreg_base, dt : adt):
-        preg = prefix_if_raw_reg(vreg)
+        preg = self.rpref(vreg)
         return self.asmwrap(f"vpxor {preg},{preg},{preg}")
 
     def vreg(self, reg_idx : int):
@@ -648,15 +670,15 @@ class fma256(avxbase):
     def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(vreg)
+        pa = self.rpref(areg)
+        pv = self.rpref(vreg)
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
     def load_vector_bcast1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(vreg)
+        pa = self.rpref(areg)
+        pv = self.rpref(vreg)
         return self.asmwrap(f"vbroadcast{suf} {offset}({pa}),{pv}")
 
 class avx512(avxbase):
@@ -670,12 +692,14 @@ class avx512(avxbase):
                      asmwrap=self.asmwrap,
                      dt_suffixes=self.dt_suffixes,
                      it_suffixes=self.it_suffixes,
+                     rpref=self.rpref,
                      has_fp16=True
                      )
         self.fmul = avx_fmul(
                      asmwrap=self.asmwrap,
                      dt_suffixes=self.dt_suffixes,
                      it_suffixes=self.it_suffixes,
+                     rpref=self.rpref,
                      has_fp16=True
                      )
 
@@ -694,8 +718,17 @@ class avx512(avxbase):
     def simd_size(self):
         return 64
 
+
+    def isaquirks(self, *, rt : reg_tracker, dt : adt):
+        maskreg = '%k2'
+        if self.output_inline:
+            maskreg = '%%k2'
+
+        asmblock = super().isaquirks(rt=rt,dt=dt)
+        return asmblock + self.asmwrap(f"kxnorb {maskreg},{maskreg},{maskreg}")
+
     def zero_vreg(self, *, vreg : vreg_base, dt : adt):
-        preg = prefix_if_raw_reg(vreg)
+        preg = self.rpref(vreg)
         return self.asmwrap(f"vpxorq {preg},{preg},{preg}")
 
     def vreg(self, reg_idx : int):
@@ -704,24 +737,43 @@ class avx512(avxbase):
     def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(vreg)
+        pa = self.rpref(areg)
+        pv = self.rpref(vreg)
         return self.asmwrap(f"vbroadcast{suf} ({pa}),{pv}")
 
     def load_vector_bcast1_immoff(self, *, areg : greg_base, offset : int,
                                vreg : vreg_base, dt : adt):
         suf = 's'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(vreg)
+        pa = self.rpref(areg)
+        pv = self.rpref(vreg)
         return self.asmwrap(f"vbroadcast{suf} {offset}({pa}),{pv}")
+
+    def load_vector_gather(self, *, areg : greg_base, offvreg : vreg_base,
+                           vreg : vreg_base, dt : adt,
+                           it : ait):
+        suf = 'p'+self.dt_suffixes[dt]
+        pa = self.rpref(areg)
+        pv = self.rpref(vreg)
+        pov = self.rpref(offvreg)
+        address = f"({pa},{pov},1)" # TODO: Explore using scale param
+        isuf = self.it_suffixes[it]
+        # TODO: properly implement mask register handling
+        maskreg = '%k2'
+        if self.output_inline:
+            maskreg = '%%k2'
+        return self.asmwrap(f"vgather{isuf}{suf} {address},{pv}{{{maskreg}}}")
 
     def store_vector_scatter(self, *, areg : greg_base, offvreg : vreg_base,
                            vreg : vreg_base, dt : adt,
                            it : ait):
-        suf = 's'+self.dt_suffixes[dt]
-        pa = prefix_if_raw_reg(areg)
-        pv = prefix_if_raw_reg(vreg)
-        pov = prefix_if_raw_reg(offvreg)
-        address = f"({pa})"
+        suf = 'p'+self.dt_suffixes[dt]
+        pa = self.rpref(areg)
+        pv = self.rpref(vreg)
+        pov = self.rpref(offvreg)
+        address = f"({pa},{pov},1)" # TODO: Explore using scale param
         isuf = self.it_suffixes[it]
-        return self.asmwrap(f"vscatter{isuf}{suf} {address},{pov},{pv}")
+        # TODO: properly implement mask register handling
+        maskreg = '%k2'
+        if self.output_inline:
+            maskreg = '%%k2'
+        return self.asmwrap(f"vscatter{isuf}{suf} {pv},{address}{{{maskreg}}}")
