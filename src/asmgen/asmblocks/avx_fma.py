@@ -61,7 +61,8 @@ class avxbase(asmgen):
                                          14,  # Frame Pointer
                                          15], # SP
                                     'freg' : list(range(8,16))},
-                spreg=15)
+                spreg=15,
+                spstart=8)
             }
         self.default_callconv = "systemv"
 

@@ -18,7 +18,11 @@ class callconv:
                  param_regs : dict[str,list[int]],
                  caller_save_lists : dict[str,list[int]],
                  callee_save_lists : dict[str,list[int]],
-                 spreg : int
+                 spreg : int,
+                 # Introducing this because x86 params seem
+                 # to be 8 bytes off. might turn out to be
+                 # an unnecessary hack and the issue is elsewhere
+                 spstart : int = 0
                  ):
         self.param_regs = param_regs
         self.caller_save_lists = caller_save_lists
@@ -27,7 +31,7 @@ class callconv:
 
         self.params = {}
         # stack offset for the next parameter
-        self.spoff = 0
+        self.spoff = spstart
         # stack offset for save/restore
         self.spadd = 0
         # stack offset for different register types
