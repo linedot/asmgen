@@ -114,6 +114,13 @@ class avxbase(asmgen):
             8 : 'q',
             }
 
+    size_mask_suffixes = {
+            1 : 'q', # AVX512BW
+            2 : 'd', # AVX512BW
+            4 : 'w', # AVX512F
+            8 : 'b', # AVX512DQ
+            }
+
     it_suffixes = {
             ait.INT64 : "q",
             ait.INT32 : "d",
@@ -327,7 +334,9 @@ class avxbase(asmgen):
         pdst = self.rpref(dst)
         preg1 = self.rpref(reg1)
         preg2 = self.rpref(reg2)
-        asmblock = self.asmwrap(f"movq {preg1},{pdst}")
+        asmblock = ''
+        if preg1 != pdst:
+            asmblock += self.asmwrap(f"movq {preg1},{pdst}")
         asmblock += self.asmwrap(f"imulq {preg2},{pdst}")
         return asmblock
 
@@ -335,9 +344,11 @@ class avxbase(asmgen):
         pdst = self.rpref(dst)
         preg1 = self.rpref(reg1)
         preg2 = self.rpref(reg2)
+        asmblock = ''
+        if preg1 != pdst:
+            asmblock += self.asmwrap(f"movq {preg1},{pdst}")
         # Eh... might be inefficient in some weird
         # cases but I can't be bothered to handle x86 differently
-        asmblock  = self.asmwrap(f"movq {preg1},{pdst}")
         asmblock += self.asmwrap(f"addq {preg2},{pdst}")
         return asmblock
 
@@ -345,7 +356,9 @@ class avxbase(asmgen):
         pdst = self.rpref(dst)
         preg1 = self.rpref(reg1)
         preg2 = self.rpref(reg2)
-        asmblock  = self.asmwrap(f"movq {preg1},{pdst}")
+        asmblock = ''
+        if preg1 != pdst:
+            asmblock += self.asmwrap(f"movq {preg1},{pdst}")
         asmblock += self.asmwrap(f"subq {preg2},{pdst}")
         return asmblock
 
@@ -720,13 +733,6 @@ class avx512(avxbase):
         return 64
 
 
-    def isaquirks(self, *, rt : reg_tracker, dt : adt):
-        maskreg = '%k2'
-        if self.output_inline:
-            maskreg = '%%k2'
-
-        asmblock = super().isaquirks(rt=rt,dt=dt)
-        return asmblock + self.asmwrap(f"kxnorb {maskreg},{maskreg},{maskreg}")
 
     def zero_vreg(self, *, vreg : vreg_base, dt : adt):
         preg = self.rpref(vreg)
@@ -762,7 +768,11 @@ class avx512(avxbase):
         maskreg = '%k2'
         if self.output_inline:
             maskreg = '%%k2'
-        return self.asmwrap(f"vgather{isuf}{suf} {address},{pv}{{{maskreg}}}")
+        masksuf = self.size_mask_suffixes[adt_size(dt)]
+
+        asmblock = self.asmwrap(f"kxnor{masksuf} {maskreg},{maskreg},{maskreg}")
+        asmblock += self.asmwrap(f"vgather{isuf}{suf} {address},{pv}{{{maskreg}}}")
+        return asmblock
 
     def store_vector_scatter(self, *, areg : greg_base, offvreg : vreg_base,
                            vreg : vreg_base, dt : adt,
@@ -777,4 +787,8 @@ class avx512(avxbase):
         maskreg = '%k2'
         if self.output_inline:
             maskreg = '%%k2'
-        return self.asmwrap(f"vscatter{isuf}{suf} {pv},{address}{{{maskreg}}}")
+        masksuf = self.size_mask_suffixes[adt_size(dt)]
+
+        asmblock = self.asmwrap(f"kxnor{masksuf} {maskreg},{maskreg},{maskreg}")
+        asmblock += self.asmwrap(f"vscatter{isuf}{suf} {pv},{address}{{{maskreg}}}")
+        return asmblock
