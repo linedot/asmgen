@@ -276,6 +276,59 @@ class avxbase(asmgen):
     def simd_size_to_greg(self, *, reg: greg_base, dt: adt) -> str:
         return self.mov_greg_imm(reg=reg, imm=self.simd_size//adt_size(dt))
 
+    def kiterkleft(self, *, kreg : greg_type,
+                   kleftreg : greg_type,
+                   unroll : int) -> str:
+        # TODO: figure out some elaborate way to deal with implicitly used registers
+        #       (maybe also relevant: register restriction for col/row in ARM SME)
+        asmblock = ""
+        rax = self.rpref(self.greg(8))
+        rcx = self.rpref(self.greg(10))
+        rdx = self.rpref(self.greg(11))
+        pkreg = self.rpref(kreg)
+        pkleftreg = self.rpref(kleftreg)
+
+        if f"{rax}" == f"{pkreg}" and f"{rdx}"== f"{pkleftreg}":
+            # implicit destinations match div
+            return self.asmwrap(f"div {rax}")
+        if f"{rdx}" == f"{pkreg}" and f"{rax}"== f"{pkleftreg}":
+            # implicit destinations swapped with div
+            asmblock += self.asmwrap(f"div {rdx}")
+            asmblock += self.asmwrap(f"xor {rdx}, {rax}")
+            asmblock += self.asmwrap(f"xor {rax}, {rdx}")
+            asmblock += self.asmwrap(f"xor {rdx}, {rax}")
+            return asmblock 
+        
+        # save rax/rdx unless they're supposed to get overwritten anyways
+        if f"{rax}" not in [f"{pkreg}", f"{pkleftreg}"]:
+            asmblock += self.asmwrap(f"push {rax}")
+        if f"{rdx}" not in [f"{pkreg}", f"{pkleftreg}"]:
+            asmblock += self.asmwrap(f"push {rdx}")
+
+        # The DIV
+        asmblock += self.asmwrap(f"div {pkreg}")
+
+        if f"{pkreg}" != f"{rdx}":
+            # write into pkreg first unless it's rdx
+            if f"{rax}" != f"{pkreg}":
+                asmblock += self.asmwrap(f"movq {rax}, {pkreg}")
+            if f"{rdx}" != f"{pkleftreg}":
+                asmblock += self.asmwrap(f"movq {rdx}, {pkleftreg}")
+        else:
+            # write into pkleftreg first if pkreg is rdx
+            if f"{rdx}" != f"{pkleftreg}":
+                asmblock += self.asmwrap(f"movq {rdx}, {pkleftreg}")
+            if f"{rax}" != f"{pkreg}":
+                asmblock += self.asmwrap(f"movq {rax}, {pkreg}")
+
+        # restore rax/rdx unless they're supposed to get overwritten anyways
+        if f"{rdx}" not in [f"{pkreg}", f"{pkleftreg}"]:
+            asmblock += self.asmwrap(f"pop {rdx}")
+        if f"{rax}" not in [f"{pkreg}", f"{pkleftreg}"]:
+            asmblock += self.asmwrap(f"pop {rax}")
+
+        return asmblock
+
     def mov_greg(self, *, src : greg_base, dst : greg_base):
         psrc = self.rpref(src)
         pdst = self.rpref(dst)

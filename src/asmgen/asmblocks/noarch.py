@@ -338,6 +338,29 @@ class asmgen(ABC):
         """
         raise NotImplementedError(NIE_MESSAGE)
 
+    @abstractmethod
+    def kiterkleft(self, *, kreg : greg_type,
+                   kleftreg : greg_type,
+                   unroll : int) -> str:
+        """
+        calculates number of unrolled iterations and tail iterations and 
+        places the results in the specified GP registers
+
+        kleft = k % unroll
+        k = k // unroll
+
+        :param kreg: GP register containing the number of iterations. will be
+                     overwritten with the number of unrolled iterations
+        :type kreg: greg_type
+        :param kleftreg: GP register to write the number of tail iterations to
+        :type kleftreg: greg_type
+        :param unroll: unroll factor
+        :type unroll: greg_type
+        :return: string containing the ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
     @property
     @abstractmethod
     def is_vla(self) -> bool:
