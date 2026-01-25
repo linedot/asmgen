@@ -276,9 +276,34 @@ class avxbase(asmgen):
     def simd_size_to_greg(self, *, reg: greg_base, dt: adt) -> str:
         return self.mov_greg_imm(reg=reg, imm=self.simd_size//adt_size(dt))
 
+    def kiterkleft_pow2(self, *, kreg : greg_type,
+                        kleftreg : greg_type,
+                        unroll : int) -> str:
+
+        asmblock = ""
+
+        unrollpower = unroll.bit_length()-1
+
+        pkreg = self.rpref(kreg)
+        pkleftreg = self.rpref(kleftreg)
+
+        asmblock += self.mov_greg(src=kreg,dst=kleftreg)
+        # Example unroll=4: kleft = k & 0b0111
+        asmblock += self.asmwrap(f"andq ${unroll-1}, {pkleftreg}")
+        # Example unroll=4: k = k >> 2
+        asmblock += self.asmwrap(f"shrq ${unrollpower}, {pkreg}")
+
+        return asmblock
+
     def kiterkleft(self, *, kreg : greg_type,
                    kleftreg : greg_type,
                    unroll : int) -> str:
+
+        if unroll.bit_count() == 1:
+            return self.kiterkleft_pow2(kreg=kreg,kleftreg=kleftreg,unroll=unroll)
+
+        #TODO: division by invariant multiplication
+
         # TODO: figure out some elaborate way to deal with implicitly used registers
         #       (maybe also relevant: register restriction for col/row in ARM SME)
         asmblock = ""
@@ -288,16 +313,12 @@ class avxbase(asmgen):
         pkreg = self.rpref(kreg)
         pkleftreg = self.rpref(kleftreg)
 
-        if f"{rax}" == f"{pkreg}" and f"{rdx}"== f"{pkleftreg}":
-            # implicit destinations match div
-            return self.asmwrap(f"div {rax}")
-        if f"{rdx}" == f"{pkreg}" and f"{rax}"== f"{pkleftreg}":
-            # implicit destinations swapped with div
-            asmblock += self.asmwrap(f"div {rdx}")
-            asmblock += self.asmwrap(f"xor {rdx}, {rax}")
-            asmblock += self.asmwrap(f"xor {rax}, {rdx}")
-            asmblock += self.asmwrap(f"xor {rdx}, {rax}")
-            return asmblock 
+        # 1) Put k into RAX and clear RDX
+        # 2) Put unroll into some register (not RAX or RDX)
+        # 3) div
+        # 4) put RAX into kreg
+        # 5) put RDX into kleftreg
+
         
         # save rax/rdx unless they're supposed to get overwritten anyways
         if f"{rax}" not in [f"{pkreg}", f"{pkleftreg}"]:
@@ -305,21 +326,31 @@ class avxbase(asmgen):
         if f"{rdx}" not in [f"{pkreg}", f"{pkleftreg}"]:
             asmblock += self.asmwrap(f"push {rdx}")
 
-        # The DIV
-        asmblock += self.asmwrap(f"div {pkreg}")
-
-        if f"{pkreg}" != f"{rdx}":
-            # write into pkreg first unless it's rdx
-            if f"{rax}" != f"{pkreg}":
-                asmblock += self.asmwrap(f"movq {rax}, {pkreg}")
-            if f"{rdx}" != f"{pkleftreg}":
-                asmblock += self.asmwrap(f"movq {rdx}, {pkleftreg}")
+        if f"{pkreg}" != f"{rax}":
+            asmblock += self.mov_greg(src=kreg,dst=self.greg(8)) #RAX
+        if f"{pkleftreg}" not in [f"{rax}",f"{rdx}"]:
+            unrollreg = kleftreg
+        elif f"{pkreg}" not in [f"{rax}",f"{rdx}"]:
+            unrollreg = kreg
         else:
-            # write into pkleftreg first if pkreg is rdx
-            if f"{rdx}" != f"{pkleftreg}":
-                asmblock += self.asmwrap(f"movq {rdx}, {pkleftreg}")
-            if f"{rax}" != f"{pkreg}":
-                asmblock += self.asmwrap(f"movq {rax}, {pkreg}")
+            asmblock += self.asmwrap(f"push {rcx}")
+            unrollreg = self.greg(10) # RCX
+
+        asmblock += self.asmwrap(f"xorq {rdx},{rdx}")
+        asmblock += self.mov_greg_imm(reg=unrollreg, imm=unroll)
+
+        # The DIV
+        asmblock += self.asmwrap(f"div {unrollreg}")
+        
+
+        if f"{pkreg}" != f"{rax}":
+            asmblock += self.mov_greg(src=self.greg(8), dst=kreg) #RAX
+        if f"{pkleftreg}" != f"{rdx}":
+            asmblock += self.mov_greg(src=self.greg(11), dst=kreg) #RDX
+
+        if f"{pkleftreg}" not in [f"{rax}", f"{rdx}"] and \
+           f"{pkreg}" not in [f"{rax}", f"{rdx}"]:
+               asmblock += self.asmwrap(f"pop {rcx}")
 
         # restore rax/rdx unless they're supposed to get overwritten anyways
         if f"{rdx}" not in [f"{pkreg}", f"{pkleftreg}"]:
