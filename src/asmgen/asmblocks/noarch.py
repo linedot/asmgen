@@ -341,6 +341,7 @@ class asmgen(ABC):
     @abstractmethod
     def kiterkleft(self, *, kreg : greg_type,
                    kleftreg : greg_type,
+                   tmpreg : greg_type,
                    unroll : int) -> str:
         """
         calculates number of unrolled iterations and tail iterations and 

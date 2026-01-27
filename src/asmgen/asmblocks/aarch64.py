@@ -139,6 +139,74 @@ class aarch64(asmgen):
     def max_fregs(self):
         return 32
 
+    def kiterkleft_pow2(self, *, kreg : greg_type,
+                        kleftreg : greg_type,
+                        unroll : int) -> str:
+
+        asmblock = ""
+
+        unrollpower = unroll.bit_length()-1
+
+        # Example unroll=4: kleft = k & 0b0111
+        asmblock += self.asmwrap(f"and {kleftreg},{kreg},#{unroll-1}")
+        # Example unroll=4: k = k >> 2
+        asmblock += self.shift_greg_right(reg=kreg,bit_count=unrollpower)
+
+        return asmblock
+
+    def kiterkleft(self, *, kreg : greg_type,
+                   kleftreg : greg_type,
+                   tmpreg : greg_type,
+                   unroll : int) -> str:
+
+        if unroll.bit_count() == 1:
+            return self.kiterkleft_pow2(kreg=kreg,kleftreg=kleftreg,unroll=unroll)
+
+        # TODO: Division by invariant multiplication (the naive attempt below fails,
+        #       need to read up on it)
+
+        # runroll = (1<<64) // unroll
+        # shift   = 64 - unroll.bit_length()
+        # asmblock = ""
+
+        # # Move reciprocal into tmpreg
+        # asmblock += self.asmwrap(f"mov  {tmpreg}, #{(runroll >>  0) & 0xFFFF}")
+        # asmblock += self.asmwrap(f"movk {tmpreg}, #{(runroll >> 16) & 0xFFFF}, lsl 16")
+        # asmblock += self.asmwrap(f"movk {tmpreg}, #{(runroll >> 32) & 0xFFFF}, lsl 32")
+        # asmblock += self.asmwrap(f"movk {tmpreg}, #{(runroll >> 48) & 0xFFFF}, lsl 48")
+
+
+        # # tmp = k // unroll
+        # asmblock += self.mul_greg_greg(dst=tmpreg, reg1=kreg, reg2=tmpreg)
+        # asmblock += self.shift_greg_right(reg=tmpreg,bit_count=shift)
+        # 
+        # # kleft = k - (tmp * unroll)
+        # asmblock += self.mov_greg_imm(reg=kleftreg, imm=unroll)
+        # asmblock += self.asmwrap(f"msub {kleftreg},{tmpreg},{kleftreg},{kreg}")
+
+        # # k = tmp
+        # asmblock += self.mov_greg(src=tmpreg,dst=kreg)
+
+        # return asmblock
+
+
+        # DIV version
+
+        asmblock = ""
+
+        asmblock += self.mov_greg_imm(reg=kleftreg, imm=unroll)
+        # tmp = k // unroll
+        asmblock += self.asmwrap(f"udiv {tmpreg},{kreg},{kleftreg}")
+        # kleft = k - (tmp * unroll)
+        asmblock += self.asmwrap(f"msub {kleftreg},{tmpreg},{kleftreg},{kreg}")
+        # k = tmp
+        asmblock += self.mov_greg(src=tmpreg,dst=kreg)
+
+
+        return asmblock
+
+
+
     def mov_greg(self, *, src : greg_base, dst : greg_base) -> str:
         return self.asmwrap(f"mov {dst},{src}")
 

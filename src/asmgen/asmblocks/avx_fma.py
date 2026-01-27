@@ -297,6 +297,7 @@ class avxbase(asmgen):
 
     def kiterkleft(self, *, kreg : greg_type,
                    kleftreg : greg_type,
+                   tmpreg : greg_type,
                    unroll : int) -> str:
 
         if unroll.bit_count() == 1:
@@ -308,8 +309,8 @@ class avxbase(asmgen):
         #       (maybe also relevant: register restriction for col/row in ARM SME)
         asmblock = ""
         rax = self.rpref(self.greg(8))
-        rcx = self.rpref(self.greg(10))
         rdx = self.rpref(self.greg(11))
+        ptmpreg = self.rpref(tmpreg)
         pkreg = self.rpref(kreg)
         pkleftreg = self.rpref(kleftreg)
 
@@ -321,9 +322,9 @@ class avxbase(asmgen):
 
         
         # save rax/rdx unless they're supposed to get overwritten anyways
-        if f"{rax}" not in [f"{pkreg}", f"{pkleftreg}"]:
+        if f"{rax}" not in [f"{pkreg}", f"{pkleftreg}", f"{ptmpreg}"]:
             asmblock += self.asmwrap(f"push {rax}")
-        if f"{rdx}" not in [f"{pkreg}", f"{pkleftreg}"]:
+        if f"{rdx}" not in [f"{pkreg}", f"{pkleftreg}", f"{ptmpreg}"]:
             asmblock += self.asmwrap(f"push {rdx}")
 
         if f"{pkreg}" != f"{rax}":
@@ -333,8 +334,7 @@ class avxbase(asmgen):
         elif f"{pkreg}" not in [f"{rax}",f"{rdx}"]:
             unrollreg = kreg
         else:
-            asmblock += self.asmwrap(f"push {rcx}")
-            unrollreg = self.greg(10) # RCX
+            unrollreg = tmpreg
 
         asmblock += self.asmwrap(f"xorq {rdx},{rdx}")
         asmblock += self.mov_greg_imm(reg=unrollreg, imm=unroll)
@@ -348,14 +348,10 @@ class avxbase(asmgen):
         if f"{pkleftreg}" != f"{rdx}":
             asmblock += self.mov_greg(src=self.greg(11), dst=kreg) #RDX
 
-        if f"{pkleftreg}" not in [f"{rax}", f"{rdx}"] and \
-           f"{pkreg}" not in [f"{rax}", f"{rdx}"]:
-               asmblock += self.asmwrap(f"pop {rcx}")
-
         # restore rax/rdx unless they're supposed to get overwritten anyways
-        if f"{rdx}" not in [f"{pkreg}", f"{pkleftreg}"]:
+        if f"{rdx}" not in [f"{pkreg}", f"{pkleftreg}", f"{ptmpreg}"]:
             asmblock += self.asmwrap(f"pop {rdx}")
-        if f"{rax}" not in [f"{pkreg}", f"{pkleftreg}"]:
+        if f"{rax}" not in [f"{pkreg}", f"{pkleftreg}", f"{ptmpreg}"]:
             asmblock += self.asmwrap(f"pop {rax}")
 
         return asmblock
