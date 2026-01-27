@@ -9,7 +9,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "asmgen"
-version = "0.4.15"
+version = "0.4.16"
 authors = [
 { name="linedot", email="linedot@linedot.org" },
 ]
