@@ -144,6 +144,46 @@ class riscv64(asmgen):
     def max_fregs(self) -> int:
         return len(riscv64_freg.names)
 
+
+    def kiterkleft_pow2(self, *, kreg : greg_type,
+                        kleftreg : greg_type,
+                        unroll : int) -> str:
+
+        asmblock = ""
+
+        unrollpower = unroll.bit_length()-1
+
+        # Example unroll=4: kleft = k & 0b0111
+        asmblock += self.asmwrap(f"andi {kleftreg},{kreg},{unroll-1}")
+        # Example unroll=4: k = k >> 2
+        asmblock += self.shift_greg_right(reg=kreg,bit_count=unrollpower)
+
+        return asmblock
+
+    def kiterkleft(self, *, kreg : greg_type,
+                   kleftreg : greg_type,
+                   tmpreg : greg_type,
+                   unroll : int) -> str:
+
+        if unroll.bit_count() == 1:
+            return self.kiterkleft_pow2(kreg=kreg,kleftreg=kleftreg,unroll=unroll)
+
+        # TODO: Division by invariant multiplication 
+
+
+        # DIV version
+
+        asmblock = ""
+
+        asmblock += self.mov_greg_imm(reg=tmpreg, imm=unroll)
+        # kleft = k % unroll
+        asmblock += self.asmwrap(f"remu {kleftreg},{kreg},{tmpreg}")
+        # tmp = k // unroll
+        asmblock += self.asmwrap(f"divu {kreg},{kreg},{tmpreg}")
+
+
+        return asmblock
+
     def mov_freg(self, *, src : freg_base, dst : freg_base, dt : adt) ->  str:
         dt_suf = self.fdt_suffixes[dt]
         return self.asmwrap(f"fmv.{dt_suf} {dst},{src}")
