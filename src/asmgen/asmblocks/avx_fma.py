@@ -336,17 +336,30 @@ class avxbase(asmgen):
         else:
             unrollreg = tmpreg
 
+        punrollreg = self.rpref(unrollreg)
+
         asmblock += self.asmwrap(f"xorq {rdx},{rdx}")
         asmblock += self.mov_greg_imm(reg=unrollreg, imm=unroll)
 
         # The DIV
-        asmblock += self.asmwrap(f"div {unrollreg}")
+        asmblock += self.asmwrap(f"div {punrollreg}")
         
 
-        if f"{pkreg}" != f"{rax}":
-            asmblock += self.mov_greg(src=self.greg(8), dst=kreg) #RAX
-        if f"{pkleftreg}" != f"{rdx}":
-            asmblock += self.mov_greg(src=self.greg(11), dst=kreg) #RDX
+        if f"{pkreg}" != f"{rdx}":
+            if f"{pkreg}" != f"{rax}":
+                asmblock += self.mov_greg(src=self.greg(8), dst=kreg) #RAX
+            if f"{pkleftreg}" != f"{rdx}":
+                asmblock += self.mov_greg(src=self.greg(11), dst=kleftreg) #RDX
+        elif f"{pkleftreg}" != f"{rax}":
+            if f"{pkleftreg}" != f"{rdx}":
+                asmblock += self.mov_greg(src=self.greg(11), dst=kleftreg) #RDX
+            if f"{pkreg}" != f"{rax}":
+                asmblock += self.mov_greg(src=self.greg(8), dst=kreg) #RAX
+        else:
+            # exchange rax and rdx
+            asmblock += self.asmwrap(f"xorq {rax},{rdx}")
+            asmblock += self.asmwrap(f"xorq {rdx},{rax}")
+            asmblock += self.asmwrap(f"xorq {rax},{rdx}")
 
         # restore rax/rdx unless they're supposed to get overwritten anyways
         if f"{rdx}" not in [f"{pkreg}", f"{pkleftreg}", f"{ptmpreg}"]:
