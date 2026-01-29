@@ -27,6 +27,7 @@ class avx_opd3_base(opd3):
     opd3 operations
     """
 
+    # pylint: disable-next=too-many-positional-arguments
     def __init__(self,
                  asmwrap : Callable[[str],str],
                  dt_suffixes : dict[adt,str],

@@ -7,6 +7,7 @@ from typing import Callable, Union
 from ..asmblocks.noarch import asmgen
 from ..registers import asm_data_type as adt, greg_base, data_reg
 
+#pylint: disable=too-many-instance-attributes,too-many-positional-arguments
 class callconv:
     """
     ISA-independent calling-convention abstraction
@@ -38,6 +39,14 @@ class callconv:
         self.sp_rtype_offsets : dict[str,int] = {}
 
     def add_param(self, type_tag : str, name : str):
+        """
+        Add a parameter to the current fuction signature
+
+        :param type_tag: type of register the parameter should be stored in
+        :type type_tag: str
+        :param name: Name of the parameter
+        :type name: str
+        """
 
         if type_tag not in self.param_regs:
             raise ValueError(f"Invalid type tag: {type_tag}")
@@ -55,9 +64,20 @@ class callconv:
     def save_regs(self,
                   gen : asmgen,
                   reg_indices : dict[str,list[int]]) -> str:
+        """
+        Returns the string with the necesseray assembly to save the specified
+        registers
 
-        self.spadd = 8*sum([len(reg_list)\
-            for _,reg_list in reg_indices.items()])
+        :param gen: assembly generator
+        :type gen: class:`asmgen.asmblocks.noarch.asmgen`
+        :param reg_indices: dict containing lists of register indices to be saved for 
+                            each type_tag
+        :type reg_indices: dict[str,list[int]]
+        :return: string containing the necessary ASM instructions
+        :rtype: str
+        """
+
+        self.spadd = 8*sum(len(reg_list) for _,reg_list in reg_indices.items())
 
         asmblock = ""
 
@@ -92,6 +112,18 @@ class callconv:
     def restore_regs(self,
                      gen : asmgen,
                      reg_indices : dict[str,list[int]]) -> str:
+        """
+        Returns the string with the necessery assembly to restore the specified
+        registers (from the stack)
+
+        :param gen: assembly generator
+        :type gen: class:`asmgen.asmblocks.noarch.asmgen`
+        :param reg_indices: dict containing lists of register indices to be restored
+                            for each type_tag
+        :type reg_indices: dict[str,list[int]]
+        :return: string containing the necessary ASM instructions
+        :rtype: str
+        """
 
         spreg = gen.greg(self.spreg)
 
@@ -129,22 +161,37 @@ class callconv:
                       gen : asmgen,
                       type_tag : str,
                       indices : list[int]) -> list[Union[greg_base,data_reg]]:
+        """
+        Returns the registers corresponding to the specified register indices
+        """
 
         kwargs = {
         }
         if 'freg' == type_tag:
             kwargs['dt'] = adt.FP64
-        
+
         return [getattr(gen,type_tag)(**(kwargs|{'reg_idx':idx}))\
                 for idx in indices]
-
-        return locations
 
     def save_or_restore(self,
              gen : asmgen,
              regs : dict[str,list[int]],
              save_lists : dict[str,list[int]],
              action : Callable[[asmgen,dict[str,list[int]]], str]) -> str:
+        """
+        Abstraction over generating the ASM for saving and restoring registers
+
+        :param gen: ASM generator
+        :type gen: class:`asmgen.asmblocks.noarch.asmgen`
+        :param regs: lists of reg indices to selectively save/restore for each type_tag
+        :type regs: dict[str,list[int]]
+        :param save_lists: lists of reg indices that require saving for each type tag
+        :type save_lists: dict[str,list[int]]
+        :param action: the function (save/restore) to apply to the selected registers
+        :type action: Callable[[class:`asmgen.asmblocks.noarch.asmgen`,dict[str,list[int]]],str]
+        :return: string containing the necessary ASM instructions
+        :rtype: str
+        """
 
         reg_indices : dict[str,list[int]] = {
                 k : [] for k in save_lists.keys()
@@ -161,6 +208,18 @@ class callconv:
     def save_before_call(self,
                       gen : asmgen,
                       regs : dict[str,list[int]]) -> str:
+        """
+        Returns a string containing instructions to save registers to stack that are
+        the resposibility of the caller
+
+        :param gen: ASM generator
+        :type gen: class:`asmgen.asmblocks.noarch.asmgen`
+        :param regs: lists of reg indices to selectively save for each type_tag
+        :type regs: dict[str,list[int]]
+
+        :return: string containing the necessary ASM instructions
+        :rtype: str
+        """
 
         return self.save_or_restore(
                 gen=gen,
@@ -171,6 +230,18 @@ class callconv:
     def restore_after_call(self,
                            gen : asmgen,
                            regs : dict[str,list[int]]) -> str:
+        """
+        Returns a string containing instructions to restore registers from stack that
+        are the resposibility of the caller
+
+        :param gen: ASM generator
+        :type gen: class:`asmgen.asmblocks.noarch.asmgen`
+        :param regs: lists of reg indices to selectively restore for each type_tag
+        :type regs: dict[str,list[int]]
+
+        :return: string containing the necessary ASM instructions
+        :rtype: str
+        """
         return self.save_or_restore(
                 gen=gen,
                 regs=regs,
@@ -180,6 +251,18 @@ class callconv:
     def save_in_call(self,
                      gen : asmgen,
                      regs : dict[str,list[int]]) -> str:
+        """
+        Returns a string containing instructions to save registers to stack that are
+        the resposibility of the callee
+
+        :param gen: ASM generator
+        :type gen: class:`asmgen.asmblocks.noarch.asmgen`
+        :param regs: lists of reg indices to selectively save for each type_tag
+        :type regs: dict[str,list[int]]
+
+        :return: string containing the necessary ASM instructions
+        :rtype: str
+        """
         return self.save_or_restore(
                 gen=gen,
                 regs=regs,
@@ -189,6 +272,18 @@ class callconv:
     def restore_before_ret(self,
                      gen : asmgen,
                      regs : dict[str,list[int]]) -> str:
+        """
+        Returns a string containing instructions to restore registers from stack that
+        are the resposibility of the callee
+
+        :param gen: ASM generator
+        :type gen: class:`asmgen.asmblocks.noarch.asmgen`
+        :param regs: lists of reg indices to selectively restore for each type_tag
+        :type regs: dict[str,list[int]]
+
+        :return: string containing the necessary ASM instructions
+        :rtype: str
+        """
         return self.save_or_restore(
                 gen=gen,
                 regs=regs,
@@ -196,5 +291,7 @@ class callconv:
                 action=self.restore_regs)
 
     def get_params(self):
+        """
+        return the internal structure containing the current function parameters
+        """
         return self.params
-

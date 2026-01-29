@@ -23,7 +23,15 @@ class x86_greg(greg_base):
     def __init__(self, reg_idx : int):
         self.reg_idx = reg_idx
 
-    def name(self, size : int = 8):
+    def name(self, size : int = 8) -> str:
+        """
+        Returns the correct name of the register for the given data size in bytes
+        
+        :param size: data size in bytes
+        :type size: int
+        :return: string containing the register name
+        :rtype: str
+        """
         prefixes = {1:'', 2: '', 4: 'e', 8: 'r'}
 
         num_suffixes = {1:'b', 2: 'w', 4: 'd', 8: ''}
@@ -100,6 +108,9 @@ class reg_prefixer:
 
     @property
     def output_inline(self) -> bool:
+        """
+        Returns True if inline ASM output is active        
+        """
         return self.output_inline_getter()
 
     def __call__(self, reg : data_reg|greg_base, size : int = 8) -> str:

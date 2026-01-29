@@ -11,12 +11,10 @@ Base ASM generator class and ISA-independent utilities
 # what was done with opd3, disable for now
 # pylint: disable=too-many-lines
 
+
 from enum import Enum,auto
 from abc import ABC, abstractmethod
 from typing import TypeAlias,Union,TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..callconv.callconv import callconv
 
 from .operations import dummy_opd3
 from ..registers import (
@@ -30,15 +28,21 @@ from ..asmdata import asm_data
 
 from ..util import NIE_MESSAGE
 
+if TYPE_CHECKING:
+    from ..callconv.callconv import callconv
+
 class comparison(Enum):
-    nz = auto()
-    ez = auto()
-    ne = auto()
-    eq = auto()
-    le = auto()
-    ge = auto()
-    lt = auto()
-    gt = auto()
+    """
+    Types of comparisons
+    """
+    NZ = auto() # non-zero
+    EZ = auto() # equal-to-zero
+    NE = auto() # not-equal
+    EQ = auto() # equal
+    LE = auto() # less or equal
+    GE = auto() # greater or equal
+    LT = auto() # less than
+    GT = auto() # greater than
 
 class asmgen(ABC):
     """
@@ -710,10 +714,10 @@ class asmgen(ABC):
         """
         Returns the string containing instructions to branch conditionally
 
-        :param reg: first GP register to compare
-        :type reg: class:`asmgen.register.greg_base`
-        :param reg: second GP register to compare
-        :type reg: class:`asmgen.register.greg_base`
+        :param reg1: first GP register to compare
+        :type reg1: class:`asmgen.register.greg_base`
+        :param reg2: second GP register to compare
+        :type reg2: class:`asmgen.register.greg_base`
         :param comparison: How the register is compared (in case of nz or ez)
         :type comparison: str
         :param label: Label name
@@ -1108,7 +1112,7 @@ class asmgen(ABC):
         :rtype: str
         """
         raise NotImplementedError(NIE_MESSAGE)
-    
+
     @abstractmethod
     def store_scalar_immoff(self, *, areg : greg_type, offset : int,
                             freg : freg_type, dt : asm_data_type):
@@ -1148,7 +1152,7 @@ class asmgen(ABC):
         :rtype: str
         """
         raise NotImplementedError(NIE_MESSAGE)
-    
+
     @abstractmethod
     def store_freg(self, *, areg : greg_type, offset : int,
                    src : freg_type, dt : asm_data_type):
@@ -1221,6 +1225,26 @@ class asmgen(ABC):
         :type areg: class:`asmgen.registers.greg_base`
         :param vreg: vector register to load the values into
         :type vreg: class:`asmgen.registers.vreg_base`
+        :param dt: Data type of the values
+        :type dt: class:`asmgen.registers.asm_data_type`
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
+    def load_vector_lane(self, *, areg : greg_base,
+                         vreg : vreg_base, lane : int, dt : asm_data_type) -> str:
+        """
+        Returns the string containing the instruction(s) to load a scalar value
+        into the specified lane of the vector register
+
+        :param areg: GP register containing the base address
+        :type areg: class:`asmgen.registers.greg_base`
+        :param vreg: vector register to load the value into
+        :type vreg: class:`asmgen.registers.vreg_base`
+        :param lane: vector lane to lead the value into
+        :type lane: int
         :param dt: Data type of the values
         :type dt: class:`asmgen.registers.asm_data_type`
         :return: String containing the required ASM instructions
@@ -1376,17 +1400,58 @@ class asmgen(ABC):
         raise NotImplementedError(NIE_MESSAGE)
 
     @abstractmethod
+    def store_vector_lane(self, *, areg : greg_base,
+                          vreg : vreg_base, lane : int, dt : asm_data_type) -> str:
+        """
+        Returns the string containing the instruction(s) to save a scalar value
+        from the specified lane of the vector register into memory
+
+        :param areg: GP register containing the base address
+        :type areg: class:`asmgen.registers.greg_base`
+        :param vreg: vector register to take the value from
+        :type vreg: class:`asmgen.registers.vreg_base`
+        :param lane: vector lane containing the value
+        :type lane: int
+        :param dt: Data type of the values
+        :type dt: class:`asmgen.registers.asm_data_type`
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
     def store_vector_voff(self, *, areg : greg_type, voffset : int,
                           vreg : vreg_type, dt : asm_data_type):
         """
         Returns the string containing the instruction(s) to store contiguous elements
         from a vector register into memory, with an immediate offset being given in 
-        numbers of vectors
+        number of vectors
 
         :param areg: GP register containing the base address
         :type areg: class:`asmgen.registers.greg_base`
         :param voffset: immediate offset in number of vectors
         :type voffset: int
+        :param vreg: vector register to store the values from
+        :type vreg: class:`asmgen.registers.vreg_base`
+        :param dt: Data type of the values
+        :type dt: class:`asmgen.registers.asm_data_type`
+        :return: String containing the required ASM instructions
+        :rtype: str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @abstractmethod
+    def store_vector_immoff(self, *, areg : greg_type, offset : int,
+                           vreg : vreg_type, dt : asm_data_type):
+        """
+        Returns the string containing the instruction(s) to store contiguous elements
+        from a vector register, with an immediate offset being given in number of
+        bytes
+
+        :param areg: GP register containing the base address
+        :type areg: class:`asmgen.registers.greg_base`
+        :param offset: immediate offset in bytes
+        :type offset: int
         :param vreg: vector register to store the values from
         :type vreg: class:`asmgen.registers.vreg_base`
         :param dt: Data type of the values

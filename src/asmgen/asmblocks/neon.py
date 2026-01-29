@@ -206,6 +206,10 @@ class neon(aarch64):
 
     def load_vector_lane_greginc(self, *, areg : greg_base, offreg : greg_base,
                          vreg : vreg_base, lane : int, dt : adt) -> str:
+        """
+        load_vector_lane variant with post-index increment by
+        a value in a GP register
+        """
         if not isinstance(vreg, neon_vreg):
             raise ValueError(f"{vreg} is not a NEON vreg")
         suf = self.dt_idxsuffixes[dt]
@@ -213,6 +217,10 @@ class neon(aarch64):
 
     def load_vector_lane_inc(self, *, areg : greg_base, offset : int,
                          vreg : vreg_base, lane : int, dt : adt) -> str:
+        """
+        load_vector_lane variant with post-index increment by
+        an immediate
+        """
         if not isinstance(vreg, neon_vreg):
             raise ValueError(f"{vreg} is not a NEON vreg")
         suf = self.dt_idxsuffixes[dt]
@@ -234,6 +242,11 @@ class neon(aarch64):
 
     def load_vector_inc(self, *, areg : greg_base, offset : int,
                            vreg : vreg_base, dt : adt) -> str:
+        """
+        load_vector variant with post-index increment by
+        an immediate
+        """
+        _ = dt # explicitly unused
         if not isinstance(vreg, neon_vreg):
             raise ValueError(f"{vreg} is not a NEON vreg")
         qv = self.vreg_to_qreg(vreg)
@@ -264,6 +277,7 @@ class neon(aarch64):
 
     def store_vector_immoff(self, *, areg : greg_base, offset : int,
                            vreg : vreg_base, dt : adt) -> str:
+        _ = dt # explicitly unused
         if not isinstance(vreg, neon_vreg):
             raise ValueError(f"{vreg} is not a NEON vreg")
         qv = self.vreg_to_qreg(vreg)
@@ -271,6 +285,11 @@ class neon(aarch64):
 
     def store_vector_inc(self, *, areg : greg_base, offset : int,
                            vreg : vreg_base, dt : adt) -> str:
+        """
+        store_vector variant with post-index increment by
+        an immediate
+        """
+        _ = dt # explicitly unused
         if not isinstance(vreg, neon_vreg):
             raise ValueError(f"{vreg} is not a NEON vreg")
         qv = self.vreg_to_qreg(vreg)
@@ -292,6 +311,10 @@ class neon(aarch64):
 
     def store_vector_lane_greginc(self, *, areg : greg_base, offreg : greg_base,
                          vreg : vreg_base, lane : int, dt : adt) -> str:
+        """
+        store_vector_lane variant with post-index increment by
+        a value in a GP register
+        """
         if not isinstance(vreg, neon_vreg):
             raise ValueError(f"{vreg} is not a NEON vreg")
         suf = self.dt_idxsuffixes[dt]
@@ -299,6 +322,10 @@ class neon(aarch64):
 
     def store_vector_lane_inc(self, *, areg : greg_base, offset : int,
                          vreg : vreg_base, lane : int, dt : adt) -> str:
+        """
+        store_vector_lane variant with post-index increment by
+        an immediate
+        """
         if not isinstance(vreg, neon_vreg):
             raise ValueError(f"{vreg} is not a NEON vreg")
         suf = self.dt_idxsuffixes[dt]

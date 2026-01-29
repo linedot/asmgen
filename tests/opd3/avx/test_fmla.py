@@ -20,7 +20,7 @@ class test_avx_fma(test_avx_opd3):
         """
 
         self.assertEqual(
-            "vfmadd231pd %%xmm1,%%xmm2,%%xmm0\n",
+            "vfmadd231pd %xmm1,%xmm2,%xmm0\n",
             self.gen128.fma(
                 adreg=self.gen128.vreg(1),
                 bdreg=self.gen128.vreg(2),
@@ -28,7 +28,7 @@ class test_avx_fma(test_avx_opd3):
                 a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64))
 
         self.assertEqual(
-            "vfmadd231pd %%ymm1,%%ymm2,%%ymm0\n",
+            "vfmadd231pd %ymm1,%ymm2,%ymm0\n",
             self.gen256.fma(
                 adreg=self.gen256.vreg(1),
                 bdreg=self.gen256.vreg(2),
@@ -36,7 +36,7 @@ class test_avx_fma(test_avx_opd3):
                 a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64))
 
         self.assertEqual(
-            "vfmadd231pd %%zmm1,%%zmm2,%%zmm0\n",
+            "vfmadd231pd %zmm1,%zmm2,%zmm0\n",
             self.gen512.fma(
                 adreg=self.gen512.vreg(1),
                 bdreg=self.gen512.vreg(2),
@@ -49,7 +49,7 @@ class test_avx_fma(test_avx_opd3):
         """
 
         self.assertEqual(
-            "vfmadd231ps %%xmm1,%%xmm2,%%xmm0\n",
+            "vfmadd231ps %xmm1,%xmm2,%xmm0\n",
             self.gen128.fma(
                 adreg=self.gen128.vreg(1),
                 bdreg=self.gen128.vreg(2),
@@ -57,7 +57,7 @@ class test_avx_fma(test_avx_opd3):
                 a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32))
 
         self.assertEqual(
-            "vfmadd231ps %%ymm1,%%ymm2,%%ymm0\n",
+            "vfmadd231ps %ymm1,%ymm2,%ymm0\n",
             self.gen256.fma(
                 adreg=self.gen256.vreg(1),
                 bdreg=self.gen256.vreg(2),
@@ -65,7 +65,7 @@ class test_avx_fma(test_avx_opd3):
                 a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32))
 
         self.assertEqual(
-            "vfmadd231ps %%zmm1,%%zmm2,%%zmm0\n",
+            "vfmadd231ps %zmm1,%zmm2,%zmm0\n",
             self.gen512.fma(
                 adreg=self.gen512.vreg(1),
                 bdreg=self.gen512.vreg(2),
@@ -77,7 +77,7 @@ class test_avx_fma(test_avx_opd3):
         Tests that the AVX generators generate correct FP16 FMA instructions
         """
         self.assertEqual(
-            "vfmadd231ph %%zmm1,%%zmm2,%%zmm0\n",
+            "vfmadd231ph %zmm1,%zmm2,%zmm0\n",
             self.gen512.fma(
                 adreg=self.gen512.vreg(1),
                 bdreg=self.gen512.vreg(2),

@@ -189,7 +189,7 @@ class rvv(riscv64):
 
     def greg_to_voffs(self, *, streg : greg_base, vreg : vreg_base, dt : adt) -> str:
         raise NotImplementedError(
-                "Index not required in RVV for constant strides, use {load,store}_vector_gregstride")
+            "Index not required in RVV for constant strides, use {load,store}_vector_gregstride")
 
     def load_vector(self, *, areg : greg_base,
                     vreg : vreg_base, dt : adt) -> str:
@@ -212,7 +212,7 @@ class rvv(riscv64):
         #raise NotImplementedError("RVV has no vector loads with address offset")
         # We can still load the vector - with max_load_{imm,v}off being 0, the generator will
         # just always pass an offset of 0 and add any offset to the address register after
-        if voffset != 0:
+        if offset != 0:
             raise NotImplementedError("RVV has no vector loads with address offset")
         return self.load_vector(areg=areg, vreg=vreg, dt=dt)
 
@@ -239,6 +239,15 @@ class rvv(riscv64):
     def store_vector_voff(self, *, areg : greg_base, voffset : int,
                           vreg : vreg_base, dt : adt) -> str:
         if voffset != 0:
+            raise NotImplementedError("RVV has no vector stores with address offset")
+        return self.store_vector(areg=areg, vreg=vreg, dt=dt)
+
+    def store_vector_immoff(self, *, areg : greg_base, offset : int,
+                         vreg : vreg_base, dt : adt) -> str:
+        #raise NotImplementedError("RVV has no vector stores with address offset")
+        # We can still store the vector - with max_store_{imm,v}off being 0, the generator will
+        # just always pass an offset of 0 and add any offset to the address register after
+        if offset != 0:
             raise NotImplementedError("RVV has no vector stores with address offset")
         return self.store_vector(areg=areg, vreg=vreg, dt=dt)
 
@@ -309,17 +318,25 @@ class rvv(riscv64):
     rvv_no_tile_message = "RVV has no tiles (wait for IME/AME support)"
 
     def treg(self, reg_idx : int, dt : adt) -> treg_base:
-        raise NotImplementedError(rvv_no_tile_message)
+        raise NotImplementedError(self.rvv_no_tile_message)
 
     def zero_treg(self, *, treg : treg_base, dt : adt) -> str:
-        raise NotImplementedError(rvv_no_tile_message)
+        raise NotImplementedError(self.rvv_no_tile_message)
 
     def load_tile(self, *, areg : greg_base,
                    treg : treg_base,
                    dt : adt) -> str:
-        raise NotImplementedError(rvv_no_tile_message)
+        raise NotImplementedError(self.rvv_no_tile_message)
 
     def store_tile(self, *, areg : greg_base,
                    treg : treg_base,
                    dt : adt) -> str:
-        raise NotImplementedError(rvv_no_tile_message)
+        raise NotImplementedError(self.rvv_no_tile_message)
+
+    def load_vector_lane(self, *, areg : greg_base,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        raise NotImplementedError("Lane loads not implemented for RVV")
+
+    def store_vector_lane(self, *, areg : greg_base,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        raise NotImplementedError("Lane stores not implemented for RVV")

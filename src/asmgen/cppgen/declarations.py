@@ -160,9 +160,12 @@ class vargen:
         :return: String containing the C++ code containing all declarations
         :rtype: str
         """
+        # false positive
+        # pylint: disable=unnecessary-semicolon
         declarations = "\n".join(
                 [f"{self.cppvar_types[name]} {name}{self.cppvar_cppinits[name]};"\
                         for name in self.cppvars])
+        # pylint: enable=unnecessary-semicolon
         declarations += "\n"
         declarations += self.extra_decl_init
         return declarations

@@ -20,7 +20,7 @@ class test_avx_fmul(test_avx_opd3):
         """
 
         self.assertEqual(
-            "vmulpd %%xmm1,%%xmm2,%%xmm0\n",
+            "vmulpd %xmm1,%xmm2,%xmm0\n",
             self.gen128.fmul(
                 adreg=self.gen128.vreg(1),
                 bdreg=self.gen128.vreg(2),
@@ -28,7 +28,7 @@ class test_avx_fmul(test_avx_opd3):
                 a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64))
 
         self.assertEqual(
-            "vmulpd %%ymm1,%%ymm2,%%ymm0\n",
+            "vmulpd %ymm1,%ymm2,%ymm0\n",
             self.gen256.fmul(
                 adreg=self.gen256.vreg(1),
                 bdreg=self.gen256.vreg(2),
@@ -36,7 +36,7 @@ class test_avx_fmul(test_avx_opd3):
                 a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64))
 
         self.assertEqual(
-            "vmulpd %%zmm1,%%zmm2,%%zmm0\n",
+            "vmulpd %zmm1,%zmm2,%zmm0\n",
             self.gen512.fmul(
                 adreg=self.gen512.vreg(1),
                 bdreg=self.gen512.vreg(2),
@@ -49,7 +49,7 @@ class test_avx_fmul(test_avx_opd3):
         """
 
         self.assertEqual(
-            "vmulps %%xmm1,%%xmm2,%%xmm0\n",
+            "vmulps %xmm1,%xmm2,%xmm0\n",
             self.gen128.fmul(
                 adreg=self.gen128.vreg(1),
                 bdreg=self.gen128.vreg(2),
@@ -57,7 +57,7 @@ class test_avx_fmul(test_avx_opd3):
                 a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32))
 
         self.assertEqual(
-            "vmulps %%ymm1,%%ymm2,%%ymm0\n",
+            "vmulps %ymm1,%ymm2,%ymm0\n",
             self.gen256.fmul(
                 adreg=self.gen256.vreg(1),
                 bdreg=self.gen256.vreg(2),
@@ -65,7 +65,7 @@ class test_avx_fmul(test_avx_opd3):
                 a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32))
 
         self.assertEqual(
-            "vmulps %%zmm1,%%zmm2,%%zmm0\n",
+            "vmulps %zmm1,%zmm2,%zmm0\n",
             self.gen512.fmul(
                 adreg=self.gen512.vreg(1),
                 bdreg=self.gen512.vreg(2),
@@ -78,7 +78,7 @@ class test_avx_fmul(test_avx_opd3):
         """
 
         self.assertEqual(
-            "vmulph %%zmm1,%%zmm2,%%zmm0\n",
+            "vmulph %zmm1,%zmm2,%zmm0\n",
             self.gen512.fmul(
                 adreg=self.gen512.vreg(1),
                 bdreg=self.gen512.vreg(2),

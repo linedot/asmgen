@@ -189,7 +189,8 @@ class sve(aarch64):
 
     def load_vector_immoff(self, *, areg : greg_base, offset : int,
                            vreg : vreg_base, dt : adt) -> str:
-        raise NotImplementedError("SVE has no vector loads with immediate offset, use load_vector_voff")
+        raise NotImplementedError(
+            "SVE has no vector loads with immediate offset, use load_vector_voff")
 
     def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt) -> str:
@@ -216,6 +217,11 @@ class sve(aarch64):
         if 0 == voffset:
             address = f"[{areg}]"
         return self.asmwrap(f"st1{msuf} {{{vreg}.{suf}}}, p0, {address}")
+
+    def store_vector_immoff(self, *, areg : greg_base, offset : int,
+                           vreg : vreg_base, dt : adt) -> str:
+        raise NotImplementedError(
+            "SVE has no vector stores with immediate offset, use store_vector_voff")
 
     def store_vector(self, *, areg : greg_base,
                      vreg : vreg_base, dt : adt) -> str:
@@ -261,7 +267,7 @@ class sve(aarch64):
                            vreg : vreg_base, dt : adt,
                            it : ait) -> str:
         if ait_size(it) not in [4,8]:
-            raise ValueError(f"index size must be 4 or 8 bytes!")
+            raise ValueError("index size must be 4 or 8 bytes!")
         suf = self.dt_suffixes[dt]
         msuf = self.dt_mnem_suffixes[dt]
         xtnd = ""
@@ -281,7 +287,7 @@ class sve(aarch64):
                              vreg : vreg_base, dt : adt,
                              it : ait) -> str:
         if ait_size(it) not in [4,8]:
-            raise ValueError(f"index size must be 4 or 8 bytes!")
+            raise ValueError("index size must be 4 or 8 bytes!")
         suf = self.dt_suffixes[dt]
         msuf = self.dt_mnem_suffixes[dt]
         xtnd = ""
@@ -309,3 +315,11 @@ class sve(aarch64):
                    treg : treg_base,
                    dt : adt) -> str:
         raise NotImplementedError("SVE has no tiles, use SME")
+
+    def load_vector_lane(self, *, areg : greg_base,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        raise NotImplementedError("Lane loads not yet implemented for SVE")
+
+    def store_vector_lane(self, *, areg : greg_base,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        raise NotImplementedError("Lane stores not yet implemented for SVE")

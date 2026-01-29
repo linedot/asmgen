@@ -19,7 +19,10 @@ class aarch64_greg(greg_base):
             self.reg_str = "sp"
         self.idx = reg_idx
 
-    def get_wreg(self):
+    def get_wreg(self) -> str:
+        """
+        returns the 32 bit variant of the register (i.e x2 -> w2)
+        """
         if self.idx == 31:
             return "sp"
         return f"w{self.idx}"

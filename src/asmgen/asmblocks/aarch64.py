@@ -31,14 +31,14 @@ class aarch64(asmgen):
             }
 
     cb_insts = {
-            'nz' : 'cbnz',
-            'ez' : 'cbz',
-            'ne' : 'b.ne',
-            'eq' : 'b.eq',
-            'le' : 'b.le',
-            'ge' : 'b.ge',
-            'lt' : 'b.lt',
-            'gt' : 'b.gt',
+            'NZ' : 'cbnz',
+            'EZ' : 'cbz',
+            'NE' : 'b.ne',
+            'EQ' : 'b.eq',
+            'LE' : 'b.le',
+            'GE' : 'b.ge',
+            'LT' : 'b.lt',
+            'GT' : 'b.gt',
             }
 
     def __init__(self):
@@ -114,9 +114,9 @@ class aarch64(asmgen):
         inst = self.cb_insts[cmp.name]
         if reg2 is None:
             return self.asmwrap(f"{inst} {reg1},{self.labelstr(label)}")
-        else:
-            return self.asmwrap(f"cmp {reg2},{reg1}")+\
-                   self.asmwrap(f"{inst} {self.labelstr(label)}")
+
+        return self.asmwrap(f"cmp {reg2},{reg1}")+\
+            self.asmwrap(f"{inst} {self.labelstr(label)}")
 
     def jzero(self, *, reg : greg_base,
               label : str) -> str:
@@ -139,9 +139,14 @@ class aarch64(asmgen):
     def max_fregs(self):
         return 32
 
-    def kiterkleft_pow2(self, *, kreg : greg_type,
-                        kleftreg : greg_type,
+    def kiterkleft_pow2(self, *, kreg : greg_base,
+                        kleftreg : greg_base,
                         unroll : int) -> str:
+        """
+        kiterkleft variant for unroll values that are powers of 2
+        
+        Can be simplified down to a "right shift" and "and"
+        """
 
         asmblock = ""
 
@@ -154,9 +159,9 @@ class aarch64(asmgen):
 
         return asmblock
 
-    def kiterkleft(self, *, kreg : greg_type,
-                   kleftreg : greg_type,
-                   tmpreg : greg_type,
+    def kiterkleft(self, *, kreg : greg_base,
+                   kleftreg : greg_base,
+                   tmpreg : greg_base,
                    unroll : int) -> str:
 
         if unroll.bit_count() == 1:
@@ -179,7 +184,7 @@ class aarch64(asmgen):
         # # tmp = k // unroll
         # asmblock += self.mul_greg_greg(dst=tmpreg, reg1=kreg, reg2=tmpreg)
         # asmblock += self.shift_greg_right(reg=tmpreg,bit_count=shift)
-        # 
+        #
         # # kleft = k - (tmp * unroll)
         # asmblock += self.mov_greg_imm(reg=kleftreg, imm=unroll)
         # asmblock += self.asmwrap(f"msub {kleftreg},{tmpreg},{kleftreg},{kreg}")

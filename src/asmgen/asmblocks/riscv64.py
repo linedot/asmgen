@@ -41,22 +41,22 @@ class riscv64(asmgen):
 
 
     cb_insts = {
-            'nz' : 'bne',
-            'ez' : 'beq',
-            'ne' : 'bne',
-            'eq' : 'beq',
-            'le' : 'ble',
-            'ge' : 'bge',
-            'lt' : 'blt',
-            'gt' : 'bgt',
+            'NZ' : 'bne',
+            'EZ' : 'beq',
+            'NE' : 'bne',
+            'EQ' : 'beq',
+            'LE' : 'ble',
+            'GE' : 'bge',
+            'LT' : 'blt',
+            'GT' : 'bgt',
             }
 
     def __init__(self):
         super().__init__()
         self.callconvs = {
             "rvg" : callconv(
-                param_regs={ 'greg' : [i for i in range(18, 26)],
-                             'freg' : [i for i in range(10, 18)]},
+                param_regs={ 'greg' : list(range(18, 26)),
+                             'freg' : list(range(10, 18))},
                 caller_save_lists={ 'greg' : [26, # ra
                                               0, 1, 2, 3 , 4, 5, 6, # t0-t6
                                               18, 19, 20, 21, 22, 23, 24, 25 # a0-a7
@@ -102,8 +102,8 @@ class riscv64(asmgen):
         inst = self.cb_insts[cmp.name]
         if reg2 is None:
             return self.asmwrap(f"{inst} {reg1},zero,{self.labelstr(label)}")
-        else:
-            return self.asmwrap(f"{inst} {reg1},{reg2},{self.labelstr(label)}")
+
+        return self.asmwrap(f"{inst} {reg1},{reg2},{self.labelstr(label)}")
 
     def jzero(self, *, reg : greg_base, label : str) -> str:
         return self.asmwrap(f" beq {reg},zero,{self.labelstr(label)}")
@@ -145,9 +145,14 @@ class riscv64(asmgen):
         return len(riscv64_freg.names)
 
 
-    def kiterkleft_pow2(self, *, kreg : greg_type,
-                        kleftreg : greg_type,
+    def kiterkleft_pow2(self, *, kreg : greg_base,
+                        kleftreg : greg_base,
                         unroll : int) -> str:
+        """
+        kiterkleft variant for unroll values that are powers of 2
+        
+        Can be simplified down to a "right shift" and "and"
+        """
 
         asmblock = ""
 
@@ -160,15 +165,15 @@ class riscv64(asmgen):
 
         return asmblock
 
-    def kiterkleft(self, *, kreg : greg_type,
-                   kleftreg : greg_type,
-                   tmpreg : greg_type,
+    def kiterkleft(self, *, kreg : greg_base,
+                   kleftreg : greg_base,
+                   tmpreg : greg_base,
                    unroll : int) -> str:
 
         if unroll.bit_count() == 1:
             return self.kiterkleft_pow2(kreg=kreg,kleftreg=kleftreg,unroll=unroll)
 
-        # TODO: Division by invariant multiplication 
+        # TODO: Division by invariant multiplication
 
 
         # DIV version
@@ -214,14 +219,6 @@ class riscv64(asmgen):
         assert src != dst
         #Gotta do 2 instructions for this
         asmblock  = self.mov_greg_imm(reg=dst, imm=factor)
-        asmblock += self.asmwrap(f"mul {dst},{src},{dst}")
-        return asmblock
-
-    def mul_greg_greg(self, *, src : greg_base, dst : greg_base, factor : int) -> str:
-        assert src != dst
-        #Gotta do 2 instructions for this
-        asmblock  = self.mov_greg_imm(reg=dst, imm=factor)
-        #asmblock += self.asmwrap(f"mul {dst},{src},{dst}")
         asmblock += self.mul_greg_greg(dst=dst,reg1=src,reg2=dst)
         return asmblock
 

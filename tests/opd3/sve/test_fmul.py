@@ -40,7 +40,7 @@ class test_sve_opd3(unittest.TestCase):
                      a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16))
 
         self.assertEqual(
-            "smullb z0.s,p0/m,z1.h,z2.h\n",
+            "smullb z0.s,z1.h,z2.h\n",
             gen.fmul(adreg=gen.vreg(1),bdreg=gen.vreg(2),cdreg=gen.vreg(0),
                      a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT32,
                      modifiers={mod.PART}, part=0))

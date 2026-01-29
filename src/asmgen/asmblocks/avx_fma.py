@@ -37,14 +37,14 @@ class avxbase(asmgen):
             ['ax','bx','cx','dx','si','di','bp','sp']]
 
     cb_insts = {
-            'nz' : 'jnz',
-            'ez' : 'jz',
-            'ne' : 'jne',
-            'eq' : 'je',
-            'le' : 'jle',
-            'ge' : 'jge',
-            'lt' : 'jl',
-            'gt' : 'jg',
+            'NZ' : 'jnz',
+            'EZ' : 'jz',
+            'NE' : 'jne',
+            'EQ' : 'je',
+            'LE' : 'jle',
+            'GE' : 'jge',
+            'LT' : 'jl',
+            'GT' : 'jg',
             }
 
     def __init__(self):
@@ -126,10 +126,29 @@ class avxbase(asmgen):
             ait.INT32 : "d",
             }
 
-    def iota_label(self, size : int, count : int):
+    def iota_label(self, size : int, count : int) -> str:
+        """
+        Returns the label string for iota data (used for emulating strided ld/st
+        with gather/scatter)
+
+        :param size: size of the data in bytes
+        :type size: int
+        :param count: Number of elements
+        :type count: int
+        :return: string to be used for the label
+        :rtype: str
+        """
         return f"iota_{size*8}x{count}"
 
     def ensure_indices(self, dt : adt, count : int):
+        """
+        Ensures iota data for this data type and element count exists
+
+        :param dt: element data type
+        :type dt: class:`asmgen.registers.asm_data_type`
+        :param count: Number of elements
+        :type count: int
+        """
         dt_size = adt_size(dt)
         key = self.iota_label(dt_size, count)
         if key in self.asmdata:
@@ -148,7 +167,7 @@ class avxbase(asmgen):
             index_dt = adt.SINT64
         else:
             raise ValueError(f"Can't determine index type for {dt}")
-            
+
 
         self.asmdata[key] = [asm_data(index_dt, i) for i in range(count)]
 
@@ -194,11 +213,11 @@ class avxbase(asmgen):
             pr1 = self.rpref(reg1)
             return self.asmwrap(f"test {pr1},{pr1}")+\
                    self.asmwrap(f"{inst} {self.labelstr(label)}")
-        else:
-            pr1 = self.rpref(reg1)
-            pr2 = self.rpref(reg2)
-            return self.asmwrap(f"cmp {pr2},{pr1}")+\
-                   self.asmwrap(f"{inst} {self.labelstr(label)}")
+
+        pr1 = self.rpref(reg1)
+        pr2 = self.rpref(reg2)
+        return self.asmwrap(f"cmp {pr2},{pr1}")+\
+               self.asmwrap(f"{inst} {self.labelstr(label)}")
 
     def xmm_to_ymm(self, vreg : vreg_base):
         """
@@ -276,9 +295,14 @@ class avxbase(asmgen):
     def simd_size_to_greg(self, *, reg: greg_base, dt: adt) -> str:
         return self.mov_greg_imm(reg=reg, imm=self.simd_size//adt_size(dt))
 
-    def kiterkleft_pow2(self, *, kreg : greg_type,
-                        kleftreg : greg_type,
+    def kiterkleft_pow2(self, *, kreg : greg_base,
+                        kleftreg : greg_base,
                         unroll : int) -> str:
+        """
+        kiterkleft variant for unroll values that are powers of 2
+        
+        Can be simplified down to a "right shift" and "and"
+        """
 
         asmblock = ""
 
@@ -295,9 +319,10 @@ class avxbase(asmgen):
 
         return asmblock
 
-    def kiterkleft(self, *, kreg : greg_type,
-                   kleftreg : greg_type,
-                   tmpreg : greg_type,
+    # pylint: disable-next=too-many-branches
+    def kiterkleft(self, *, kreg : greg_base,
+                   kleftreg : greg_base,
+                   tmpreg : greg_base,
                    unroll : int) -> str:
 
         if unroll.bit_count() == 1:
@@ -320,7 +345,7 @@ class avxbase(asmgen):
         # 4) put RAX into kreg
         # 5) put RDX into kleftreg
 
-        
+
         # save rax/rdx unless they're supposed to get overwritten anyways
         if f"{rax}" not in [f"{pkreg}", f"{pkleftreg}", f"{ptmpreg}"]:
             asmblock += self.asmwrap(f"push {rax}")
@@ -343,7 +368,7 @@ class avxbase(asmgen):
 
         # The DIV
         asmblock += self.asmwrap(f"div {punrollreg}")
-        
+
 
         if f"{pkreg}" != f"{rdx}":
             if f"{pkreg}" != f"{rax}":
@@ -657,20 +682,28 @@ class avxbase(asmgen):
     avx_no_tile_message = "Not tile support in AVX (will be supported with AMX)"
 
     def treg(self, reg_idx : int, dt : adt):
-        raise NotImplementedError(avx_no_tile_message)
+        raise NotImplementedError(self.avx_no_tile_message)
 
     def zero_treg(self, *, treg : treg_base, dt : adt):
-        raise NotImplementedError(avx_no_tile_message)
+        raise NotImplementedError(self.avx_no_tile_message)
 
     def load_tile(self, *, areg : greg_base,
                    treg : treg_base,
                    dt : adt):
-        raise NotImplementedError(avx_no_tile_message)
+        raise NotImplementedError(self.avx_no_tile_message)
 
     def store_tile(self, *, areg : greg_base,
                    treg : treg_base,
                    dt : adt):
-        raise NotImplementedError(avx_no_tile_message)
+        raise NotImplementedError(self.avx_no_tile_message)
+
+    def load_vector_lane(self, *, areg : greg_base,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        raise NotImplementedError("Lane loads not yet implemented for AVX")
+
+    def store_vector_lane(self, *, areg : greg_base,
+                         vreg : vreg_base, lane : int, dt : adt) -> str:
+        raise NotImplementedError("Lane stores not yet implemented for AVX")
 
 class fma128(avxbase):
     """
