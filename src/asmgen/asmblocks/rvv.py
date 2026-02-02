@@ -53,7 +53,13 @@ class rvv(riscv64):
     def get_parameters(self) -> list[str]:
         return ["LMUL"]
 
-    def set_parameter(self, name : str, value : Union[str,int]):
+    def get_param_value(self, name : str) -> int|str:
+        if "LMUL" != name:
+            raise ValueError(f"Invalid isa parameter: {name}")
+
+        return self.lmul
+
+    def set_parameter(self, name : str, value : int|str):
         if "LMUL" == name:
             if isinstance(value, str) and value.isdigit():
                 self.lmul = int(value)

@@ -79,6 +79,9 @@ class avxbase(asmgen):
     def get_parameters(self) -> list[str]:
         return []
 
+    def get_param_value(self, name : str) -> list[str]:
+        raise ValueError(f"Invalid isa parameter \"{name}\"")
+
     def set_parameter(self, name : str, value : Union[str,int]):
         raise ValueError(f"Invalid name {name} or value {value}")
 

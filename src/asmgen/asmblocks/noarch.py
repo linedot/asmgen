@@ -86,8 +86,19 @@ class asmgen(ABC):
         """
         raise NotImplementedError(NIE_MESSAGE)
 
+    def get_param_value(self, name : str) -> int|str:
+        """
+        Returns the current value of the named generator parameter
+
+        :param name: Name of the parameter
+        :type name: str
+        :return: Current value of the parameter
+        :rtype: int|str
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
     @abstractmethod
-    def set_parameter(self, name : str, value : Union[str,int]):
+    def set_parameter(self, name : str, value : int|str):
         """
         Sets a parameter in the generator, affecting the output, min/max values
         and supported features
@@ -95,7 +106,7 @@ class asmgen(ABC):
         :param name: Name of the parameter
         :type name: str
         :param value: New value to set the parameter to
-        :type value: Union[str,int]
+        :type value: int|str
         """
         raise NotImplementedError(NIE_MESSAGE)
 
