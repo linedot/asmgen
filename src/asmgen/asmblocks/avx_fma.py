@@ -518,7 +518,7 @@ class avxbase(asmgen):
         return 0
 
     def max_load_immoff(self, dt : adt):
-        return 2**31
+        return 255//adt_size(dt)
 
     def min_bcast_immoff(self, dt : adt) -> int:
         return self.min_load_immoff(dt)
@@ -530,7 +530,7 @@ class avxbase(asmgen):
         return 0
 
     def max_fload_immoff(self, dt : adt):
-        return 2**31
+        return 255//adt_size(dt)
 
     @property
     def min_load_voff(self):
@@ -538,12 +538,12 @@ class avxbase(asmgen):
 
     @property
     def max_load_voff(self) -> int:
-        return 2**31//self.simd_size
+        return 255//self.simd_size//8
 
 
     @property
     def max_add_voff(self) -> int:
-        return 2**31//self.simd_size
+        return 2**31//self.simd_size//8
 
     def greg_to_voffs(self, *, streg : greg_base, vreg : vreg_base, dt : adt) -> str:
 
