@@ -91,7 +91,7 @@ def main():
     y_idx = rt.reserve_any_reg("vreg")
     y = gen.vreg(y_idx)
     alpha_idx = rt.reserve_any_reg("freg")
-    alpha = gen.vreg(alpha_idx)
+    alpha = gen.freg(alpha_idx, dt=dt)
 
     innerblock += gen.isaquirks(dt=dt,rt=rt)
 
