@@ -24,7 +24,11 @@
 
 
 from asmgen.asmblocks.rvv import rvv
-from asmgen.registers import asm_data_type as adt, reg_tracker
+from asmgen.registers import (
+        adt_size,
+        asm_data_type as adt,
+        reg_tracker
+)
 from asmgen.asmblocks.operations import modifier as mod
 
 
@@ -34,13 +38,15 @@ def main():
 
     gen.set_output_inline(yesno=False)
 
+    dt = adt.FP64
+
     for lmul in [1,2,4,8]:
         gen.set_parameter("LMUL", lmul)
         rt = reg_tracker(reg_type_init_list=[
             ("greg",gen.max_gregs),
             ("freg",gen.max_fregs),
             ("vreg",gen.max_vregs),
-            ("treg",gen.max_tregs(dt=adt.FP64)),
+            ("treg",gen.max_tregs(dt=dt)),
             ])
 
         aidx = rt.reserve_any_reg("vreg")
@@ -50,29 +56,74 @@ def main():
         cidx = rt.reserve_any_reg("vreg")
         c = gen.vreg(cidx)
 
+        aaddr_idx = rt.reserve_any_reg("greg")
+        aaddr = gen.greg(aaddr_idx)
+        baddr_idx = rt.reserve_any_reg("greg")
+        baddr = gen.greg(baddr_idx)
+        caddr_idx = rt.reserve_any_reg("greg")
+        caddr = gen.greg(caddr_idx)
+
         bfidx = rt.reserve_any_reg("freg")
-        bf = gen.freg(bfidx,dt=adt.FP64)
+        bf = gen.freg(bfidx,dt=dt)
+
+        bfaddr_idx = rt.reserve_any_reg("greg")
+        bfaddr = gen.greg(bfaddr_idx)
 
 
-        asmblock = gen.isaquirks(dt=adt.FP64,rt=rt)
+        asmblock = gen.isaquirks(dt=dt,rt=rt)
+
+        vlenidx = rt.aliased_regs["greg"]["vlen"]
+        vlen = gen.greg(vlenidx)
+
+        asmblock += gen.shift_greg_left(
+                reg=vlen,
+                bit_count=adt_size(dt).bit_length()-1)
+
+
+        asmblock += gen.load_vector(
+                areg=aaddr,
+                vreg=a,
+                dt=dt)
+        asmblock += gen.load_vector(
+                areg=baddr,
+                vreg=b,
+                dt=dt)
+        asmblock += gen.load_vector(
+                areg=caddr,
+                vreg=c,
+                dt=dt)
 
         asmblock += gen.fma(
                 adreg=a,
                 bdreg=b,
                 cdreg=c,
-                a_dt=adt.FP64,
-                b_dt=adt.FP64,
-                c_dt=adt.FP64)
+                a_dt=dt,
+                b_dt=dt,
+                c_dt=dt)
         asmblock += gen.fma(
                 adreg=a,
                 bdreg=bf,
                 cdreg=c,
-                a_dt=adt.FP64,
-                b_dt=adt.FP64,
-                c_dt=adt.FP64,
+                a_dt=dt,
+                b_dt=dt,
+                c_dt=dt,
                 modifiers={mod.VF})
 
-        asmblock += gen.isaendquirks(dt=adt.FP64, rt=rt)
+
+        asmblock += gen.add_greg_greg(dst=aaddr,
+                                      reg1=aaddr,
+                                      reg2=vlen)
+        asmblock += gen.add_greg_greg(dst=baddr,
+                                      reg1=baddr,
+                                      reg2=vlen)
+        asmblock += gen.add_greg_greg(dst=caddr,
+                                      reg1=caddr,
+                                      reg2=vlen)
+
+        asmblock += gen.add_greg_imm(reg=bfaddr,
+                                     imm=adt_size(dt))
+
+        asmblock += gen.isaendquirks(dt=dt, rt=rt)
 
         rt.unuse_reg("vreg", aidx)
         rt.unuse_reg("vreg", bidx)
