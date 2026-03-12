@@ -11,6 +11,7 @@
 # vle64.v v0, (t0)
 # vle64.v v1, (t1)
 # vle64.v v2, (t2)
+# fld f0, 0(t3)
 # vfmacc.vv v2,v1,v0
 # vfmacc.vf v2,f0,v0
 # add t0,t0,t4
@@ -23,6 +24,7 @@
 # vle64.v v0, (t0)
 # vle64.v v2, (t1)
 # vle64.v v4, (t2)
+# fld f0, 0(t3)
 # vfmacc.vv v4,v2,v0
 # vfmacc.vf v4,f0,v0
 # add t0,t0,t4
@@ -35,6 +37,7 @@
 # vle64.v v0, (t0)
 # vle64.v v4, (t1)
 # vle64.v v8, (t2)
+# fld f0, 0(t3)
 # vfmacc.vv v8,v4,v0
 # vfmacc.vf v8,f0,v0
 # add t0,t0,t4
@@ -47,6 +50,7 @@
 # vle64.v v0, (t0)
 # vle64.v v8, (t1)
 # vle64.v v16, (t2)
+# fld f0, 0(t3)
 # vfmacc.vv v16,v8,v0
 # vfmacc.vf v16,f0,v0
 # add t0,t0,t4
@@ -122,6 +126,12 @@ def main():
         asmblock += gen.load_vector(
                 areg=caddr,
                 vreg=c,
+                dt=dt)
+
+        asmblock += gen.load_scalar_immoff(
+                areg=bfaddr,
+                offset=0,
+                freg=bf,
                 dt=dt)
 
         asmblock += gen.fma(
