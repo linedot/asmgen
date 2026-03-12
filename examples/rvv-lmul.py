@@ -43,11 +43,15 @@ def main():
             ("treg",gen.max_tregs(dt=adt.FP64)),
             ])
 
-        a = gen.vreg(0)
-        b = gen.vreg(1)
-        c = gen.vreg(2)
+        aidx = rt.reserve_any_reg("vreg")
+        a = gen.vreg(aidx)
+        bidx = rt.reserve_any_reg("vreg")
+        b = gen.vreg(bidx)
+        cidx = rt.reserve_any_reg("vreg")
+        c = gen.vreg(cidx)
 
-        bf = gen.freg(0,dt=adt.FP64)
+        bfidx = rt.reserve_any_reg("freg")
+        bf = gen.freg(bfidx,dt=adt.FP64)
 
 
         asmblock = gen.isaquirks(dt=adt.FP64,rt=rt)
@@ -69,6 +73,11 @@ def main():
                 modifiers={mod.VF})
 
         asmblock += gen.isaendquirks(dt=adt.FP64, rt=rt)
+
+        rt.unuse_reg("vreg", aidx)
+        rt.unuse_reg("vreg", bidx)
+        rt.unuse_reg("vreg", cidx)
+        rt.unuse_reg("freg", bfidx)
 
         print(asmblock)
 
