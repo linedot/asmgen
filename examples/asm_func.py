@@ -15,11 +15,11 @@
 # # a3 = n
 # vsetvli t0, zero, e64, m1, ta, ma
 # slli t0,t0,3
-# fld v0, 0(a2)
+# fld f0, 0(a2)
 # .loop:
 # vle64.v v0, (a0)
 # vle64.v v1, (a1)
-# vfmacc.vf v1,v0,v0
+# vfmacc.vf v1,f0,v0
 # vse64.v v1, (a1)
 # add a0,a0,t0
 # add a1,a1,t0
