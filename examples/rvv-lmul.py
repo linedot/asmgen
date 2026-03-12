@@ -6,22 +6,53 @@
 
 # Output should be:
 #
-# vsetvli t0, zero, e64, m1, ta, ma
+# vsetvli t4, zero, e64, m1, ta, ma
+# slli t4,t4,3
+# vle64.v v0, (t0)
+# vle64.v v1, (t1)
+# vle64.v v2, (t2)
 # vfmacc.vv v2,v1,v0
 # vfmacc.vf v2,f0,v0
+# add t0,t0,t4
+# add t1,t1,t4
+# add t2,t2,t4
+# add t3,t3,8
 # 
-# vsetvli t0, zero, e64, m2, ta, ma
+# vsetvli t4, zero, e64, m2, ta, ma
+# slli t4,t4,3
+# vle64.v v0, (t0)
+# vle64.v v2, (t1)
+# vle64.v v4, (t2)
 # vfmacc.vv v4,v2,v0
 # vfmacc.vf v4,f0,v0
+# add t0,t0,t4
+# add t1,t1,t4
+# add t2,t2,t4
+# add t3,t3,8
 # 
-# vsetvli t0, zero, e64, m4, ta, ma
+# vsetvli t4, zero, e64, m4, ta, ma
+# slli t4,t4,3
+# vle64.v v0, (t0)
+# vle64.v v4, (t1)
+# vle64.v v8, (t2)
 # vfmacc.vv v8,v4,v0
 # vfmacc.vf v8,f0,v0
+# add t0,t0,t4
+# add t1,t1,t4
+# add t2,t2,t4
+# add t3,t3,8
 # 
-# vsetvli t0, zero, e64, m8, ta, ma
+# vsetvli t4, zero, e64, m8, ta, ma
+# slli t4,t4,3
+# vle64.v v0, (t0)
+# vle64.v v8, (t1)
+# vle64.v v16, (t2)
 # vfmacc.vv v16,v8,v0
 # vfmacc.vf v16,f0,v0
-
+# add t0,t0,t4
+# add t1,t1,t4
+# add t2,t2,t4
+# add t3,t3,8
 
 from asmgen.asmblocks.rvv import rvv
 from asmgen.registers import (
