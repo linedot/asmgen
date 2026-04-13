@@ -30,7 +30,7 @@ class callconv:
         self.callee_save_lists = callee_save_lists
         self.spreg = spreg
 
-        self.params = {}
+        self.params : dict[str,tuple[str,int,bool,adt|None]] = {}
         # stack offset for the next parameter
         self.spoff = spstart
         # stack offset for save/restore
@@ -38,7 +38,7 @@ class callconv:
         # stack offset for different register types
         self.sp_rtype_offsets : dict[str,int] = {}
 
-    def add_param(self, type_tag : str, name : str):
+    def add_param(self, type_tag : str, name : str, dt : adt|None = None):
         """
         Add a parameter to the current fuction signature
 
@@ -46,8 +46,11 @@ class callconv:
         :type type_tag: str
         :param name: Name of the parameter
         :type name: str
+        :param dt: Data type for freg
+        :type dt: class:`asmgen.registers.asm_data_type`|None
         """
 
+        in_stack = False
         if type_tag not in self.param_regs:
             raise ValueError(f"Invalid type tag: {type_tag}")
 
@@ -55,11 +58,11 @@ class callconv:
             idx = self.param_regs[type_tag].pop(0)
         else:
             idx = self.spoff
-            type_tag = 'sp'
+            in_stack = True
             self.spoff += 8 # TODO: non-64-bit
 
 
-        self.params[name] = (type_tag, idx)
+        self.params[name] = (type_tag, idx, in_stack, dt)
 
     def save_regs(self,
                   gen : asmgen,

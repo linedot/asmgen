@@ -53,13 +53,14 @@ class test_callconv_gemmukr(unittest.TestCase):
         self.gregs_used = []
         self.fregs_used = []
 
-        for name,(tag,idx) in self.cc.get_params().items():
+        for name,(tag,idx,in_stack) in self.cc.get_params().items():
 
             location = ''
-            if 'greg' == tag:
-                self.gregs_used.append(idx)
-            elif 'freg' == tag:
-                self.fregs_used.append(idx)
+            if not in_stack:
+                if 'greg' == tag:
+                    self.gregs_used.append(idx)
+                elif 'freg' == tag:
+                    self.fregs_used.append(idx)
 
 
     expected_save_blocks = [
@@ -158,101 +159,7 @@ class test_callconv_gemmukr(unittest.TestCase):
                 })
 
 
-        #print(save_block)
-        #print(restore_block)
-
         self.assertEqual(expected_save_block, save_block)
         self.assertEqual(expected_restore_block, restore_block)
-        #gregs_used = []
 
-        #for name,(tag,idx) in cc.get_params().items():
-
-        #    location = ''
-        #    if 'greg' == tag:
-        #        location = gen.greg(idx)
-        #        gregs_used.append(idx)
-        #    elif 'freg' == tag:
-        #        location = gen.freg(idx, adt.FP64)
-        #    elif 'sp' == tag:
-        #        location = f"{idx}(sp)"
-
-
-        #    print(f"{location} <- {name}")
-
-        #gregs_to_save = set(gregs_used).intersection(set(cc.greg_caller_save_list))
-
-        #gregs_to_save = [str(gen.greg(idx)) for idx in gregs_to_save]
-
-        #asm_tpl = Template("""
-        #.section .rodata
-        #paramout: .asciz "Parameter %s = %llu\\n"
-        #% for i,name in enumerate(params.keys()):
-        #  paramname${i}: .asciz "${name}"
-        #% endfor
-
-        #<% sp_offset = 8*(len(gregs_to_save)+1)  %>
-
-        #.section .text
-        #.global gemm_kernel
-        #gemm_kernel:
-        #addi sp, sp, -${sp_offset}
-        #sd ra, (sp)
-
-        #% for i,greg in enumerate(gregs_to_save):
-        #    sd ${greg}, ${8*(i+1)}(sp)
-        #% endfor
-        #% for i,name in enumerate(params.keys()):
-        #    <%
-        #        location = ''
-        #        tag,idx = params[name]
-        #        if 'greg' == tag:
-        #            location = str(gen.greg(idx))
-        #        elif 'freg' == tag:
-        #            location = str(gen.freg(idx))
-        #        elif 'sp' == tag:
-        #            location = f"{idx+sp_offset}(sp)"
-
-        #        if location in gregs_to_save:
-        #            idx = gregs_to_save.index(location)
-        #            location = f"{8*(idx+1)}(sp)"
-        #    %>
-        #    % if "sp" in str(location):
-        #    ld a2, ${location}
-        #    % else:
-        #    mv a2, ${location}
-        #    % endif
-        #    la a1, paramname${i}
-        #    la a0, paramout
-        #    call printf
-        #% endfor
-        #ld ra, (sp)
-        #addi sp, sp, ${sp_offset}
-        #ret
-        #""")
-
-        #asm = asm_tpl.render(params=cc.get_params(),
-        #                     gen=gen,
-        #                     gregs_to_save=gregs_to_save)
-
-        #cpp_code = """
-        ##include <cstdint>
-        #extern "C" void gemm_kernel(std::uint64_t m, std::uint64_t n, std::uint64_t k,
-        #    void* alpha, void* a, void* b,
-        #    void* beta, void* c,
-        #    int rs_c, int cs_c,
-        #    void* data, void* cntx);
-        #int main()
-        #{
-        #    gemm_kernel(100, 101, 102,
-        #        (void*)0x1, (void*)0x2, (void*)0x3, (void*)0x4, (void*)0x5,
-        #        10, 14,
-        #        (void*)0x6, (void*)0x7);
-        #}
-        #"""
-
-        #with open("test.cpp","w+") as f:
-        #    f.write(cpp_code)
-
-        #with open("test.s","w+") as f:
-        #    f.write(asm)
 

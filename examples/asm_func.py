@@ -56,7 +56,7 @@ def main():
 
     cc.add_param("greg", "x")
     cc.add_param("greg", "y")
-    cc.add_param("greg", "alpha")
+    cc.add_param("freg", "alpha", adt.FP64)
     cc.add_param("greg", "n")
 
 
@@ -68,7 +68,7 @@ def main():
 
     addr_x_idx     = rt.aliased_regs["greg"]["x"]
     addr_y_idx     = rt.aliased_regs["greg"]["y"]
-    addr_alpha_idx = rt.aliased_regs["greg"]["alpha"]
+    #addr_alpha_idx = rt.aliased_regs["greg"]["alpha"]
     n_idx = rt.aliased_regs["greg"]["n"]
 
 
@@ -82,7 +82,7 @@ def main():
 
     addr_x = gen.greg(addr_x_idx)
     addr_y = gen.greg(addr_y_idx)
-    addr_alpha = gen.greg(addr_alpha_idx)
+    #addr_alpha = gen.greg(addr_alpha_idx)
     n = gen.greg(n_idx)
 
 
@@ -90,7 +90,7 @@ def main():
     x = gen.vreg(x_idx)
     y_idx = rt.reserve_any_reg("vreg")
     y = gen.vreg(y_idx)
-    alpha_idx = rt.reserve_any_reg("freg")
+    alpha_idx = rt.aliased_regs["freg"]["alpha"]
     alpha = gen.freg(alpha_idx, dt=dt)
 
     innerblock += gen.isaquirks(dt=dt,rt=rt)
@@ -102,10 +102,10 @@ def main():
             reg=vlen,
             bit_count=adt_size(dt).bit_length()-1)
 
-    innerblock += gen.load_scalar_immoff(areg=addr_alpha,
-                                         offset=0,
-                                         freg=alpha,
-                                         dt=dt)
+#    innerblock += gen.load_scalar_immoff(areg=addr_alpha,
+#                                         offset=0,
+#                                         freg=alpha,
+#                                         dt=dt)
 
     innerblock += gen.label(label="loop")
 
