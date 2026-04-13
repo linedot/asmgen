@@ -26,22 +26,42 @@
 # bne a2,zero,.loop
 
 
-from asmgen.asmblocks.rvv import rvv
 from asmgen.registers import (
         adt_size,
         asm_data_type as adt,
         reg_tracker
 )
+from asmgen.asmblocks.noarch import asmgen
 from asmgen.callconv.callconv import callconv
 from asmgen.callconv.fngen import fngen
 from asmgen.asmblocks.noarch import comparison
 from asmgen.asmblocks.operations import modifier as mod
 
+import sys
+import importlib
+
+isa_modules = {
+        "fma128" : "avx_fma",
+        "fma256" : "avx_fma",
+        "avx512" : "avx_fma",
+        }
+
 def main():
 
     dt = adt.FP64
 
-    gen = rvv()
+    isa = 'rvv'
+    if len(sys.argv) == 2:
+        isa = sys.argv[1]
+
+    module_name = isa
+    if isa in isa_modules:
+        module_name = isa_modules[isa]
+    generator_module = importlib.import_module(f"asmgen.asmblocks.{module_name}")
+
+    generator_class = getattr(generator_module, isa)
+
+    gen : asmgen = generator_class()
     gen.set_output_inline(yesno=False)
     rt = reg_tracker(reg_type_init_list=[
         ("greg",gen.max_gregs),
@@ -94,12 +114,37 @@ def main():
 
     innerblock += gen.isaquirks(dt=dt,rt=rt)
 
-    vlenidx = rt.aliased_regs["greg"]["vlen"]
-    vlen = gen.greg(vlenidx)
+    if "vlen" in rt.aliased_regs["greg"]:
+        vlenidx = rt.aliased_regs["greg"]["vlen"]
+        vlen = gen.greg(vlenidx)
 
-    innerblock += gen.shift_greg_left(
-            reg=vlen,
-            bit_count=adt_size(dt).bit_length()-1)
+        innerblock += gen.shift_greg_left(
+                reg=vlen,
+                bit_count=adt_size(dt).bit_length()-1)
+    
+    can_vf = True
+    fma_mods = {mod.VF}
+    breg = alpha
+    try:
+        gen.fma(
+            adreg=gen.vreg(0),
+            bdreg=gen.freg(1, adt.FP64),
+            cdreg=gen.vreg(2),
+            a_dt=dt,
+            b_dt=dt,
+            c_dt=dt,
+            modifiers=fma_mods
+            )
+    except:
+        can_vf = False
+        fma_mods = {}
+
+    if not can_vf:
+        alpha_vreg_idx = rt.reserve_any_reg("vreg")
+        alpha_vreg = gen.vreg(alpha_vreg_idx)
+        innerblock += gen.fill_vector(sreg=alpha, vreg=alpha_vreg, dt=dt)
+        breg = alpha_vreg
+
 
 #    innerblock += gen.load_scalar_immoff(areg=addr_alpha,
 #                                         offset=0,
@@ -117,23 +162,27 @@ def main():
 
     innerblock += gen.fma(
             adreg=x,
-            bdreg=alpha,
+            bdreg=breg,
             cdreg=y,
             a_dt=dt,
             b_dt=dt,
             c_dt=dt,
-            modifiers={mod.VF})
+            modifiers=fma_mods)
 
     innerblock += gen.store_vector(areg=addr_y,
                                    vreg=y,
                                    dt=dt)
 
-    innerblock += gen.add_greg_greg(dst=addr_x,
-                                    reg1=addr_x,
-                                    reg2=vlen)
-    innerblock += gen.add_greg_greg(dst=addr_y,
-                                    reg1=addr_y,
-                                    reg2=vlen)
+    if "vlen" in rt.aliased_regs["greg"]:
+        innerblock += gen.add_greg_greg(dst=addr_x,
+                                        reg1=addr_x,
+                                        reg2=vlen)
+        innerblock += gen.add_greg_greg(dst=addr_y,
+                                        reg1=addr_y,
+                                        reg2=vlen)
+    else:
+        innerblock += gen.add_greg_voff(reg=addr_x, offset=1, dt=dt)
+        innerblock += gen.add_greg_voff(reg=addr_y, offset=1, dt=dt)
 
     innerblock += gen.add_greg_imm(reg=n,imm=-1)
 

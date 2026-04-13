@@ -197,6 +197,12 @@ class rvv(riscv64):
         raise NotImplementedError(
             "Index not required in RVV for constant strides, use {load,store}_vector_gregstride")
 
+    def fill_vector(self, *, sreg : freg_base,
+                    vreg : vreg_base, dt : adt) -> str:
+        dt_suf = self.dt_suffixes[dt]
+
+        return self.asmwrap(f"vfmv.v.f {vreg}, {sreg}")
+
     def load_vector(self, *, areg : greg_base,
                     vreg : vreg_base, dt : adt) -> str:
         dt_suf = self.dt_suffixes[dt]

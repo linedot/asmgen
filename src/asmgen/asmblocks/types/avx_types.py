@@ -60,40 +60,40 @@ class avx_freg(freg_base):
     x86_64 scalar register (actually xmm)
     """
     def __init__(self, reg_idx : int):
-        self.reg_str = f"xmm{reg_idx}"
+        self.idx = reg_idx
 
     def __str__(self) -> str:
-        return self.reg_str
+        return f"xmm{self.idx}"
 
 class xmm_vreg(vreg_base):
     """
     AVX 128 bit vector register (xmm)
     """
     def __init__(self, reg_idx : int):
-        self.reg_str = f"xmm{reg_idx}"
+        self.idx = reg_idx
 
     def __str__(self) -> str:
-        return self.reg_str
+        return f"xmm{self.idx}"
 
 class ymm_vreg(vreg_base):
     """
     AVX 256 bit vector register (ymm)
     """
     def __init__(self, reg_idx : int):
-        self.reg_str = f"ymm{reg_idx}"
+        self.idx = reg_idx
 
     def __str__(self) -> str:
-        return self.reg_str
+        return f"ymm{self.idx}"
 
 class zmm_vreg(vreg_base):
     """
     AVX512 vector register (zmm)
     """
     def __init__(self, reg_idx : int):
-        self.reg_str = f"zmm{reg_idx}"
+        self.idx = reg_idx
 
     def __str__(self) -> str:
-        return self.reg_str
+        return f"zmm{self.idx}"
 
 
 class reg_prefixer:

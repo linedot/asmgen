@@ -574,6 +574,12 @@ class avxbase(asmgen):
         preg = self.rpref(areg)
         return self.asmwrap(f"mov %[{name}],{preg}")
 
+    def fill_vector(self, *, sreg : freg_base,
+                    vreg : vreg_base, dt : adt):
+        suf = 's'+self.dt_suffixes[dt]
+        ps = self.rpref(sreg)
+        pv = self.rpref(vreg)
+        return self.asmwrap(f"vbroadcast{suf} {ps}, {pv}")
 
     def load_vector_voff(self, *, areg : greg_base, voffset : int, vreg : vreg_base, dt : adt):
         suf = 'p'+self.dt_suffixes[dt]
@@ -751,6 +757,17 @@ class fma128(avxbase):
 
     def vreg(self, reg_idx):
         return xmm_vreg(reg_idx)
+
+    def fill_vector(self, *, sreg : freg_base,
+                    vreg : vreg_base, dt : adt):
+        suf = 's'+self.dt_suffixes[dt]
+        ps = self.rpref(sreg)
+        pv = self.rpref(vreg)
+        
+        if 'sd' == suf:
+            return self.asmwrap(f"vmovddup {ps}, {pv}")
+        else:
+            return self.asmwrap(f"vbroadcast{suf} {ps}, {pv}")
 
     def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt):
