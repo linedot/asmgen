@@ -11,20 +11,19 @@
 # myfunction:
 #   # a0 = x
 # # a1 = y
-# # a2 = alpha
-# # a3 = n
+# # f10 = alpha
+# # a2 = n
 # vsetvli t0, zero, e64, m1, ta, ma
 # slli t0,t0,3
-# fld f0, 0(a2)
 # .loop:
 # vle64.v v0, (a0)
 # vle64.v v1, (a1)
-# vfmacc.vf v1,f0,v0
+# vfmacc.vf v1,f10,v0
 # vse64.v v1, (a1)
 # add a0,a0,t0
 # add a1,a1,t0
-# add a3,a3,-1
-# bne a3,zero,.loop
+# add a2,a2,-1
+# bne a2,zero,.loop
 
 
 from asmgen.asmblocks.rvv import rvv
