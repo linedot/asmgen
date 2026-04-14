@@ -19,7 +19,7 @@ from ..registers import (
 )
 
 from .types.sve_types import sve_vreg,sve_preg
-from .sve_opd3 import sve_fma,sve_fmul
+from .sve_opd3 import sve_fma,sve_fmul,sve_fadd
 
 from .neon import neon
 
@@ -55,6 +55,9 @@ class sve(aarch64):
         self.fmul = sve_fmul(asmwrap=self.asmwrap,
                            dt_suffixes=self.dt_suffixes,
                            dt_idxsuffixes=self.dt_suffixes)
+        self.fadd = sve_fadd(asmwrap=self.asmwrap,
+                             dt_suffixes=self.dt_suffixes,
+                             dt_idxsuffixes=self.dt_suffixes)
 
     def get_req_flags(self) -> list[str]:
         """
