@@ -4,8 +4,17 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 """
-Meta-module for NEON opd3 operations
+RVV 1.0 and 0.7.1 addition
 """
-from .neon_fma import *
-from .neon_fmul import *
-from .neon_fadd import *
+
+from ..operations import modifier
+
+from .rvv_opd3_base import rvv_opd3_base
+
+class rvv_fadd(rvv_opd3_base):
+    """
+    RVV 1.0 and 0.7.1 implementation of fma
+    """
+
+    def get_base_inst(self, modifiers : set[modifier]):
+        return "add"

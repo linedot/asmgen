@@ -61,6 +61,7 @@ class asmgen(ABC):
         self.fopa = dummy_opd3()
         self.fma = dummy_opd3()
         self.fmul = dummy_opd3()
+        self.fadd = dummy_opd3()
         self.dota = dummy_opd3()
 
         self.asmdata : dict[str,list[asm_data]] = dict()
