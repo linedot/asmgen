@@ -23,7 +23,8 @@ class callconv:
                  # Introducing this because x86 params seem
                  # to be 8 bytes off. might turn out to be
                  # an unnecessary hack and the issue is elsewhere
-                 spstart : int = 0
+                 spstart : int = 0,
+                 spalign : int = 16,
                  ):
         self.param_regs = param_regs
         self.caller_save_lists = caller_save_lists
@@ -37,6 +38,8 @@ class callconv:
         self.spadd = 0
         # stack offset for different register types
         self.sp_rtype_offsets : dict[str,int] = {}
+
+        self.spalign = spalign
 
     def add_param(self, type_tag : str, name : str, dt : adt|None = None):
         """
@@ -86,9 +89,10 @@ class callconv:
 
         spreg = gen.greg(self.spreg)
         if self.spadd > 0:
+            aligned_sp = ((self.spadd / self.spalign)+1)*self.spalign
             asmblock += gen.add_greg_imm(
                     reg=spreg,
-                    imm=-self.spadd
+                    imm=-aligned_sp
                     )
 
         rtype_off = 0
@@ -150,9 +154,10 @@ class callconv:
                 asmblock += load(**kwargs)
 
         if self.spadd > 0:
+            aligned_sp = ((self.spadd / self.spalign)+1)*self.spalign
             asmblock += gen.add_greg_imm(
                     reg=spreg,
-                    imm=self.spadd
+                    imm=aligned_sp
                     )
 
         self.spadd = 0
