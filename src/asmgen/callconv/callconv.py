@@ -89,7 +89,7 @@ class callconv:
 
         spreg = gen.greg(self.spreg)
         if self.spadd > 0:
-            aligned_sp = ((self.spadd / self.spalign)+1)*self.spalign
+            aligned_sp = ((self.spadd // self.spalign)+1)*self.spalign
             asmblock += gen.add_greg_imm(
                     reg=spreg,
                     imm=-aligned_sp
@@ -154,7 +154,7 @@ class callconv:
                 asmblock += load(**kwargs)
 
         if self.spadd > 0:
-            aligned_sp = ((self.spadd / self.spalign)+1)*self.spalign
+            aligned_sp = ((self.spadd // self.spalign)+1)*self.spalign
             asmblock += gen.add_greg_imm(
                     reg=spreg,
                     imm=aligned_sp
