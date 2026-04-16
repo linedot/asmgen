@@ -117,7 +117,7 @@ class aarch64(asmgen):
         if reg2 is None:
             return self.asmwrap(f"{inst} {reg1},{self.labelstr(label)}")
 
-        return self.asmwrap(f"cmp {reg2},{reg1}")+\
+        return self.asmwrap(f"cmp {reg1},{reg2}")+\
             self.asmwrap(f"{inst} {self.labelstr(label)}")
 
     def jzero(self, *, reg : greg_base,
