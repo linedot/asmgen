@@ -38,7 +38,7 @@ class neon_fmul(neon_opd3_base):
         if adt_size(c_dt)//adt_size(a_dt) > 2:
             raise ValueError("NEON FMUL has only 2xways widening")
 
-        if c_dt in [adt.UINT64, adt.UINT32, adt.UINT16]:
+        if c_dt in [adt.SINT64, adt.SINT32, adt.SINT16]:
             if adt_size(a_dt) == adt_size(c_dt):
                 raise ValueError("only widening variants exist for unsigned integer types")
 
@@ -49,9 +49,9 @@ class neon_fmul(neon_opd3_base):
             adt_triple(a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32),
             adt_triple(a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16),
 
-            adt_triple(a_dt=adt.SINT32, b_dt=adt.SINT32, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT16),
-            adt_triple(a_dt=adt.SINT8,  b_dt=adt.SINT8,  c_dt=adt.SINT8),
+            adt_triple(a_dt=adt.UINT32, b_dt=adt.UINT32, c_dt=adt.UINT32),
+            adt_triple(a_dt=adt.UINT16, b_dt=adt.UINT16, c_dt=adt.UINT16),
+            adt_triple(a_dt=adt.UINT8,  b_dt=adt.UINT8,  c_dt=adt.UINT8),
 
             adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT32),
             adt_triple(a_dt=adt.SINT8, b_dt=adt.SINT8, c_dt=adt.SINT16),
