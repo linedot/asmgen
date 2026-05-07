@@ -4,16 +4,5 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 """
-RVV 1.0 and 0.7.1 load instructions
+opdna1 operation tests for the RISC-V +D/F generator base
 """
-
-from ..operations import opdna1_action as action
-from .rvv_opdna1_base import rvv_opdna1
-
-class rvv_load(rvv_opdna1):
-    """
-    RVV vector loads
-    """
-
-    def __init__(self, lmul_getter :Callable[[],int]):
-        super().__init__(action=action.LOAD, lmul_getter=lmul_getter)

@@ -171,6 +171,13 @@ class opdna1_modifier(Enum):
     STRUCT = auto()  # load a structure with multiple components 
                      # (i.e [Re,Im], [x,y,z] or [r,g,b,a])
 
+class opdna1_action(Enum):
+    """
+    Possible opdna1 actions
+    """
+    LOAD = auto()
+    STORE = auto()
+
 class opdna1(ABC):
     """
     Assembly/IR instruction with n data operand and 1 address operand
@@ -226,7 +233,7 @@ class opdna1(ABC):
         :type dt : class:`asmgen.registers.asm_data_type`
         :raises ValueError: if an unsupported datatype is passed
         """
-        if dt not in self.supported_triples():
+        if dt not in self.supported_dts():
             raise ValueError(f"Unsupported type {dt}")
 
 class dummy_opd1a1(opd3):

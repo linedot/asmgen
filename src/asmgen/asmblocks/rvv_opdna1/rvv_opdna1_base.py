@@ -8,22 +8,33 @@ RVV 1.0 and 0.7.1 opdna1 base
 """
 from ...registers import asm_data_type as adt,adt_size
 
-from ..operations import opdna1, opdna1_modifier as mod
+from ..operations import opdna1_modifier as mod,opdna1_action
+
+from ..riscv64_opdna1.riscv64_opdna1_base import riscv64_opdna1
 
 from ..types.rvv_types import rvv_vreg
 from ..types.riscv64_types import riscv64_greg
 
-class rvv_opdna1(opdna1):
+class rvv_opdna1(riscv64_opdna1):
     """
     RVV instruction with 1 data operand and 1 address operand
 
     Abstraction for loads/stores (maybe also prefetches)
     """
 
-    def __init__(self, inst_base : str,
+    def __init__(self, action : opdna1_action,
                  lmul_getter :Callable[[],int]):
-        self.inst_base = inst_base
+        self.action = action
         self.get_lmul = lmul_getter
+
+    @property
+    def inst_base(self):
+        if self.action  == opdna1_action.LOAD:
+            return "vl"
+        elif self.action == opdna1_action.STORE:
+            return "vs"
+        else:
+            raise ValueError(f"Invalid action: {self.action}")
 
     def supported_dts(self) -> list[adt]:
        
@@ -135,6 +146,7 @@ class rvv_opdna1(opdna1):
                  modifiers : set[mod], **kwargs) -> str:
 
         self.check_modifiers(modifiers)
+        self.check_dt(dt)
         self.check_required_parameters(dregs, modifiers, **kwargs)
         inst = self.get_instruction(self.inst_base, modifiers, dt, **kwargs)
         addressing = self.get_addressing(areg, modifiers, **kwargs)

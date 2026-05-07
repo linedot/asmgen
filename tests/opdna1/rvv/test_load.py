@@ -16,7 +16,7 @@ class test_rvv_load(unittest.TestCase):
     def setUp(self):
         # Create standard registers for testing
         self.vs = [rvv_vreg(i) for i in range(8)]
-        self.vid = rvv_vreg(5)
+        self.vid = rvv_vreg(8)
         
         self.a0 = riscv64_greg(0)
         self.s0 = riscv64_greg(1)
@@ -72,7 +72,7 @@ class test_rvv_load(unittest.TestCase):
                       areg=self.a0, vidxreg=self.vid,
                       dt=adt.FP64,
                       modifiers={mod.VINDEX}),
-            "vluxei64.v v0, (t0), v5"
+            "vluxei64.v v0, (t0), v8"
         )
 
     def test_segmented_loads_lmul_1(self):
@@ -102,7 +102,7 @@ class test_rvv_load(unittest.TestCase):
                       nstructs=4,
                       dt=adt.FP64,
                       modifiers={mod.STRUCT, mod.VINDEX}),
-            "vluxseg4ei64.v v0, (t0), v5"
+            "vluxseg4ei64.v v0, (t0), v8"
         )
 
     def test_segmented_loads_lmul_2(self):
