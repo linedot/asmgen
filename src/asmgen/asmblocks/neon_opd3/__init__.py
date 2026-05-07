@@ -9,3 +9,4 @@ Meta-module for NEON opd3 operations
 from .neon_fma import *
 from .neon_fmul import *
 from .neon_fadd import *
+from .neon_fsub import *

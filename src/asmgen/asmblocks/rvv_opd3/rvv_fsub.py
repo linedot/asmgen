@@ -4,9 +4,17 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 """
-Meta-module for SVE opd3 operations
+RVV 1.0 and 0.7.1 subtraction
 """
-from .sve_fma import *
-from .sve_fmul import *
-from .sve_fadd import *
-from .sve_fsub import *
+
+from ..operations import modifier
+
+from .rvv_opd3_base import rvv_opd3_base
+
+class rvv_fsub(rvv_opd3_base):
+    """
+    RVV 1.0 and 0.7.1 implementation of sub
+    """
+
+    def get_base_inst(self, modifiers : set[modifier]):
+        return "sub"
