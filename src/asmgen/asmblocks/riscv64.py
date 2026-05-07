@@ -20,6 +20,9 @@ from .types.riscv64_types import riscv64_freg, riscv64_greg
 from ..callconv.callconv import callconv
 
 
+from .riscv64_opdna1 import riscv64_load,riscv64_store
+
+
 # pylint: disable=too-many-public-methods
 
 class riscv64(asmgen):
@@ -73,6 +76,9 @@ class riscv64(asmgen):
                 spreg=27)
             }
         self.default_callconv = "rvg"
+
+        self.load = riscv64_load
+        self.store = riscv64_store
 
     def create_callconv(self, name : str = "default"):
 

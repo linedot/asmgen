@@ -20,6 +20,7 @@ from .riscv64 import riscv64
 from .types.rvv_types import rvv_vreg
 
 from .rvv_opd3 import rvv_fma,rvv_fmul,rvv_fadd
+from .rvv_opdna1 import rvv_load,rvv_store
 
 
 # pylint: disable=too-many-public-methods
@@ -50,6 +51,9 @@ class rvv(riscv64):
         self.fadd = rvv_fadd(asmwrap=self.asmwrap)
 
         self.lmul = 1
+
+        self.load = rvv_load(lambda : self.lmul)
+        self.store = rvv_store(lambda : self.lmul)
 
     def get_parameters(self) -> list[str]:
         return ["LMUL"]

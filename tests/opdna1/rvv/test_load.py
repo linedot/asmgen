@@ -5,7 +5,7 @@
 # ------------------------------------------------------------------------------
 import unittest
 
-from asmgen.asmblocks.rvv_opdna1.rvv_load import rvv_load
+from asmgen.asmblocks.rvv import rvv
 from asmgen.asmblocks.types.rvv_types import rvv_vreg
 from asmgen.asmblocks.types.riscv64_types import riscv64_greg
 from asmgen.asmblocks.operations import opdna1_modifier as mod
@@ -21,8 +21,7 @@ class test_rvv_load(unittest.TestCase):
         self.a0 = riscv64_greg(0)
         self.s0 = riscv64_greg(1)
 
-        # Default LMUL=1
-        self.load = rvv_load(lmul_getter=lambda: 1)
+        self.rvv = rvv()
 
 
     def test_unit_stride(self):
@@ -30,21 +29,21 @@ class test_rvv_load(unittest.TestCase):
         Test basic unit-stride loads with different data types
         """
         self.assertEqual(
-            self.load(dregs=self.vs[:1],
+            self.rvv.load(dregs=self.vs[:1],
                       areg=self.a0,
                       dt=adt.FP64,
                       modifiers={}),
             "vle64.v v0, (t0)"
         )
         self.assertEqual(
-            self.load(dregs=self.vs[:1],
+            self.rvv.load(dregs=self.vs[:1],
                       areg=self.a0,
                       dt=adt.FP32,
                       modifiers={}),
             "vle32.v v0, (t0)"
         )
         self.assertEqual(
-            self.load(dregs=self.vs[:1],
+            self.rvv.load(dregs=self.vs[:1],
                       areg=self.a0,
                       dt=adt.FP16,
                       modifiers={}),
@@ -56,7 +55,7 @@ class test_rvv_load(unittest.TestCase):
         Test strided load with GSTRIDE modifier
         """
         self.assertEqual(
-            self.load(dregs=self.vs[:1],
+            self.rvv.load(dregs=self.vs[:1],
                       areg=self.a0, streg=self.s0,
                       dt=adt.FP64,
                       modifiers={mod.GSTRIDE}),
@@ -68,7 +67,7 @@ class test_rvv_load(unittest.TestCase):
         Test indexed load with VINDEX modifier
         """
         self.assertEqual(
-            self.load(dregs=self.vs[:1],
+            self.rvv.load(dregs=self.vs[:1],
                       areg=self.a0, vidxreg=self.vid,
                       dt=adt.FP64,
                       modifiers={mod.VINDEX}),
@@ -80,14 +79,14 @@ class test_rvv_load(unittest.TestCase):
         Test segmented loads requiring consecutive registers (LMUL=1)
         """
         self.assertEqual(
-            self.load(dregs=self.vs[:2],
+            self.rvv.load(dregs=self.vs[:2],
                       areg=self.a0, nstructs=2,
                       dt=adt.FP64,
                       modifiers={mod.STRUCT}),
             "vlseg2e64.v v0, (t0)"
         )
         self.assertEqual(
-            self.load(dregs=self.vs[:3],
+            self.rvv.load(dregs=self.vs[:3],
                       areg=self.a0,
                       streg=self.s0,
                       nstructs=3,
@@ -96,7 +95,7 @@ class test_rvv_load(unittest.TestCase):
             "vlsseg3e64.v v0, (t0), t1"
         )
         self.assertEqual(
-            self.load(dregs=self.vs[:4],
+            self.rvv.load(dregs=self.vs[:4],
                       areg=self.a0,
                       vidxreg=self.vid,
                       nstructs=4,
@@ -110,13 +109,16 @@ class test_rvv_load(unittest.TestCase):
         Test segmented loads with LMUL=2 requiring gaps between
         register groups
         """
-        load_m2 = rvv_load(lmul_getter=lambda: 2)
+        self.rvv.set_parameter("LMUL",2)
         
         # dregs: v0, v2 (valid for LMUL=2)
         dregs_m2 = [self.vs[0], self.vs[2]]
         
         self.assertEqual(
-            load_m2(dregs=dregs_m2, areg=self.a0, nstructs=2, dt=adt.FP64, modifiers={mod.STRUCT}),
+            self.rvv.load(dregs=dregs_m2,
+                          areg=self.a0, nstructs=2,
+                          dt=adt.FP64,
+                          modifiers={mod.STRUCT}),
             "vlseg2e64.v v0, (t0)"
         )
 
@@ -125,7 +127,7 @@ class test_rvv_load(unittest.TestCase):
         """
         Ensure exception is raised if register offsets don't match LMUL
         """
-        load_m2 = rvv_load(lmul_getter=lambda: 2)
+        self.rvv.set_parameter("LMUL",2)
         
         # dregs: v0, v1 (invalid for LMUL=2, should be v0, v2)
         dregs_invalid = [self.vs[0], self.vs[1]]
@@ -133,33 +135,33 @@ class test_rvv_load(unittest.TestCase):
         with self.assertRaisesRegex(
                 ValueError,
                 "Segmented registers must be consecutive"):
-            load_m2(dregs=dregs_invalid,
-                    areg=self.a0,
-                    nstructs=2,
-                    dt=adt.FP64,
-                    modifiers={mod.STRUCT})
+            self.rvv.load(dregs=dregs_invalid,
+                          areg=self.a0,
+                          nstructs=2,
+                          dt=adt.FP64,
+                          modifiers={mod.STRUCT})
 
     def test_missing_required_kwargs(self):
         """
         Test missing keyword arguments for specific modifiers
         """
         with self.assertRaisesRegex(ValueError, "Missing parameter: streg"):
-            self.load(dregs=self.vs[:1],
-                      areg=self.a0,
-                      dt=adt.FP64,
-                      modifiers={mod.GSTRIDE})
+            self.rvv.load(dregs=self.vs[:1],
+                          areg=self.a0,
+                          dt=adt.FP64,
+                          modifiers={mod.GSTRIDE})
 
         with self.assertRaisesRegex(ValueError, "Missing parameter: vidxreg"):
-            self.load(dregs=self.vs[:1],
-                      areg=self.a0,
-                      dt=adt.FP64,
-                      modifiers={mod.VINDEX})
+            self.rvv.load(dregs=self.vs[:1],
+                          areg=self.a0,
+                          dt=adt.FP64,
+                          modifiers={mod.VINDEX})
 
         with self.assertRaisesRegex(ValueError, "Missing parameter: nstructs"):
-            self.load(dregs=self.vs[:2],
-                      areg=self.a0,
-                      dt=adt.FP64,
-                      modifiers={mod.STRUCT})
+            self.rvv.load(dregs=self.vs[:2],
+                          areg=self.a0,
+                          dt=adt.FP64,
+                          modifiers={mod.STRUCT})
 
     def test_nstructs_mismatch(self):
         """
@@ -168,21 +170,21 @@ class test_rvv_load(unittest.TestCase):
         """
         with self.assertRaisesRegex(ValueError,
                                     "3 nstructs specified but only 2 dregs given"):
-            self.load(dregs=self.vs[:2],
-                      areg=self.a0, nstructs=3,
-                      dt=adt.FP64, modifiers={mod.STRUCT})
+            self.rvv.load(dregs=self.vs[:2],
+                          areg=self.a0, nstructs=3,
+                          dt=adt.FP64, modifiers={mod.STRUCT})
 
     def test_mutually_exclusive_modifiers(self):
         """
         Test that GSTRIDE and VINDEX cannot be used together
         """
         with self.assertRaisesRegex(ValueError, "mutually exclusive"):
-            self.load(dregs=self.vs[:1],
-                      areg=self.a0,
-                      streg=self.s0,
-                      vidxreg=self.vid,
-                      dt=adt.FP64,
-                      modifiers={mod.GSTRIDE, mod.VINDEX})
+            self.rvv.load(dregs=self.vs[:1],
+                          areg=self.a0,
+                          streg=self.s0,
+                          vidxreg=self.vid,
+                          dt=adt.FP64,
+                          modifiers={mod.GSTRIDE, mod.VINDEX})
 
     def test_unsupported_modifiers(self):
         """
@@ -197,10 +199,10 @@ class test_rvv_load(unittest.TestCase):
         for m in unsupported:
             with self.subTest(modifier=m):
                 with self.assertRaises(ValueError):
-                    self.load(dregs=self.vs[:1],
-                              areg=self.a0,
-                              dt=adt.FP64,
-                              modifiers={m})
+                    self.rvv.load(dregs=self.vs[:1],
+                                  areg=self.a0,
+                                  dt=adt.FP64,
+                                  modifiers={m})
 
     def test_invalid_register_types(self):
         """
@@ -208,11 +210,11 @@ class test_rvv_load(unittest.TestCase):
         """
         # Bad dreg (passing a greg where a vreg is expected)
         with self.assertRaisesRegex(ValueError, "All dregs must be vregs"):
-            self.load(dregs=[self.a0], areg=self.a0, dt=adt.FP64, modifiers={})
+            self.rvv.load(dregs=[self.a0], areg=self.a0, dt=adt.FP64, modifiers={})
             
         # Bad areg (passing a vreg where a greg is expected)
         with self.assertRaisesRegex(ValueError, "is not a riscv64_greg"):
-            self.load(dregs=self.vs[:1], areg=self.vs[0], dt=adt.FP64, modifiers={})
+            self.rvv.load(dregs=self.vs[:1], areg=self.vs[0], dt=adt.FP64, modifiers={})
 
 if __name__ == '__main__':
     unittest.main()
