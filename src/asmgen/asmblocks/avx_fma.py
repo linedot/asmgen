@@ -25,7 +25,7 @@ from ..callconv.callconv import callconv
 
 from .types.avx_types import x86_greg,avx_freg,xmm_vreg,ymm_vreg,zmm_vreg,reg_prefixer
 
-from .avx_opd3 import avx_fma,avx_fmul,avx_fadd
+from .avx_opd3 import avx_fma,avx_fmul,avx_fadd,avx_fsub
 
 class avxbase(asmgen):
     """
@@ -742,6 +742,13 @@ class fma128(avxbase):
                      rpref=self.rpref,
                      has_fp16=False
                      )
+        self.fsub = avx_fsub(
+                     asmwrap=self.asmwrap,
+                     dt_suffixes=self.dt_suffixes,
+                     it_suffixes=self.it_suffixes,
+                     rpref=self.rpref,
+                     has_fp16=False
+                     )
 
     def get_req_flags(self):
         return ['fma', 'avx']
@@ -818,6 +825,13 @@ class fma256(avxbase):
                      rpref=self.rpref,
                      has_fp16=False
                      )
+        self.fsub = avx_fsub(
+                     asmwrap=self.asmwrap,
+                     dt_suffixes=self.dt_suffixes,
+                     it_suffixes=self.it_suffixes,
+                     rpref=self.rpref,
+                     has_fp16=False
+                     )
 
     def get_req_flags(self):
         return ['fma', 'avx']
@@ -877,6 +891,13 @@ class avx512(avxbase):
                      has_fp16=True
                      )
         self.fadd = avx_fadd(
+                     asmwrap=self.asmwrap,
+                     dt_suffixes=self.dt_suffixes,
+                     it_suffixes=self.it_suffixes,
+                     rpref=self.rpref,
+                     has_fp16=True
+                     )
+        self.fsub = avx_fsub(
                      asmwrap=self.asmwrap,
                      dt_suffixes=self.dt_suffixes,
                      it_suffixes=self.it_suffixes,

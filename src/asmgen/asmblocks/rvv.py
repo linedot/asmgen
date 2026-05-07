@@ -19,7 +19,7 @@ from ..registers import (
 from .riscv64 import riscv64
 from .types.rvv_types import rvv_vreg
 
-from .rvv_opd3 import rvv_fma,rvv_fmul,rvv_fadd
+from .rvv_opd3 import rvv_fma,rvv_fmul,rvv_fadd,rvv_fsub
 
 
 # pylint: disable=too-many-public-methods
@@ -48,6 +48,7 @@ class rvv(riscv64):
         self.fma = rvv_fma(asmwrap=self.asmwrap)
         self.fmul = rvv_fmul(asmwrap=self.asmwrap)
         self.fadd = rvv_fadd(asmwrap=self.asmwrap)
+        self.fsub = rvv_fsub(asmwrap=self.asmwrap)
 
         self.lmul = 1
 
