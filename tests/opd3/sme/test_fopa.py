@@ -11,7 +11,7 @@ import unittest
 from asmgen.asmblocks.sme import sme
 from asmgen.registers import asm_data_type as adt
 
-from asmgen.asmblocks.operations import modifier as mod
+from asmgen.asmblocks.operations import opd3_modifier as mod
 
 class test_sme_opd3(unittest.TestCase):
     """

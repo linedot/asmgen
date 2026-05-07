@@ -20,7 +20,7 @@ from ..registers import (
     treg_base, vreg_base, greg_base,
 )
 from .sve import sve
-from .operations import opd3,widening_method,modifier
+from .operations import opd3,widening_method,opd3_modifier as mod
 
 
 # pylint: disable-next=too-few-public-methods
@@ -56,9 +56,9 @@ class sme_fmopa(opd3):
         self.asmwrap = asmwrap
         self.dt_suffixes = dt_suffixes
 
-    def check_modifiers(self, modifiers : set[modifier]):
+    def check_modifiers(self, modifiers : set[mod]):
         if modifiers.intersection(
-                set([modifier.IDX, modifier.PART, modifier.VF])):
+                set([mod.IDX, mod.PART, mod.VF])):
             raise ValueError("unsupported modifiers for SME")
 
     @property
@@ -132,7 +132,7 @@ class sme_fmopa(opd3):
     # pylint: disable-next=dangerous-default-value
     def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                  a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[modifier] = set(),
+                 modifiers : set[mod] = set(),
                  **kwargs) -> str:
         self.check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
         self.check_modifiers(modifiers=modifiers)
@@ -152,7 +152,7 @@ class sme_fmopa(opd3):
             raise ValueError(f"C type must be one of [{valid_str}]")
 
 
-        suf = "s" if modifier.NP in modifiers else "a"
+        suf = "s" if mod.NP in modifiers else "a"
         inst = self.mopx_inst_str(a_dt=a_dt, b_dt=b_dt, suf=suf)
         narrow_suf = self.dt_suffixes[a_dt]
         wide_suf = self.dt_suffixes[c_dt]

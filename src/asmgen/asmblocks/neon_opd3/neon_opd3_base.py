@@ -15,7 +15,7 @@ from ...registers import (
     adt_is_float,adt_is_int,
     data_reg
 )
-from ..operations import opd3,widening_method,modifier
+from ..operations import opd3,widening_method,opd3_modifier as mod
 
 class neon_opd3_base(opd3):
     """
@@ -38,15 +38,15 @@ class neon_opd3_base(opd3):
     def widening_method(self) -> widening_method:
         return widening_method.SPLIT_INSTRUCTIONS
 
-    def check_modifiers(self, modifiers : set[modifier]):
-        if modifier.VF in modifiers:
+    def check_modifiers(self, modifiers : set[mod]):
+        if mod.VF in modifiers:
             raise ValueError("NEON has no vf form")
-        if modifier.REGIDX in modifiers:
+        if mod.REGIDX in modifiers:
             raise ValueError("NEON has no regidx form")
 
     def check_triple_and_modifiers(self,
                                    a_dt : adt, b_dt : adt, c_dt : adt,
-                                   modifiers : set[modifier]):
+                                   modifiers : set[mod]):
         """
         Combined datatype triple and modifier check
 
@@ -58,7 +58,7 @@ class neon_opd3_base(opd3):
         :param c_dt : Data type of the C component
         :type c_dt : class:`asmgen.registers.asm_data_type`
         :param modifiers: set containing the modifiers to check
-        :type modifiers: set[class:`asmgen.asmblocks.operations.modifier`]
+        :type modifiers: set[class:`asmgen.asmblocks.operations.opd3_modifier`]
         :raises ValueError: If an unsupported modifier/datatype is in the specified set
         """
         super().check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
@@ -142,32 +142,34 @@ class neon_opd3_base(opd3):
     # pylint: disable-next=dangerous-default-value,too-many-locals,too-many-branches
     def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                  a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[modifier] = set(),
+                 modifiers : set[mod] = set(),
                  **kwargs) -> str:
-        self.check_triple_and_modifiers(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,modifiers=modifiers)
+        self.check_triple_and_modifiers(
+                a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,
+                modifiers=modifiers)
 
         part = 0
         if adt_size(a_dt) < adt_size(c_dt):
-            if (not modifier.PART in modifiers) or ('part' not in kwargs):
+            if (not mod.PART in modifiers) or ('part' not in kwargs):
                 raise ValueError(
                         "NEON requires 'PART' modifier and argument for widening operations")
             part = kwargs['part']
 
         # This allows the SVE version to use the same codepath
         sve_preg=""
-        if ('sve_preg' in kwargs) and (modifier.PART not in modifiers):
+        if ('sve_preg' in kwargs) and (mod.PART not in modifiers):
             sve_preg=kwargs['sve_preg'] + ','
 
         # Add a/s suffix if instruction supports it
         suf = ""
         try:
-            self.check_modifiers({modifier.NP})
-            suf = "s" if modifier.NP in modifiers else "a"
+            self.check_modifiers({mod.NP})
+            suf = "s" if mod.NP in modifiers else "a"
         except ValueError:
             pass
 
         idx = 0
-        if modifier.IDX in modifiers:
+        if mod.IDX in modifiers:
             if 'idx' not in kwargs:
                 raise ValueError("'idx' modifier specified, but not 'idx' parameter")
             idx = kwargs['idx']
@@ -176,14 +178,14 @@ class neon_opd3_base(opd3):
 
         inst = self.inst_prefix(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt) +\
                self.inst_base + suf
-        if modifier.PART in modifiers:
+        if mod.PART in modifiers:
             ways = adt_size(c_dt)//adt_size(a_dt)
             inst += self.partial_inst_suffix(ways=ways, part=part)
 
         narrow_suf = self.dt_suffixes[a_dt]
         wide_suf = self.dt_suffixes[c_dt]
         inst_str = f"{inst} {cdreg}.{wide_suf},{sve_preg}{adreg}.{narrow_suf},"
-        if modifier.IDX in modifiers:
+        if mod.IDX in modifiers:
             b_suf = self.dt_idxsuffixes[b_dt]
             inst_str += f"{bdreg}.{b_suf}[{idx}]"
         else:

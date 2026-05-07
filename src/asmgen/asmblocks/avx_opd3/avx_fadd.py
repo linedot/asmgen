@@ -7,7 +7,7 @@
 AVX fadd instruction
 """
 
-from ..operations import modifier
+from ..operations import opd3_modifier as mod
 
 from .avx_opd3_base import avx_opd3_base
 
@@ -16,10 +16,10 @@ class avx_fadd(avx_opd3_base):
     AVX implementation of fadd
     """
 
-    def get_base_inst(self, modifiers):
+    def get_base_inst(self, modifiers : set[mod]):
         return "vadd"
 
-    def check_modifiers(self, modifiers : set[modifier]):
+    def check_modifiers(self, modifiers : set[mod]):
         super().check_modifiers(modifiers=modifiers)
-        if modifier.NP in modifiers:
+        if mod.NP in modifiers:
             raise ValueError("AVX fadd has no NP form")

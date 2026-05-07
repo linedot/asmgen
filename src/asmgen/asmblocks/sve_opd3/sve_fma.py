@@ -8,7 +8,7 @@ SVE fma instruction
 """
 from ...registers import data_reg,asm_data_type as adt
 from ..neon_opd3.neon_fma import neon_fma
-from ..operations import modifier
+from ..operations import opd3_modifier as mod
 
 class sve_fma(neon_fma):
     """
@@ -18,12 +18,14 @@ class sve_fma(neon_fma):
     # pylint: disable-next=dangerous-default-value,too-many-locals,too-many-branches
     def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                  a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[modifier] = set(),
+                 modifiers : set[mod] = set(),
                  **kwargs) -> str:
-        self.check_triple_and_modifiers(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,modifiers=modifiers)
+        self.check_triple_and_modifiers(
+                a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,
+                modifiers=modifiers)
 
         sve_preg = 'p0/m'
-        if modifier.MASK in modifiers:
+        if mod.MASK in modifiers:
             if 'mreg' not in kwargs:
                 raise ValueError("MASK modifier, but no mreg parameter passed")
             sve_preg=kwargs['mreg']+"/m"

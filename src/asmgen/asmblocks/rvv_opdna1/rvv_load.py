@@ -4,17 +4,15 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 """
-RVV 1.0 and 0.7.1 register types
+RVV 1.0 and 0.7.1 load instructions
 """
-from ...registers import vreg_base
 
-#pylint: disable=too-few-public-methods
-class rvv_vreg(vreg_base):
-    """
-    RVV vector register
-    """
-    def __init__(self, reg_idx : int):
-        self.reg_idx = reg_idx
+from .rvv_opdna1_base import rvv_opdna1
 
-    def __str__(self) -> str:
-        return f"v{self.reg_idx}"
+class rvv_load(rvv_opdna1):
+    """
+    RVV vector loads
+    """
+
+    def __init__(self, lmul_getter :Callable[[],int]):
+        super().__init__(inst_base="vl", lmul_getter=lmul_getter)

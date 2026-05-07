@@ -13,7 +13,7 @@ from ...registers import (
     adt_size,
     adt_is_float,
 )
-from ..operations import modifier
+from ..operations import opd3_modifier as mod
 
 from .neon_opd3_base import neon_opd3_base
 
@@ -24,9 +24,9 @@ class neon_fadd(neon_opd3_base):
 
     inst_base = "add"
 
-    def check_modifiers(self, modifiers : set[modifier]):
+    def check_modifiers(self, modifiers : set[mod]):
         super().check_modifiers(modifiers=modifiers)
-        if modifier.NP in modifiers:
+        if mod.NP in modifiers:
             raise ValueError("NEON add has no NP-form")
 
     def check_triple(self, a_dt : adt, b_dt : adt, c_dt : adt):

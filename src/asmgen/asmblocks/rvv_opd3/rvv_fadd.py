@@ -7,7 +7,7 @@
 RVV 1.0 and 0.7.1 addition
 """
 
-from ..operations import modifier
+from ..operations import opd3_modifier as mod
 
 from .rvv_opd3_base import rvv_opd3_base
 
@@ -16,5 +16,5 @@ class rvv_fadd(rvv_opd3_base):
     RVV 1.0 and 0.7.1 implementation of fma
     """
 
-    def get_base_inst(self, modifiers : set[modifier]):
+    def get_base_inst(self, modifiers : set[mod]):
         return "add"

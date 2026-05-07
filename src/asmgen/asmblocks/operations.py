@@ -26,9 +26,9 @@ class widening_method(Enum):
     DOT_NEIGHBOURS = auto()
     SPLIT_INSTRUCTIONS = auto()
 
-class modifier(Enum):
+class opd3_modifier(Enum):
     """
-    Possible modifiers for an instruction/operation
+    Possible modifiers for an opd3 instruction/operation
     """
     NP = auto()
     IDX = auto()
@@ -81,13 +81,13 @@ class opd3(ABC):
         raise NotImplementedError(self.NIE_MESSAGE)
 
     @abstractmethod
-    def check_modifiers(self, modifiers : set[modifier]):
+    def check_modifiers(self, modifiers : set[opd3_modifier]):
         """
         Checks whether the operations supports the specified modifiers
 
 
         :param modifiers: set containing the modifiers to check
-        :type modifiers: set[class:`asmgen.asmblocks.operations.modifier`]
+        :type modifiers: set[class:`asmgen.asmblocks.operations.opd3_modifier`]
         :raises ValueError: If an unsupported modifier is in the specified set
         """
         raise NotImplementedError(self.NIE_MESSAGE)
@@ -95,7 +95,7 @@ class opd3(ABC):
     @abstractmethod
     def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                  a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[modifier], **kwargs) -> str:
+                 modifiers : set[opd3_modifier], **kwargs) -> str:
         """
         Return the ASM/IR instruction
         
@@ -132,6 +132,9 @@ class opd3(ABC):
         if triple not in self.supported_triples():
             raise ValueError(f"Unsupported type combination a={a_dt},b={b_dt},c={c_dt}")
 
+
+
+
 class dummy_opd3(opd3):
     """
     Dummy opd3 operation; ISAs assign this by default to operations they do not support
@@ -144,9 +147,99 @@ class dummy_opd3(opd3):
     def supported_triples(self) -> list[adt_triple]:
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    def check_modifiers(self, modifiers : set[modifier]):
+    def check_modifiers(self, modifiers : set[opd3_modifier]):
         raise NotImplementedError(self.NIE_MESSAGE)
 
     def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
-                 a_dt : adt, b_dt : adt, c_dt : adt, modifiers : set[modifier], **kwargs) -> str:
+                 a_dt : adt, b_dt : adt, c_dt : adt, modifiers : set[opd3_modifier], **kwargs) -> str:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+class opdna1_modifier(Enum):
+    """
+    Possible modifiers for an instruction/operation
+    """
+    ILANE = auto()   # select lane with an immediate
+    GLANE = auto()   # select lane with a greg
+    TOFFSET = auto() # 2D offset in number of tiles
+    VOFFSET = auto() # 1D offset in number of vectors
+    IOFFSET = auto() # 1D offset in number of elements
+    TINDEX = auto()  # 2D tile contains per-element indices/offsets
+    VINDEX = auto()  # 1D vector contains per-element indices/offsets
+    GSTRIDE = auto() # stride between elements given by greg
+    ISTRIDE = auto() # stride between elements given by immediate
+    POSTINC = auto() # increment address greg after operation
+    STRUCT = auto()  # load a structure with multiple components 
+                     # (i.e [Re,Im], [x,y,z] or [r,g,b,a])
+
+class opdna1(ABC):
+    """
+    Assembly/IR instruction with n data operand and 1 address operand
+
+    Absraction for loads/stores (maybe also prefetches)
+    """
+    NIE_MESSAGE="Method not implemented"
+
+    @abstractmethod
+    def supported_dts(self) -> list[adt]:
+        """
+        Return the list of supported data types
+        
+        :return : list of supported data types
+        :rtype : class:`asmgen.registers.asm_data_type`
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    @abstractmethod
+    def check_modifiers(self, modifiers : set[opdna1_modifier]):
+        """
+        Checks whether the operations supports the specified modifiers
+
+
+        :param modifiers: set containing the modifiers to check
+        :type modifiers: set[class:`asmgen.asmblocks.operations.opd1a1_modifier`]
+        :raises ValueError: If an unsupported modifier is in the specified set
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    @abstractmethod
+    def __call__(self, *, dregs : list[data_reg], areg : greg_type, dt : adt,
+                 modifiers : set[opdna1_modifier], **kwargs) -> str:
+        """
+        Return the ASM/IR instruction
+        
+        :param dregs : Data registers
+        :type dregs : list[class:`asmgen.registers.data_reg`]
+        :param areg : Address register
+        :type areg : class:`asmgen.registers.greg_type`
+        :param dt : Data type
+        :type dt : class:`asmgen.registers.asm_data_type`
+        :return : ASM/IR instruction corresponding to the operation
+        :rtype : str
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def check_dt(self, dt : adt):
+        """
+        Check if the operation supports the specified data type
+        
+        :param dt : Data type
+        :type dt : class:`asmgen.registers.asm_data_type`
+        :raises ValueError: if an unsupported datatype is passed
+        """
+        if dt not in self.supported_triples():
+            raise ValueError(f"Unsupported type {dt}")
+
+class dummy_opd1a1(opd3):
+    """
+    Dummy opd1a1 operation; ISAs assign this by default to operations they do not support
+    """
+
+    def supported_dts(self) -> list[adt_triple]:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def check_modifiers(self, modifiers : set[opdna1_modifier]):
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def __call__(self, *, dreg : data_reg, areg : greg_type, dt : adt,
+                 modifiers : set[modifier], **kwargs) -> str:
         raise NotImplementedError(self.NIE_MESSAGE)

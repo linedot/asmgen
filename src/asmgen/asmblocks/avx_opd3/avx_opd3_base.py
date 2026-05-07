@@ -15,7 +15,7 @@ from ...registers import (
     asm_index_type as ait,
     data_reg,
 )
-from ..operations import opd3,widening_method,modifier
+from ..operations import opd3,widening_method,opd3_modifier as mod
 
 from ..types.avx_types import reg_prefixer
 
@@ -42,12 +42,12 @@ class avx_opd3_base(opd3):
         self.has_fp16 = has_fp16
 
     @abstractmethod
-    def get_base_inst(self, modifiers : set[modifier]) -> str:
+    def get_base_inst(self, modifiers : set[mod]) -> str:
         """
         Return the base instruction name based on the specified modifiers
 
         :param modifiers: set of modifiers to check the name for
-        :type modifiers: set[class:`asmgen.asmblocks.operations.modifier`]
+        :type modifiers: set[class:`asmgen.asmblocks.operations.opd3_modifier`]
         :return: ASM instruction name
         :rtype: str
         """
@@ -57,14 +57,14 @@ class avx_opd3_base(opd3):
     def widening_method(self) -> widening_method:
         return widening_method.NONE
 
-    def check_modifiers(self, modifiers : set[modifier]):
-        if modifier.VF in modifiers:
+    def check_modifiers(self, modifiers : set[mod]):
+        if mod.VF in modifiers:
             raise ValueError("AVX has no vf form")
-        if modifier.REGIDX in modifiers:
+        if mod.REGIDX in modifiers:
             raise ValueError("AVX has no regidx form")
-        if modifier.IDX in modifiers:
+        if mod.IDX in modifiers:
             raise ValueError("AVX has no idx form")
-        if modifier.PART in modifiers:
+        if mod.PART in modifiers:
             raise ValueError("AVX has no partial instructions")
 
     def supported_triples(self) -> list[adt_triple]:
@@ -81,7 +81,7 @@ class avx_opd3_base(opd3):
     # pylint: disable-next=dangerous-default-value
     def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                  a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[modifier] = set(),
+                 modifiers : set[mod] = set(),
                  **kwargs) -> str:
         self.check_modifiers(modifiers=modifiers)
         self.check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
