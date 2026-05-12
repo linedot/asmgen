@@ -6,7 +6,7 @@
 """
 ARM64/AArch64 register types
 """
-from ...registers import greg_base, freg_base, asm_data_type as adt
+from ...registers import greg_base, freg_base, asm_data_type as adt, adt_size
 
 #pylint: disable=too-few-public-methods
 class aarch64_greg(greg_base):
@@ -27,6 +27,11 @@ class aarch64_greg(greg_base):
             return "sp"
         return f"w{self.idx}"
 
+    def retype(self, dt : adt) -> str:
+        if adt_size(dt) < 8:
+            return self.get_wreg()
+        return self
+
     def __str__(self) -> str:
         return self.reg_str
 
@@ -45,6 +50,9 @@ class aarch64_freg(freg_base):
     def __init__(self, reg_idx : int, dt : adt):
         self.idx = reg_idx
         self.dt = dt
+
+    def retype(self, dt : adt):
+        return aarch64_freg(reg_idx=self.idx, dt=dt)
 
     def __str__(self) -> str:
         return f"{self.dt_regname_map[self.dt]}{self.idx}"

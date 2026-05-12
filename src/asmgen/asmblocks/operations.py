@@ -163,6 +163,7 @@ class opdna1_modifier(Enum):
     TOFFSET = auto() # 2D offset in number of tiles
     VOFFSET = auto() # 1D offset in number of vectors
     IOFFSET = auto() # 1D offset in number of elements
+    GOFFSET = auto() # 1D offset given by greg
     TINDEX = auto()  # 2D tile contains per-element indices/offsets
     VINDEX = auto()  # 1D vector contains per-element indices/offsets
     GSTRIDE = auto() # stride between elements given by greg
@@ -170,6 +171,8 @@ class opdna1_modifier(Enum):
     POSTINC = auto() # increment address greg after operation
     STRUCT = auto()  # load a structure with multiple components 
                      # (i.e [Re,Im], [x,y,z] or [r,g,b,a])
+    BCAST = auto()   # Broadcast one value into all lanes
+    MASK  = auto()   # Masked operation
 
 class opdna1_action(Enum):
     """
