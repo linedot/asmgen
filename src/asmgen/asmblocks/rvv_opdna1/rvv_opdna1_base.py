@@ -8,14 +8,14 @@ RVV 1.0 and 0.7.1 opdna1 base
 """
 from ...registers import asm_data_type as adt,adt_size
 
-from ..operations import opdna1_modifier as mod,opdna1_action
+from ..operations import opdna1_modifier as mod,opdna1_action,opdna1
 
 from ..riscv64_opdna1.riscv64_opdna1_base import riscv64_opdna1
 
 from ..types.rvv_types import rvv_vreg
-from ..types.riscv64_types import riscv64_greg
+from ..types.riscv64_types import riscv64_greg,riscv64_freg
 
-class rvv_opdna1(riscv64_opdna1):
+class rvv_opdna1(opdna1):
     """
     RVV instruction with 1 data operand and 1 address operand
 
@@ -26,6 +26,8 @@ class rvv_opdna1(riscv64_opdna1):
                  lmul_getter :Callable[[],int]):
         self.action = action
         self.get_lmul = lmul_getter
+
+        self.scalar_opdna1 = riscv64_opdna1(action=action)
 
     @property
     def inst_base(self):
@@ -119,9 +121,6 @@ class rvv_opdna1(riscv64_opdna1):
 
         return inst_name
 
-    def get_addressing(self, base : str, modifiers: set[mod], dt : adt, **kwargs):
-        pass
-
     def get_addressing(self, areg : riscv64_greg, modifiers: set[mod], **kwargs) -> str:
         if not isinstance(areg, riscv64_greg):
             raise ValueError(f"{areg} is not a riscv64_greg")
@@ -136,7 +135,7 @@ class rvv_opdna1(riscv64_opdna1):
         elif mod.VINDEX in modifiers:
             vidxreg = kwargs["vidxreg"]
             if not isinstance(vidxreg, rvv_vreg):
-                raise ValueError(f"{vidxreg} is not a riscv64_greg")
+                raise ValueError(f"{vidxreg} is not a rvv_vreg")
             return f"{base_addr}, {vidxreg}"
             
         return base_addr
@@ -144,6 +143,14 @@ class rvv_opdna1(riscv64_opdna1):
 
     def __call__(self, *, dregs : list[data_reg], areg : greg_type, dt : adt,
                  modifiers : set[mod], **kwargs) -> str:
+                 
+        if not dregs:
+            raise ValueError("No dregs provided")
+
+        # If scalar registers are passed, forward to base RISC-V
+        if isinstance(dregs[0], (riscv64_greg, riscv64_freg)):
+            return self.scalar_opdna1(dregs=dregs, areg=areg, dt=dt,
+                                      modifiers=modifiers, **kwargs)
 
         self.check_modifiers(modifiers)
         self.check_dt(dt)
