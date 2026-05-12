@@ -1,7 +1,7 @@
 import unittest
 
 from asmgen.asmblocks.operations import opdna1_modifier as mod
-from asmgen.registers import asm_data_type as adt
+from asmgen.registers import asm_data_type as adt, asm_index_type as ait
 from asmgen.asmblocks.types.riscv64_types import riscv64_greg, riscv64_freg
 from asmgen.asmblocks.types.rvv_types import rvv_vreg
 from asmgen.asmblocks.rvv import rvv  # Updated import
@@ -48,7 +48,8 @@ class test_rvv_opdna1(unittest.TestCase):
     def test_indexed_vector_operations(self):
         """ Test unordered indexed vector operations (vluxei/vsuxei) """
         self.assertEqual(
-            self.rvv.store(dregs=self.vs[:1], areg=self.t0, dt=adt.FP32, 
+            self.rvv.store(dregs=self.vs[:1], areg=self.t0,
+                           dt=adt.FP32, it=ait.INT32,
                            modifiers={mod.VINDEX}, vidxreg=self.vs[2]),
             "vsuxei32.v v0, (t0), v2"
         )

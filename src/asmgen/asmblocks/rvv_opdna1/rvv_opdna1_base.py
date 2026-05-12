@@ -74,6 +74,7 @@ class rvv_opdna1(opdna1):
 
         if mod.VINDEX in modifiers:
             required_extra_params.append("vidxreg")
+            required_extra_params.append("it")
         if mod.STRUCT in modifiers:
             required_extra_params.append("nstructs")
         if mod.GSTRIDE in modifiers:
