@@ -17,6 +17,7 @@ class test_x86_opdna1(unittest.TestCase):
         
         self.xmm0_32 = avx_freg(0)
         self.xmm1_64 = avx_freg(1)
+        self.xmm2_16 = avx_freg(2)
         
         self.load = x86_load()
         self.store = x86_store()
@@ -42,6 +43,10 @@ class test_x86_opdna1(unittest.TestCase):
 
     def test_basic_float_loads(self):
         """ Test scalar floating point zero-offset loads """
+        self.assertEqual(
+            self.load(dregs=[self.xmm2_16], areg=self.rdi, dt=adt.FP16, modifiers={}),
+            f"vmovsh ({self.rdi}), {self.xmm2_16}"
+        )
         self.assertEqual(
             self.load(dregs=[self.xmm0_32], areg=self.rdi, dt=adt.FP32, modifiers={}),
             f"vmovss ({self.rdi}), {self.xmm0_32}"
