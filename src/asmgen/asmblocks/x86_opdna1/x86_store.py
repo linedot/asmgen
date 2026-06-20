@@ -15,5 +15,7 @@ class x86_store(x86_opdna1):
     Base X86 freg and greg stores
     """
 
-    def __init__(self):
-        super().__init__(action=action.STORE)
+    def __init__(self,
+                 asmwrap: Callable[[str],str],
+                 rpref : Callable[[str],str]):
+        super().__init__(action=action.STORE, asmwrap=asmwrap, rpref=rpref)

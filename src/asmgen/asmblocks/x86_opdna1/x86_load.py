@@ -15,5 +15,7 @@ class x86_load(x86_opdna1):
     Base X86 freg and greg loads
     """
 
-    def __init__(self):
-        super().__init__(action=action.LOAD)
+    def __init__(self,
+                 asmwrap: Callable[[str],str],
+                 rpref : Callable[[str],str]):
+        super().__init__(action=action.LOAD, asmwrap=asmwrap, rpref=rpref)

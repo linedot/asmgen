@@ -7,14 +7,20 @@ from ..operations import opdna1, opdna1_modifier as mod, opdna1_action
 from ...registers import asm_data_type as adt, adt_size
 from ..types.avx_types import x86_greg, avx_freg
 
+from typing import Callable
+
 class x86_opdna1(opdna1):
     """
     x86-64 scalar instruction with 1 data operand and 1 address operand.
     Handles standard scalar loads/stores (movb, movq, vmovss, vmovsd)
     """
 
-    def __init__(self, action: opdna1_action):
+    def __init__(self, action: opdna1_action,
+                 asmwrap: Callable[[str],str],
+                 rpref : Callable[[str],str]):
         self.action = action
+        self.asmwrap = asmwrap
+        self.rpref = rpref
 
     def supported_dts(self) -> list[adt]:
         return [
@@ -72,7 +78,8 @@ class x86_opdna1(opdna1):
             raise ValueError(f"{areg} is not an x86_greg")
             
         offset = kwargs.get("ioffset", 0) if mod.IOFFSET in modifiers else 0
-        return f"{offset}({areg})" if offset != 0 else f"({areg})"
+        pareg = self.rpref(areg)
+        return f"{offset}({pareg})" if offset != 0 else f"({pareg})"
 
     def __call__(self, *, dregs: list, areg: x86_greg, dt: adt,
                  modifiers: set[mod], **kwargs) -> str:
@@ -94,7 +101,9 @@ class x86_opdna1(opdna1):
         
         addressing = self.get_addressing(areg, modifiers, **kwargs)
 
+        pdreg = self.rpref(dreg)
+
         if self.action == opdna1_action.LOAD:
-            return f"{inst} {addressing}, {dreg}"
+            return self.asmwrap(f"{inst} {addressing}, {pdreg}")
         else: # STORE
-            return f"{inst} {dreg}, {addressing}"
+            return self.asmwrap(f"{inst} {pdreg}, {addressing}")
