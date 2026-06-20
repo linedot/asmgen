@@ -9,16 +9,20 @@ from ..types.aarch64_types import aarch64_greg,aarch64_freg
 from ..operations import opdna1_modifier as mod, opdna1_action, opdna1
 from ...registers import asm_data_type as adt, adt_size
 
+from typing import Callable
+
 class neon_opdna1(opdna1):
     """
     NEON (ASIMD) instruction with n data operands and 1 address operand.
     Inherits from aarch64_opdna1 to automatically handle scalar routing.
     """
 
-    def __init__(self, action: opdna1_action):
+    def __init__(self, action: opdna1_action,
+                 asmwrap : Callable[[str],str]):
         self.action = action
+        self.asmwrap = asmwrap
 
-        self.scalar_opdna1 = aarch64_opdna1(action=action)
+        self.scalar_opdna1 = aarch64_opdna1(action=action, asmwrap=asmwrap)
 
     @property
     def inst_base(self):
@@ -165,7 +169,7 @@ class neon_opdna1(opdna1):
         # Case 1: LDR / STR for IOFFSET / VOFFSET
         if mod.VOFFSET in modifiers or mod.IOFFSET in modifiers:
             inst = "ldr" if self.action == opdna1_action.LOAD else "str"
-            return f"{inst} q{dregs[0].idx}, {addressing}"
+            return self.asmwrap(f"{inst} q{dregs[0].idx}, {addressing}")
 
         # Segmented registers contiguity check
         for i in range(1, len(dregs)):
@@ -187,4 +191,4 @@ class neon_opdna1(opdna1):
             reg_list_str = ", ".join([f"{r}{arrangement}" for r in dregs])
             dreg_str = f"{{{reg_list_str}}}"
 
-        return f"{inst} {dreg_str}, {addressing}"
+        return self.asmwrap(f"{inst} {dreg_str}, {addressing}")

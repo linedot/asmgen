@@ -10,6 +10,11 @@ from asmgen.registers import asm_data_type as adt
 from asmgen.asmblocks.types.riscv64_types import riscv64_greg, riscv64_freg
 from asmgen.asmblocks.riscv64_opdna1.riscv64_opdna1_base import riscv64_opdna1
 
+
+def asmwrap(s: str) -> str:
+    lines = s.split("\n")
+    return "".join(f"{line}\n" for line in lines)
+
 class test_riscv64_opdna1(unittest.TestCase):
     def setUp(self):
         self.t1 = riscv64_greg(1)
@@ -17,26 +22,28 @@ class test_riscv64_opdna1(unittest.TestCase):
         self.f0 = riscv64_freg(0)
         self.f1 = riscv64_freg(1)
         
-        self.load = riscv64_opdna1(action=opdna1_action.LOAD)
-        self.store = riscv64_opdna1(action=opdna1_action.STORE)
+        self.load = riscv64_opdna1(action=opdna1_action.LOAD,
+                                   asmwrap=asmwrap)
+        self.store = riscv64_opdna1(action=opdna1_action.STORE,
+                                    asmwrap=asmwrap)
 
     def test_basic_scalar_loads(self):
         """ Test scalar integer and floating point loads """
         self.assertEqual(
             self.load(dregs=[self.f1], areg=self.t1, dt=adt.FP64, modifiers={}),
-            "fld f1, 0(t1)"
+            "fld f1, 0(t1)\n"
         )
         self.assertEqual(
             self.load(dregs=[self.f0], areg=self.t1, dt=adt.FP32, modifiers={}),
-            "flw f0, 0(t1)"
+            "flw f0, 0(t1)\n"
         )
         self.assertEqual(
             self.load(dregs=[self.t2], areg=self.t1, dt=adt.SINT8, modifiers={}),
-            "lb t2, 0(t1)"
+            "lb t2, 0(t1)\n"
         )
         self.assertEqual(
             self.load(dregs=[self.t2], areg=self.t1, dt=adt.UINT64, modifiers={}),
-            "ld t2, 0(t1)"
+            "ld t2, 0(t1)\n"
         )
 
     def test_scalar_ioffset(self):
@@ -44,12 +51,12 @@ class test_riscv64_opdna1(unittest.TestCase):
         self.assertEqual(
             self.load(dregs=[self.t2], areg=self.t1, dt=adt.SINT32, 
                       modifiers={mod.IOFFSET}, ioffset=16),
-            "lw t2, 16(t1)"
+            "lw t2, 16(t1)\n"
         )
         self.assertEqual(
             self.store(dregs=[self.f1], areg=self.t1, dt=adt.FP64, 
                        modifiers={mod.IOFFSET}, ioffset=-8),
-            "fsd f1, -8(t1)"
+            "fsd f1, -8(t1)\n"
         )
 
     def test_scalar_invalid_modifiers(self):

@@ -52,8 +52,10 @@ class rvv(riscv64):
 
         self.lmul = 1
 
-        self.load = rvv_load(lambda : self.lmul)
-        self.store = rvv_store(lambda : self.lmul)
+        self.load = rvv_load(asmwrap=self.asmwrap,
+                             lmul_getter=lambda : self.lmul)
+        self.store = rvv_store(asmwrap=self.asmwrap,
+                               lmul_getter=lambda : self.lmul)
 
     def get_parameters(self) -> list[str]:
         return ["LMUL"]

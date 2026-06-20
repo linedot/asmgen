@@ -18,23 +18,24 @@ class test_rvv_opdna1(unittest.TestCase):
         
         # Using the wrapper class directly
         self.rvv = rvv()
+        self.rvv.set_output_inline(False)
 
     def test_scalar_routing(self):
         """ Test that scalar registers are successfully routed through the rvv wrapper """
         self.assertEqual(
             self.rvv.load(dregs=[self.f0], areg=self.t0, dt=adt.FP32, modifiers={}),
-            "flw f0, 0(t0)" # Assuming riscv64_greg(5) prints as t0
+            "flw f0, 0(t0)\n" # Assuming riscv64_greg(5) prints as t0
         )
 
     def test_unit_stride(self):
         """ Test contiguous unit-stride vector loads/stores """
         self.assertEqual(
             self.rvv.load(dregs=self.vs[:1], areg=self.t0, dt=adt.FP64, modifiers={}),
-            "vle64.v v0, (t0)"
+            "vle64.v v0, (t0)\n"
         )
         self.assertEqual(
             self.rvv.store(dregs=self.vs[:1], areg=self.t0, dt=adt.FP32, modifiers={}),
-            "vse32.v v0, (t0)"
+            "vse32.v v0, (t0)\n"
         )
 
     def test_strided_vector_operations(self):
@@ -42,7 +43,7 @@ class test_rvv_opdna1(unittest.TestCase):
         self.assertEqual(
             self.rvv.load(dregs=self.vs[:1], areg=self.t0, dt=adt.FP64, 
                           modifiers={mod.GSTRIDE}, streg=self.t1),
-            "vlse64.v v0, (t0), t1"
+            "vlse64.v v0, (t0), t1\n"
         )
 
     def test_indexed_vector_operations(self):
@@ -51,7 +52,7 @@ class test_rvv_opdna1(unittest.TestCase):
             self.rvv.store(dregs=self.vs[:1], areg=self.t0,
                            dt=adt.FP32, it=ait.INT32,
                            modifiers={mod.VINDEX}, vidxreg=self.vs[2]),
-            "vsuxei32.v v0, (t0), v2"
+            "vsuxei32.v v0, (t0), v2\n"
         )
 
     def test_structured_segment_operations(self):
@@ -59,7 +60,7 @@ class test_rvv_opdna1(unittest.TestCase):
         self.assertEqual(
             self.rvv.load(dregs=self.vs[:2], areg=self.t0, dt=adt.FP64, 
                           modifiers={mod.STRUCT}, nstructs=2),
-            "vlseg2e64.v v0, (t0)"
+            "vlseg2e64.v v0, (t0)\n"
         )
 
     def test_mutually_exclusive_modifiers(self):

@@ -76,8 +76,8 @@ class neon(aarch64):
                               dt_suffixes=self.dt_suffixes,
                               dt_idxsuffixes=self.dt_idxsuffixes)
 
-        self.load = neon_load()
-        self.store = neon_store()
+        self.load = neon_load(asmwrap=self.asmwrap)
+        self.store = neon_store(asmwrap=self.asmwrap)
 
     def get_req_flags(self) -> list[str]:
         """

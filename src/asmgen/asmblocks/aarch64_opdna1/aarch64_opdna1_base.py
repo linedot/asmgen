@@ -8,14 +8,18 @@ from ...registers import asm_data_type as adt, adt_size
 
 from ..types.aarch64_types import aarch64_greg, aarch64_freg
 
+from typing import Callable
+
 class aarch64_opdna1(opdna1):
     """
     AArch64 scalar instruction with 1 data operand and 1 address operand.
     Handles standard scalar loads/stores (ldr, str, ldrb, strh, etc.)
     """
 
-    def __init__(self, action: opdna1_action):
+    def __init__(self, action: opdna1_action, 
+                 asmwrap : Callable[[str],str]):
         self.action = action
+        self.asmwrap=asmwrap
 
     @property
     def inst_base(self):
@@ -149,4 +153,4 @@ class aarch64_opdna1(opdna1):
         inst = self.get_inst_mnemonic(dt, is_freg)
         addressing = self.get_addressing(areg, modifiers, **kwargs)
 
-        return f"{inst} {dreg}, {addressing}"
+        return self.asmwrap(f"{inst} {dreg}, {addressing}")

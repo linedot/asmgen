@@ -10,10 +10,12 @@ Base AArch64 store instructions
 from ..operations import opdna1_action as action
 from .aarch64_opdna1_base import aarch64_opdna1
 
+from typing import Callable
+
 class aarch64_store(aarch64_opdna1):
     """
     RISC-V freg and greg stores
     """
 
-    def __init__(self):
-        super().__init__(action=action.STORE)
+    def __init__(self, asmwrap : Callable[[str],str]):
+        super().__init__(action=action.STORE, asmwrap=asmwrap)

@@ -77,8 +77,8 @@ class riscv64(asmgen):
             }
         self.default_callconv = "rvg"
 
-        self.load = riscv64_load
-        self.store = riscv64_store
+        self.load = riscv64_load(asmwrap=self.asmwrap)
+        self.store = riscv64_store(asmwrap=self.asmwrap)
 
     def create_callconv(self, name : str = "default"):
 

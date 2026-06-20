@@ -7,6 +7,10 @@ from asmgen.asmblocks.types.neon_types import neon_vreg
 from asmgen.asmblocks.operations import opdna1_modifier as mod
 from asmgen.registers import asm_data_type as adt
 
+def asmwrap(s: str) -> str:
+    lines = s.split("\n")
+    return "".join(f"{line}\n" for line in lines)
+
 class test_aarch64_opdna1(unittest.TestCase):
 
     def setUp(self):
@@ -23,8 +27,8 @@ class test_aarch64_opdna1(unittest.TestCase):
         # Vector register (for testing failures)
         self.v0 = neon_vreg(0)
 
-        self.load = aarch64_load()
-        self.store = aarch64_store()
+        self.load = aarch64_load(asmwrap=asmwrap)
+        self.store = aarch64_store(asmwrap=asmwrap)
 
     # --- 1. Basic Load/Store and Size Mnemonics ---
 
@@ -33,42 +37,42 @@ class test_aarch64_opdna1(unittest.TestCase):
         # FP64 -> ldr
         self.assertEqual(
             self.load(dregs=[self.f1_64], areg=self.x0, dt=adt.FP64, modifiers={}),
-            "ldr d1, [x0]"
+            "ldr d1, [x0]\n"
         )
         # FP32 -> ldr
         self.assertEqual(
             self.load(dregs=[self.f0_32], areg=self.x0, dt=adt.FP32, modifiers={}),
-            "ldr s0, [x0]"
+            "ldr s0, [x0]\n"
         )
         # UINT8 (1 byte) -> ldrb
         self.assertEqual(
             self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT8, modifiers={}),
-            "ldrb w1, [x0]"
+            "ldrb w1, [x0]\n"
         )
         # UINT16 (2 bytes) -> ldrh
         self.assertEqual(
             self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT16, modifiers={}),
-            "ldrh w1, [x0]"
+            "ldrh w1, [x0]\n"
         )
         # UINT64 (8 bytes) -> ldr
         self.assertEqual(
             self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, modifiers={}),
-            "ldr x1, [x0]"
+            "ldr x1, [x0]\n"
         )
 
     def test_basic_stores(self):
         """ Test scalar zero-offset stores across data types and sizes """
         self.assertEqual(
             self.store(dregs=[self.f1_64], areg=self.x0, dt=adt.FP64, modifiers={}),
-            "str d1, [x0]"
+            "str d1, [x0]\n"
         )
         self.assertEqual(
             self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT8, modifiers={}),
-            "strb w1, [x0]"
+            "strb w1, [x0]\n"
         )
         self.assertEqual(
             self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT16, modifiers={}),
-            "strh w1, [x0]"
+            "strh w1, [x0]\n"
         )
 
     # --- 2. Addressing Modes & Modifiers ---
@@ -78,13 +82,13 @@ class test_aarch64_opdna1(unittest.TestCase):
         self.assertEqual(
             self.load(dregs=[self.f0_32], areg=self.x0, dt=adt.FP32, 
                       modifiers={mod.IOFFSET}, ioffset=16),
-            "ldr s0, [x0, #16]"
+            "ldr s0, [x0, #16]\n"
         )
         # Test zero offset optimization
         self.assertEqual(
             self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, 
                        modifiers={mod.IOFFSET}, ioffset=0),
-            "str x1, [x0]"
+            "str x1, [x0]\n"
         )
 
     def test_register_offset_goffset(self):
@@ -92,7 +96,7 @@ class test_aarch64_opdna1(unittest.TestCase):
         self.assertEqual(
             self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64,
                       modifiers={mod.GOFFSET}, offreg=self.x2),
-            "ldr x1, [x0, x2]"
+            "ldr x1, [x0, x2]\n"
         )
 
     def test_post_increment(self):
@@ -101,13 +105,13 @@ class test_aarch64_opdna1(unittest.TestCase):
         self.assertEqual(
             self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, 
                       modifiers={mod.POSTINC}, iinc=8),
-            "ldr x1, [x0], #8"
+            "ldr x1, [x0], #8\n"
         )
         # Register post-inc
         self.assertEqual(
             self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, 
                        modifiers={mod.POSTINC}, increg=self.x2),
-            "str x1, [x0], x2"
+            "str x1, [x0], x2\n"
         )
 
     # --- 3. Error Handling and Input Validation ---

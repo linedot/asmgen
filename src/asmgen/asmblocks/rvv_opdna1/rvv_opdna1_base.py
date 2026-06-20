@@ -15,6 +15,8 @@ from ..riscv64_opdna1.riscv64_opdna1_base import riscv64_opdna1
 from ..types.rvv_types import rvv_vreg
 from ..types.riscv64_types import riscv64_greg,riscv64_freg
 
+from typing import Callable
+
 class rvv_opdna1(opdna1):
     """
     RVV instruction with 1 data operand and 1 address operand
@@ -23,11 +25,13 @@ class rvv_opdna1(opdna1):
     """
 
     def __init__(self, action : opdna1_action,
+                 asmwrap : Callable[[str],str],
                  lmul_getter :Callable[[],int]):
         self.action = action
+        self.asmwrap = asmwrap
         self.get_lmul = lmul_getter
 
-        self.scalar_opdna1 = riscv64_opdna1(action=action)
+        self.scalar_opdna1 = riscv64_opdna1(action=action, asmwrap=asmwrap)
 
     @property
     def inst_base(self):
@@ -175,6 +179,6 @@ class rvv_opdna1(opdna1):
 
 
         dreg_str = str(dregs[0])
-        return f"{inst} {dreg_str}, {addressing}"
+        return self.asmwrap(f"{inst} {dreg_str}, {addressing}")
         
         raise NotImplementedError(self.NIE_MESSAGE)

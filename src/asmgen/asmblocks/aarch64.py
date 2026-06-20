@@ -19,6 +19,7 @@ from ..registers import (
 from .types.aarch64_types import aarch64_greg,aarch64_freg
 from ..callconv.callconv import callconv
 
+from .aarch64_opdna1 import aarch64_load, aarch64_store
 
 class aarch64(asmgen):
     """
@@ -63,6 +64,8 @@ class aarch64(asmgen):
                                     'freg' : list(range(8,16))},
                 spreg=31)
             }
+        self.load = aarch64_load(asmwrap=self.asmwrap)
+        self.store = aarch64_store(asmwrap=self.asmwrap)
         self.default_callconv = "aapcs64"
 
     def create_callconv(self, name : str = "default"):

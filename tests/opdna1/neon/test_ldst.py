@@ -23,6 +23,7 @@ class test_neon_opdna1(unittest.TestCase):
 
         # Instantiating the operations
         self.gen = neon()
+        self.gen.set_output_inline(False)
 
     # --- 1. Scalar Routing ---
 
@@ -30,7 +31,7 @@ class test_neon_opdna1(unittest.TestCase):
         """ Test that passing a scalar register routes correctly to the parent class """
         self.assertEqual(
             self.gen.load(dregs=[self.f0], areg=self.x0, dt=adt.FP32, modifiers={}),
-            "ldr s0, [x0]"
+            "ldr s0, [x0]\n"
         )
 
     # --- 2. Q-Register LDR/STR (VOFFSET / IOFFSET) ---
@@ -40,7 +41,7 @@ class test_neon_opdna1(unittest.TestCase):
         self.assertEqual(
             self.gen.load(dregs=[self.v0], areg=self.x0, dt=adt.FP32, 
                       modifiers={mod.IOFFSET}, ioffset=16),
-            "ldr q0, [x0, #16]"
+            "ldr q0, [x0, #16]\n"
         )
 
     def test_q_register_voffset(self):
@@ -48,7 +49,7 @@ class test_neon_opdna1(unittest.TestCase):
         self.assertEqual(
             self.gen.store(dregs=[self.v0], areg=self.x0, dt=adt.FP32, 
                        modifiers={mod.VOFFSET}, voffset=2),
-            "str q0, [x0, #32]"
+            "str q0, [x0, #32]\n"
         )
 
     # --- 3. NEON Structural Loads (LD1, LD2, etc.) ---
@@ -57,7 +58,7 @@ class test_neon_opdna1(unittest.TestCase):
         """ Test standard single-vector load (ld1) """
         self.assertEqual(
             self.gen.load(dregs=[self.v0], areg=self.x0, dt=adt.FP32, modifiers={}),
-            "ld1 {v0.4s}, [x0]"
+            "ld1 {v0.4s}, [x0]\n"
         )
 
     def test_struct_ld2(self):
@@ -65,7 +66,7 @@ class test_neon_opdna1(unittest.TestCase):
         self.assertEqual(
             self.gen.load(dregs=[self.v0, self.v1], areg=self.x0, dt=adt.FP64, 
                       modifiers={mod.STRUCT}, nstructs=2),
-            "ld2 {v0.2d, v1.2d}, [x0]"
+            "ld2 {v0.2d, v1.2d}, [x0]\n"
         )
 
     # --- 4. Lane and Broadcast Loads ---
@@ -75,7 +76,7 @@ class test_neon_opdna1(unittest.TestCase):
         self.assertEqual(
             self.gen.load(dregs=[self.v0], areg=self.x0, dt=adt.FP32, 
                       modifiers={mod.ILANE}, lane=1),
-            "ld1 {v0.s}[1], [x0]"
+            "ld1 {v0.s}[1], [x0]\n"
         )
 
     def test_broadcast_load(self):
@@ -83,7 +84,7 @@ class test_neon_opdna1(unittest.TestCase):
         self.assertEqual(
             self.gen.load(dregs=[self.v0], areg=self.x0, dt=adt.FP16, 
                       modifiers={mod.BCAST}),
-            "ld1r {v0.8h}, [x0]"
+            "ld1r {v0.8h}, [x0]\n"
         )
 
     # --- 5. Addressing Mods ---
@@ -93,7 +94,7 @@ class test_neon_opdna1(unittest.TestCase):
         self.assertEqual(
             self.gen.load(dregs=[self.v0, self.v1], areg=self.x0, dt=adt.FP32, 
                       modifiers={mod.STRUCT, mod.POSTINC}, nstructs=2, iinc=32),
-            "ld2 {v0.4s, v1.4s}, [x0], #32"
+            "ld2 {v0.4s, v1.4s}, [x0], #32\n"
         )
 
     # --- 6. Error Handling & Validation ---

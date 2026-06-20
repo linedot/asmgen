@@ -10,10 +10,12 @@ NEON store instructions
 from ..operations import opdna1_action as action
 from .neon_opdna1_base import neon_opdna1
 
+from typing import Callable
+
 class neon_store(neon_opdna1):
     """
     NEON freg and greg stores
     """
 
-    def __init__(self):
-        super().__init__(action=action.STORE)
+    def __init__(self, asmwrap : Callable[[str],str]):
+        super().__init__(action=action.STORE, asmwrap=asmwrap)

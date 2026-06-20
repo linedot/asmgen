@@ -4,21 +4,23 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 from ..operations import opdna1,opdna1_modifier as mod, opdna1_action
-
 from ...registers import asm_data_type as adt, adt_size
-
 from ..types.riscv64_types import riscv64_greg,riscv64_freg
+
+from typing import Callable
 
 
 class riscv64_opdna1(opdna1):
-
-    def __init__(self, action : opdna1_action):
-        self.action = action
     """
     RISC-V 64 bit instructions with n data operand and 1 address operand
 
     Absraction for loads/stores (maybe also prefetches)
     """
+
+    def __init__(self, action : opdna1_action,
+                 asmwrap : Callable[[str],str]):
+        self.action = action
+        self.asmwrap = asmwrap
 
     @property
     def inst_base(self):
@@ -104,6 +106,6 @@ class riscv64_opdna1(opdna1):
         inst += self.get_dt_suffix(dt)
         addressing = self.get_addressing(areg, modifiers, **kwargs)
 
-        return f"{inst} {dreg}, {addressing}"
+        return self.asmwrap(f"{inst} {dreg}, {addressing}")
 
 
