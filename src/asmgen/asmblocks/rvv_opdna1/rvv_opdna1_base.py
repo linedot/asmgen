@@ -6,7 +6,7 @@
 """
 RVV 1.0 and 0.7.1 opdna1 base
 """
-from ...registers import asm_data_type as adt,adt_size
+from ...registers import asm_data_type as adt,adt_size,data_reg
 
 from ..operations import opdna1_modifier as mod,opdna1_action,opdna1
 
