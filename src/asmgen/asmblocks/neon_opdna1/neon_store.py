@@ -14,7 +14,7 @@ from typing import Callable
 
 class neon_store(neon_opdna1):
     """
-    NEON freg and greg stores
+    NEON register stores
     """
 
     def __init__(self, asmwrap : Callable[[str],str]):
