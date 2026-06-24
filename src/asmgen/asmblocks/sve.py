@@ -236,16 +236,18 @@ class sve(aarch64):
         return self.store_vector_voff(areg=areg, voffset=0, vreg=vreg, dt=dt)
 
     # SVE-specific
-    def preg(self, idx : int) -> sve_preg:
+    def preg(self, idx : int, is_pn : bool = False) -> sve_preg:
         """
         returns an SVE predicate register with the specified index
 
         :param idx: Register index
         :type idx: int
+        :param is_pn: Is this a pn reg? (for SME/SME2)
+        :type is_pn: bool
         :return: Predicate register
         :rtype: class:`asmgen.asmblocks.types.sve_types.sve_preg`
         """
-        return sve_preg(idx)
+        return sve_preg(idx, is_pn)
 
     def ptrue(self, reg : sve_preg, dt : adt) -> str:
         """
