@@ -61,10 +61,9 @@ class rvv(riscv64):
         return ["LMUL"]
 
     def get_param_value(self, name : str) -> int|str:
-        if "LMUL" != name:
-            raise ValueError(f"Invalid isa parameter: {name}")
-
-        return self.lmul
+        if "LMUL" == name:
+            return self.lmul
+        return super().get_param_value(name)
 
     def set_parameter(self, name : str, value : int|str):
         if "LMUL" == name:
