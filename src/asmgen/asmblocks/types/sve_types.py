@@ -23,8 +23,9 @@ class sve_preg:
     """
     SVE predicate register
     """
-    def __init__(self, reg_idx : int):
-        self.reg_str = f"p{reg_idx}"
+    def __init__(self, reg_idx : int, is_pn : bool = False):
+        self.idx = reg_idx
+        self.is_pn = is_pn
 
     def __str__(self) -> str:
-        return self.reg_str
+        return f"pn{self.idx}" if self.is_pn else f"p{self.idx}"
