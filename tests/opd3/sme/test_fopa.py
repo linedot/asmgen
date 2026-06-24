@@ -14,7 +14,7 @@ from asmgen.asmblocks.operations import opd3_modifier as mod
 
 class test_sme_opd3(unittest.TestCase):
     """
-    Tests SME opd3 operations broken down by category.
+    Tests SME opd3 operations
     """
 
     def setUp(self):

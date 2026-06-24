@@ -4,5 +4,18 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 """
-opdna1 operation tests for the AArch64 SVE generator base
+SME store instructions
 """
+
+from ..operations import opdna1_action as action
+from .sme_opdna1_base import sme_opdna1
+
+from typing import Callable
+
+class sme_store(sme_opdna1):
+    """
+    SME register stores
+    """
+
+    def __init__(self, asmwrap : Callable[[str],str]):
+        super().__init__(action=action.STORE, asmwrap=asmwrap)

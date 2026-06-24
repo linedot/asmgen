@@ -173,6 +173,9 @@ class opdna1_modifier(Enum):
                      # (i.e [Re,Im], [x,y,z] or [r,g,b,a])
     BCAST = auto()   # Broadcast one value into all lanes
     MASK  = auto()   # Masked operation
+    ROW = auto()     # Row of a treg
+    COL = auto()     # Column of a treg
+    NT  = auto()     # Non-temporal ld/st
 
 class opdna1_action(Enum):
     """

@@ -4,5 +4,5 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 """
-opdna1 operation tests for the AArch64 SVE generator base
+opdna1 operation tests for the AArch64 SME generator base
 """

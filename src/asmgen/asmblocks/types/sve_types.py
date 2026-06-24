@@ -14,10 +14,9 @@ class sve_vreg(vreg_base):
     SVE vector register
     """
     def __init__(self, reg_idx : int):
-        self.reg_str = f"z{reg_idx}"
-
+        self.idx = reg_idx
     def __str__(self) -> str:
-        return self.reg_str
+        return f"z{self.idx}"
 
 class sve_preg:
     """

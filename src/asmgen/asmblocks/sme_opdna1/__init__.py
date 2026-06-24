@@ -4,5 +4,7 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 """
-opdna1 operation tests for the AArch64 SVE generator base
+Meta-module for SME opdna1 operations
 """
+from .sme_load import *
+from .sme_store import *
