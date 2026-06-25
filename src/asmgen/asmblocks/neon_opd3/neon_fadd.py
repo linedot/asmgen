@@ -14,7 +14,7 @@ from ...registers import (
     adt_is_float,
 )
 from ..operations import opd3_modifier as mod
-
+from ..types.neon_types import neon_vreg
 from .neon_opd3_base import neon_opd3_base
 
 class neon_fadd(neon_opd3_base):
@@ -30,6 +30,10 @@ class neon_fadd(neon_opd3_base):
             raise ValueError("NEON add has no NP-form")
         if mod.MASK in modifiers:
             raise ValueError("NEON add has no masked form")
+
+    def check_valid_registers(self, dregs : list[data_reg]) -> bool:
+        if not all(isinstance(d, neon_vreg) for d in dregs):
+            raise ValueError("All dregs of a NEON opd3 must be neon_vreg")
 
     def check_triple(self, a_dt : adt, b_dt : adt, c_dt : adt):
         super().check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)

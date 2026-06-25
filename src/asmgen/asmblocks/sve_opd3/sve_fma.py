@@ -9,6 +9,7 @@ SVE fma instruction
 from ...registers import data_reg,asm_data_type as adt
 from ..neon_opd3.neon_fma import neon_fma
 from ..operations import opd3_modifier as mod
+from ..types.sve_types import sve_vreg
 
 class sve_fma(neon_fma):
     """
@@ -16,6 +17,11 @@ class sve_fma(neon_fma):
     """
     # modfier set is only read, therefore a mutable default is ok
     # pylint: disable-next=dangerous-default-value,too-many-locals,too-many-branches
+    
+    def check_valid_registers(self, dregs : list[data_reg]) -> bool:
+        if not all(isinstance(d, sve_vreg) for d in dregs):
+            raise ValueError("All dregs of a SVE opd3 must be sve_vreg")
+
     def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                  a_dt : adt, b_dt : adt, c_dt : adt,
                  modifiers : set[mod] = set(),

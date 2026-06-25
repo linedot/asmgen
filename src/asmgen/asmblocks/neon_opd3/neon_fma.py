@@ -13,6 +13,9 @@ from ...registers import (
     adt_triple,
 )
 from .neon_opd3_base import neon_opd3_base
+from ..types.neon_types import neon_vreg
+
+from ..operations import opd3_modifier as mod
 
 class neon_fma(neon_opd3_base):
     """
@@ -24,6 +27,10 @@ class neon_fma(neon_opd3_base):
         super().check_modifiers(modifiers=modifiers)
         if mod.MASK in modifiers:
             raise ValueError("NEON fma has no masked form")
+
+    def check_valid_registers(self, dregs : list[data_reg]) -> bool:
+        if not all(isinstance(d, neon_vreg) for d in dregs):
+            raise ValueError("All dregs of a NEON opd3 must be neon_vreg")
 
     def supported_triples(self) -> list[adt_triple]:
         return [

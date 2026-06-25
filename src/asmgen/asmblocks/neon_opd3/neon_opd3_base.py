@@ -45,6 +45,11 @@ class neon_opd3_base(opd3):
             raise ValueError("NEON has no regidx form")
         # Don't check for MASK here, since SVE inherits from this
 
+    
+    def check_valid_registers(self, dregs : list[data_reg]) -> bool:
+        raise NotImplementedError("Inheriting class must implement this")
+
+
     def check_triple_and_modifiers(self,
                                    a_dt : adt, b_dt : adt, c_dt : adt,
                                    modifiers : set[mod]):
@@ -148,6 +153,8 @@ class neon_opd3_base(opd3):
         self.check_triple_and_modifiers(
                 a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,
                 modifiers=modifiers)
+
+        self.check_valid_registers([adreg,bdreg,cdreg])
 
         part = 0
         if adt_size(a_dt) < adt_size(c_dt):
