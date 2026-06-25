@@ -54,6 +54,12 @@ class x86_opdna1(opdna1):
             raise ValueError("Base X86 has no broadcast ld/st")
         if mod.MASK in modifiers:
             raise ValueError("Base X86 has no masked ld/st")
+        if mod.ROW in modifiers:
+            raise ValueError("Base X86 has no row selection ld/st")
+        if mod.COL in modifiers:
+            raise ValueError("Base X86 has no column selection ld/st")
+        if mod.NT in modifiers:
+            raise NotImplementedError("Non-temporals for Base X86 not yet implemented")
 
     def check_required_parameters(self, dregs: list, modifiers: set[mod], **kwargs):
         if mod.IOFFSET in modifiers and "ioffset" not in kwargs:

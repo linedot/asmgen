@@ -44,21 +44,27 @@ class neon_opdna1(opdna1):
 
         if mod.TINDEX in modifiers:
             raise ValueError(
-                    "Base AArch64 has no ld/st with 2D tile offset indices")
+                    "NEON has no ld/st with 2D tile offset indices")
         if mod.VINDEX in modifiers:
             raise ValueError(
-                    "Base AArch64 has no ld/st with 1D vector offset indices")
+                    "NEON has no ld/st with 1D vector offset indices")
         if mod.GLANE in modifiers:
-            raise ValueError("Base AArch64 has no GP-reg lane ld/st")
+            raise ValueError("NEON has no GP-reg lane ld/st")
         if mod.TOFFSET in modifiers:
-            raise ValueError("Base AArch64 has no ld/st with 2D tile offsets")
+            raise ValueError("NEON has no ld/st with 2D tile offsets")
         if mod.ISTRIDE in modifiers:
             raise ValueError(
-                    "Base AArch64 has no ld/st with immediate strides")
+                    "NEON has no ld/st with immediate strides")
         if mod.GSTRIDE in modifiers:
-            raise ValueError("Base AArch64 has no ld/st with GP-reg strides")
+            raise ValueError("NEON has no ld/st with GP-reg strides")
         if mod.MASK in modifiers:
-            raise ValueError("Base AArch64 has no masked ld/st")
+            raise ValueError("NEON has no masked ld/st")
+        if mod.ROW in modifiers:
+            raise ValueError("NEON has no row selection ld/st")
+        if mod.COL in modifiers:
+            raise ValueError("NEON has no column selection ld/st")
+        if mod.NT in modifiers:
+            raise NotImplementedError("Non-temporals for NEON not yet implemented")
                 
         # Modifier/Kwarg Compatibility Checks
         if mod.VOFFSET in modifiers or mod.IOFFSET in modifiers:

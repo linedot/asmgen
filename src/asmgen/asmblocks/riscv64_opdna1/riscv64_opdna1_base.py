@@ -63,6 +63,14 @@ class riscv64_opdna1(opdna1):
             raise ValueError("RISC-V +D/F has no ld/st with GP-reg strides")
         if mod.STRUCT in modifiers:
             raise ValueError("RISC-V +D/F has no structured ld/st")
+        if mod.MASK in modifiers:
+            raise ValueError("RISC-V +D/F has no masked ld/st")
+        if mod.ROW in modifiers:
+            raise ValueError("RISC-V +D/F has no row selection ld/st")
+        if mod.COL in modifiers:
+            raise ValueError("RISC-V +D/F has no column selection ld/st")
+        if mod.NT in modifiers:
+            raise NotImplementedError("Non-temporals for RISC-V +D/F not yet implemented")
         
     def get_addressing(self, areg: riscv64_greg, modifiers: set[mod], **kwargs) -> str:
         if not isinstance(areg, riscv64_greg):

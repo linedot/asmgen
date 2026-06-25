@@ -66,6 +66,14 @@ class rvv_opdna1(opdna1):
             raise ValueError("RVV has no ld/st with immediate offsets")
         if mod.ISTRIDE in modifiers:
             raise ValueError("RVV has no ld/st with immediate strides")
+        if mod.MASK in modifiers:
+            raise NotImplementedError("Masked ld/st for RVV not yet implemented")
+        if mod.ROW in modifiers:
+            raise ValueError("RVV has no row selection ld/st")
+        if mod.COL in modifiers:
+            raise ValueError("RVV has no column selection ld/st")
+        if mod.NT in modifiers:
+            raise NotImplementedError("Non-temporals for RVV not yet implemented")
 
         #TODO: invalid combinations
         if (mod.GSTRIDE in modifiers) and (mod.VINDEX in modifiers):

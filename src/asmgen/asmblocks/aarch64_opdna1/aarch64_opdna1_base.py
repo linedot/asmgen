@@ -64,6 +64,12 @@ class aarch64_opdna1(opdna1):
             raise ValueError("Base AArch64 has no broadcasting ld/st")
         if mod.MASK in modifiers:
             raise ValueError("Base AArch64 has no masked ld/st")
+        if mod.ROW in modifiers:
+            raise ValueError("Base AArch64 has no row selection ld/st")
+        if mod.COL in modifiers:
+            raise ValueError("Base AArch64 has no column selection ld/st")
+        if mod.NT in modifiers:
+            raise NotImplementedError("Non-temporals for Base AArch64 not yet implemented")
 
     def check_required_parameters(self, dregs : list[data_reg],  modifiers: set[mod], **kwargs):
 

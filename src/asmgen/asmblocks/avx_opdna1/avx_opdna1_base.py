@@ -51,6 +51,14 @@ class avx_opdna1(opdna1):
             raise ValueError("AVX has no ld/st with GP-reg strides")
         if mod.STRUCT in modifiers:
             raise ValueError("AVX has no structured ld/st")
+        if mod.ROW in modifiers:
+            raise ValueError("AVX has no row selection ld/st")
+        if mod.COL in modifiers:
+            raise ValueError("AVX has no column selection ld/st")
+        if mod.NT in modifiers:
+            raise NotImplementedError("Non-temporals for AVX not yet implemented")
+        if mod.MASK in modifiers:
+            raise NotImplementedError("Masked ld/st for AVX not yet implemented")
 
         if mod.BCAST in modifiers and self.action != opdna1_action.LOAD:
             raise ValueError("BCAST modifier can only be used with loads")

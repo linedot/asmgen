@@ -47,6 +47,14 @@ class sve_opdna1(opdna1):
             raise ValueError("SVE has no ld/st with immediate strides")
         if mod.GSTRIDE in modifiers:
             raise ValueError("SVE has no ld/st with GP-reg strides")
+        if mod.MASK in modifiers:
+            raise NotImplementedError("Masked ld/st for SVE not yet implemented")
+        if mod.ROW in modifiers:
+            raise ValueError("SVE has no row selection ld/st")
+        if mod.COL in modifiers:
+            raise ValueError("SVE has no column selection ld/st")
+        if mod.NT in modifiers:
+            raise NotImplementedError("Non-temporals for SVE not yet implemented")
 
         if mod.BCAST in modifiers and self.action != opdna1_action.LOAD:
             raise ValueError("BCAST modifier is only valid for LOAD operations")

@@ -55,6 +55,8 @@ class sme_opdna1(opdna1):
             raise ValueError("SME native instructions do not support GP-reg strides")
         if mod.STRUCT in modifiers:
             raise ValueError("SME uses multiple discrete registers for strided loads, not STRUCT")
+        if mod.MASK in modifiers:
+            raise NotImplementedError("Masked ld/st for SME not yet implemented")
         if mod.BCAST in modifiers:
             raise ValueError("SME native instructions do not support BCAST")
         if mod.VINDEX in modifiers:
