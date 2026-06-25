@@ -43,6 +43,7 @@ class neon_opd3_base(opd3):
             raise ValueError("NEON has no vf form")
         if mod.REGIDX in modifiers:
             raise ValueError("NEON has no regidx form")
+        # Don't check for MASK here, since SVE inherits from this
 
     def check_triple_and_modifiers(self,
                                    a_dt : adt, b_dt : adt, c_dt : adt,

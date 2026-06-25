@@ -20,6 +20,10 @@ class neon_fma(neon_opd3_base):
     """
 
     inst_base = "ml"
+    def check_modifiers(self, modifiers : set[mod]):
+        super().check_modifiers(modifiers=modifiers)
+        if mod.MASK in modifiers:
+            raise ValueError("NEON fma has no masked form")
 
     def supported_triples(self) -> list[adt_triple]:
         return [

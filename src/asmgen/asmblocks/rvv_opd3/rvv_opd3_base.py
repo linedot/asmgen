@@ -56,6 +56,8 @@ class rvv_opd3_base(opd3):
             raise ValueError("RVV has no idx form")
         if mod.PART in modifiers:
             raise ValueError("RVV has no partial instructions (using vgroups instead)")
+        if mod.MASK in modifiers:
+            raise NotImplementedError("RVV masked opd3 not implemented yet")
 
     def check_triple_and_modifiers(self,
                                    a_dt : adt, b_dt : adt, c_dt : adt,

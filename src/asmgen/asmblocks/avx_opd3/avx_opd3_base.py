@@ -66,6 +66,8 @@ class avx_opd3_base(opd3):
             raise ValueError("AVX has no idx form")
         if mod.PART in modifiers:
             raise ValueError("AVX has no partial instructions")
+        if mod.MASK in modifiers:
+            raise NotImplementedError("AVX masked opd3 not yet implemented")
 
     def supported_triples(self) -> list[adt_triple]:
         supported_list = [

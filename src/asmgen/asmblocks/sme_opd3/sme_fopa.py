@@ -37,9 +37,17 @@ class sme_fopa(opd3):
         self.dt_suffixes = dt_suffixes
 
     def check_modifiers(self, modifiers : set[mod]):
-        if modifiers.intersection(
-                set([mod.IDX, mod.PART, mod.VF])):
-            raise ValueError("unsupported modifiers for SME")
+        
+        if mod.IDX in modifiers:
+            raise ValueError("RVV has no idx form")
+        if mod.REGIDX in modifiers:
+            raise ValueError("RVV has no regidx form")
+        if mod.VF in modifiers:
+            raise ValueError("RVV has no vf form")
+        if mod.PART in modifiers:
+            raise ValueError("SME has no partial instructions (widening instructions 'dot' neighbours)")
+        if mod.MASK in modifiers:
+            raise NotImplementedError("RVV masked opd3 not implemented yet")
 
     @property
     def widening_method(self) -> widening_method:

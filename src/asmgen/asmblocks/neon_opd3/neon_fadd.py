@@ -28,6 +28,8 @@ class neon_fadd(neon_opd3_base):
         super().check_modifiers(modifiers=modifiers)
         if mod.NP in modifiers:
             raise ValueError("NEON add has no NP-form")
+        if mod.MASK in modifiers:
+            raise ValueError("NEON add has no masked form")
 
     def check_triple(self, a_dt : adt, b_dt : adt, c_dt : adt):
         super().check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
