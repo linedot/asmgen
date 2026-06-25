@@ -17,7 +17,7 @@ from ...registers import (
 )
 from ..operations import opd3,widening_method,opd3_modifier as mod
 
-from ..types.avx_types import reg_prefixer
+from ..types.avx_types import reg_prefixer, avx_vreg
 
 from ...util import NIE_MESSAGE
 
@@ -89,6 +89,9 @@ class avx_opd3_base(opd3):
         self.check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
         if (a_dt != b_dt) or (a_dt != c_dt):
             raise ValueError("A,B and C must have same type")
+
+        if any(not isinstance(r, avx_vreg) for r in (adreg,bdreg,cdreg)):
+            raise ValueError("All dregs of an AVX opd3 must be avx_vreg")
 
         inst = self.get_base_inst(modifiers=modifiers)
 

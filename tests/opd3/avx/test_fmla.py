@@ -14,7 +14,7 @@ class test_avx_fma(test_avx_opd3):
     """
     Tests AVX opd3 operations
     """
-    def test_fma_fp64(self):
+    def test_fp64(self):
         """
         Tests that the AVX generators generate correct FP64 FMA instructions
         """
@@ -43,7 +43,7 @@ class test_avx_fma(test_avx_opd3):
                 cdreg=self.gen512.vreg(0),
                 a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64))
 
-    def test_fma_fp32(self):
+    def test_fp32(self):
         """
         Tests that the AVX generators generate correct FP32 FMA instructions
         """
@@ -72,7 +72,7 @@ class test_avx_fma(test_avx_opd3):
                 cdreg=self.gen512.vreg(0),
                 a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32))
 
-    def test_fma_fp16(self):
+    def test_fp16(self):
         """
         Tests that the AVX generators generate correct FP16 FMA instructions
         """
@@ -83,3 +83,17 @@ class test_avx_fma(test_avx_opd3):
                 bdreg=self.gen512.vreg(2),
                 cdreg=self.gen512.vreg(0),
                 a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16))
+
+    def test_wrong_registers(self):
+        """
+        Tests that the correct error is raised if wrong registers are passed
+        to the operation
+        """
+        with self.assertRaisesRegex(
+                ValueError,
+                "All dregs of an AVX opd3 must be avx_vreg"):
+            self.gen128.fma(
+                    adreg=self.gen128.vreg(1),
+                    bdreg=self.gen128.vreg(2),
+                    cdreg=self.gen128.freg(0,dt=adt.FP64),
+                    a_dt=adt.FP64,b_dt=adt.FP64,c_dt=adt.FP64)
