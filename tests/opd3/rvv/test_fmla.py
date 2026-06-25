@@ -84,3 +84,19 @@ class test_rvv_opd3(unittest.TestCase):
                 bdreg=self.gen.vreg(2),
                 cdreg=self.gen.freg(0,dt=adt.FP64),
                 a_dt=adt.FP64,b_dt=adt.FP64,c_dt=adt.FP64)
+
+        with self.assertRaisesRegex(
+                ValueError, err_msg):
+            self.gen.fma(
+                adreg=self.gen.greg(1),
+                bdreg=self.gen.vreg(2),
+                cdreg=self.gen.freg(0,dt=adt.FP64),
+                a_dt=adt.FP64,b_dt=adt.FP64,c_dt=adt.FP64)
+
+        with self.assertRaisesRegex(
+                ValueError, err_msg):
+            self.gen.fma(
+                adreg=self.gen.freg(1,dt=adt.FP64),
+                bdreg=self.gen.vreg(2),
+                cdreg=self.gen.vreg(0),
+                a_dt=adt.FP64,b_dt=adt.FP64,c_dt=adt.FP64)
