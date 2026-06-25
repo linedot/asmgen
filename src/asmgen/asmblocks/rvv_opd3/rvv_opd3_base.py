@@ -18,8 +18,10 @@ from ...registers import (
     data_reg
 )
 from ..operations import opd3,widening_method,opd3_modifier as mod
-
 from ...util import NIE_MESSAGE
+
+from ..types.riscv64_types import riscv64_freg
+from ..types.rvv_types import rvv_vreg
 
 class rvv_opd3_base(opd3):
     """
@@ -184,6 +186,22 @@ class rvv_opd3_base(opd3):
         self.check_triple_and_modifiers(
                 a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,
                 modifiers=modifiers)
+
+
+        invalid_regs = False
+        # check registers
+        if mod.VF not in modifiers:
+            if not all(isinstance(r, rvv_vreg) for r in (adreg,bdreg,cdreg)):
+                invalid_regs = True
+        else:
+            if not all(isinstance(r, rvv_vreg) for r in (adreg,cdreg)) or \
+                    not isinstance(bdreg, riscv64_freg):
+                invalid_regs = True
+
+        if invalid_regs:
+            raise ValueError(
+                    ("Either all dregs of an RVV opd3 must be rvv_vreg"
+                     " or a and c must be rvv_vreg and b must be riscv64_freg"))
 
 
         pref = self.inst_prefix(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
