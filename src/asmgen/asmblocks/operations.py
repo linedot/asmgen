@@ -16,6 +16,29 @@ from ..registers import (
     adt_triple,
 )
 
+class operation(ABC):
+
+    NIE_MESSAGE="Inheriting class must implement this method"
+
+    @abstractmethod
+    def supported_dts(self) -> list[dict[str,adt]]:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    @abstractmethod
+    def check_modifiers(self, modifiers : set[Enum]):
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+
+    @abstractmethod
+    def execute(self, *,
+                dregs : list[data_reg],
+                gregs : list[greg_type],
+                dts : dict[str,adt],
+                modifiers : set[Enum],
+                **kwargs) -> str:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+
 class widening_method(Enum):
     """
     Possible methods ISAs can have for widening instructions
@@ -36,6 +59,7 @@ class opd3_modifier(Enum):
     PART = auto()
     VF = auto()
     MASK = auto()
+
 
 class opd3(ABC):
     """
