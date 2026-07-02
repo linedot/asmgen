@@ -16,28 +16,71 @@ from ..registers import (
     adt_triple,
 )
 
+class operand_restriction(Enum):
+    idxmin = auto()
+    idxmax = auto()
+
+def make_ord_prefix(i : int) -> 'str':
+    if i > 25 or i < 0:
+        raise ValueError("index outside of allowed range [0,25]")
+
+    return chr(ord('a')+i)
+
 class operation(ABC):
+    """
+    Abstraction over operations/instructions
+    """
 
     NIE_MESSAGE="Inheriting class must implement this method"
 
     @abstractmethod
     def supported_dts(self) -> list[dict[str,adt]]:
+        """
+        Returns a list of valid datatypes for each argument
+        """
         raise NotImplementedError(self.NIE_MESSAGE)
 
     @abstractmethod
     def check_modifiers(self, modifiers : set[Enum]):
+        """
+        Confirm validity of the supplied modifier combination
+        """
         raise NotImplementedError(self.NIE_MESSAGE)
 
+    def check_dts(self, dts : dict[str,adt]):
+        if dts not in self.supported_dts():
+            raise ValueError("Invalid data type combination")
 
-    @abstractmethod
     def execute(self, *,
                 dregs : list[data_reg],
                 gregs : list[greg_type],
                 dts : dict[str,adt],
                 modifiers : set[Enum],
                 **kwargs) -> str:
-        raise NotImplementedError(self.NIE_MESSAGE)
 
+        self.check_modifiers(modifiers)
+        self.check_dts(dts)
+
+        # generate dreg args
+        for i,reg in enumerate(dregs):
+            pfx = make_ord_prefix(i)
+            dreg_name = f"{pfx}dreg"
+            dt_name = f"{pfx}_dt"
+            kwargs[dreg_name] = reg
+            kwargs[dt_name] = dts[dreg_name]
+
+        kwargs['modifiers'] = modifiers
+
+        return self.implementation(**kwargs)
+
+
+    @abstractmethod
+    def implementation(self, **kwargs) -> str:
+        """
+        Actual implementation of the operation to be implemented
+        by the inheriting class
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
 
 class widening_method(Enum):
     """
@@ -61,7 +104,7 @@ class opd3_modifier(Enum):
     MASK = auto()
 
 
-class opd3(ABC):
+class opd3(operation):
     """
     Assembly/IR instruction with 3 data operands
 
@@ -95,16 +138,6 @@ class opd3(ABC):
         raise NotImplementedError(self.NIE_MESSAGE)
 
     @abstractmethod
-    def supported_triples(self) -> list[adt_triple]:
-        """
-        Return the list of supported data type combinations
-        
-        :return : list of supported data type combinations
-        :rtype : class:`asmgen.registers.adt_triple`
-        """
-        raise NotImplementedError(self.NIE_MESSAGE)
-
-    @abstractmethod
     def check_modifiers(self, modifiers : set[opd3_modifier]):
         """
         Checks whether the operations supports the specified modifiers
@@ -116,10 +149,11 @@ class opd3(ABC):
         """
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    @abstractmethod
-    def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+    def __call__(self, *,
+                 adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                  a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[opd3_modifier], **kwargs) -> str:
+                 modifiers : set[opd3_modifier] = set(),
+                 **kwargs) -> str:
         """
         Return the ASM/IR instruction
         
@@ -138,25 +172,14 @@ class opd3(ABC):
         :return : ASM/IR instruction corresponding to the operation
         :rtype : str
         """
-        raise NotImplementedError(self.NIE_MESSAGE)
 
-    def check_triple(self, a_dt : adt, b_dt : adt, c_dt : adt):
-        """
-        Check if the operation supports the specified data type combination
-        
-        :param a_dt : Data type of the A component
-        :type a_dt : class:`asmgen.registers.asm_data_type`
-        :param b_dt : Data type of the B component
-        :type b_dt : class:`asmgen.registers.asm_data_type`
-        :param c_dt : Data type of the C component
-        :type c_dt : class:`asmgen.registers.asm_data_type`
-        :raises ValueError: if an unsupported datatype combination is passed
-        """
-        triple = adt_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
-        if triple not in self.supported_triples():
-            raise ValueError(f"Unsupported type combination a={a_dt},b={b_dt},c={c_dt}")
-
-
+        return self.execute(
+            dregs=[adreg,bdreg,cdreg],
+            gregs=[],
+            dts={'adreg':a_dt,'bdreg':b_dt,'cdreg':c_dt},
+            modifiers=modifiers,
+            **kwargs
+        )
 
 
 class dummy_opd3(opd3):
@@ -168,14 +191,16 @@ class dummy_opd3(opd3):
     def widening_method(self) -> widening_method:
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    def supported_triples(self) -> list[adt_triple]:
+    def supported_dts(self) -> list[dict[str,adt]]:
         raise NotImplementedError(self.NIE_MESSAGE)
 
     def check_modifiers(self, modifiers : set[opd3_modifier]):
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
-                 a_dt : adt, b_dt : adt, c_dt : adt, modifiers : set[opd3_modifier], **kwargs) -> str:
+    def implementation(self, *,
+                       adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+                       a_dt : adt, b_dt : adt, c_dt : adt,
+                       modifiers : set[opd3_modifier], **kwargs) -> str:
         raise NotImplementedError(self.NIE_MESSAGE)
 
 class opdna1_modifier(Enum):

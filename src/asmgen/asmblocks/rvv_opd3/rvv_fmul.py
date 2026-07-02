@@ -16,5 +16,11 @@ class rvv_fmul(rvv_opd3_base):
     RVV 1.0 and 0.7.1 implementation of fma
     """
 
+    def check_modifiers(self, modifiers : set[mod]):
+        super().check_modifiers(modifiers)
+
+        if mod.NP in modifiers:
+            raise ValueError("RVV fmul has no NP form")
+
     def get_base_inst(self, modifiers : set[mod]):
         return "mul"
