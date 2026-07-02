@@ -125,14 +125,28 @@ class test_sme_opd3(unittest.TestCase):
     # Exceptions and Error Handling
     # ---------------------------------------------------------
 
-    def test_fopa_invalid_modifiers(self):
-        """Tests that unsupported SME modifiers raise an error"""
-        invalid_mods = [mod.IDX, mod.PART, mod.VF]
-        for m in invalid_mods:
-            with self.assertRaisesRegex(ValueError, "unsupported modifiers for SME"):
-                self.gen.fopa(adreg=self.z0, bdreg=self.z1, cdreg=self.za0,
-                              a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
-                              modifiers={m})
+    def test_fopa_invalid_modifier_idx(self):
+        """Tests that the IDX modifier raises an error for SME fopa."""
+        with self.assertRaisesRegex(ValueError, r"SME has no idx form"):
+            self.gen.fopa(adreg=self.z0, bdreg=self.z1, cdreg=self.za0,
+                          a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
+                          modifiers={mod.IDX})
+
+    def test_fopa_invalid_modifier_part(self):
+        """Tests that the PART modifier raises an error for SME fopa."""
+        expected_error = (r"SME has no partial instructions"
+                           " \(widening instructions 'dot' neighbours\)")
+        with self.assertRaisesRegex(ValueError, expected_error):
+            self.gen.fopa(adreg=self.z0, bdreg=self.z1, cdreg=self.za0,
+                          a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
+                          modifiers={mod.PART})
+
+    def test_fopa_invalid_modifier_vf(self):
+        """Tests that the VF modifier raises an error for SME fopa."""
+        with self.assertRaisesRegex(ValueError, r"SME has no vf form"):
+            self.gen.fopa(adreg=self.z0, bdreg=self.z1, cdreg=self.za0,
+                          a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
+                          modifiers={mod.VF})
 
     def test_fopa_invalid_registers(self):
         """Tests that passing the wrong register types (e.g. vreg for ZA) raises errors"""
@@ -151,18 +165,18 @@ class test_sme_opd3(unittest.TestCase):
         
         # C is smaller than A/B
         with self.assertRaisesRegex(ValueError,
-                "Unsupported type combination a=asm_data_type.SINGLE,b=asm_data_type.SINGLE,c=asm_data_type.HALF"):
+                "Invalid data type combination"):
             self.gen.fopa(adreg=self.z0, bdreg=self.z1, cdreg=self.gen.treg(0, adt.FP16),
                           a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP16)
 
         # Mixing Float and Int
         with self.assertRaisesRegex(ValueError,
-                "Unsupported type combination a=asm_data_type.SINGLE,b=asm_data_type.SINGLE,c=asm_data_type.UINT64"):
+                "Invalid data type combination"):
             self.gen.fopa(adreg=self.z0, bdreg=self.z1, cdreg=self.gen.treg(0, adt.UINT64),
                           a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.UINT64)
 
         # C is not in valid_c_types (e.g. UINT8)
         with self.assertRaisesRegex(ValueError,
-                "Unsupported type combination a=asm_data_type.UINT8,b=asm_data_type.UINT8,c=asm_data_type.UINT8"):
+                "Invalid data type combination"):
             self.gen.fopa(adreg=self.z0, bdreg=self.z1, cdreg=self.gen.treg(0, adt.UINT8),
                           a_dt=adt.UINT8, b_dt=adt.UINT8, c_dt=adt.UINT8)

@@ -39,53 +39,53 @@ class sme_fopa(opd3):
     def check_modifiers(self, modifiers : set[mod]):
         
         if mod.IDX in modifiers:
-            raise ValueError("RVV has no idx form")
+            raise ValueError("SME has no idx form")
         if mod.REGIDX in modifiers:
-            raise ValueError("RVV has no regidx form")
+            raise ValueError("SME has no regidx form")
         if mod.VF in modifiers:
-            raise ValueError("RVV has no vf form")
+            raise ValueError("SME has no vf form")
         if mod.PART in modifiers:
             raise ValueError("SME has no partial instructions (widening instructions 'dot' neighbours)")
         if mod.MASK in modifiers:
-            raise NotImplementedError("RVV masked opd3 not implemented yet")
+            raise NotImplementedError("SME masked opd3 not implemented yet")
 
     @property
     def widening_method(self) -> widening_method:
         return widening_method.DOT_NEIGHBOURS
 
-    def supported_triples(self) -> list[adt_triple]:
+    def supported_dts(self) -> list[dict[str,adt]]:
         return [
-            adt_triple(a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64),
-            adt_triple(a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32),
-            adt_triple(a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16),
+            {'adreg':adt.FP64, 'bdreg':adt.FP64, 'cdreg':adt.FP64},
+            {'adreg':adt.FP32, 'bdreg':adt.FP32, 'cdreg':adt.FP32},
+            {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP16},
 
-            adt_triple(a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32),
+            {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP32},
 
-            adt_triple(a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32),
-            adt_triple(a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP16),
-            adt_triple(a_dt=adt.FP8E4M3, b_dt=adt.FP8E4M3, c_dt=adt.FP32),
-            adt_triple(a_dt=adt.FP8E4M3, b_dt=adt.FP8E4M3, c_dt=adt.FP16),
+            {'adreg':adt.FP8E5M2, 'bdreg':adt.FP8E5M2, 'cdreg':adt.FP32},
+            {'adreg':adt.FP8E5M2, 'bdreg':adt.FP8E5M2, 'cdreg':adt.FP16},
+            {'adreg':adt.FP8E4M3, 'bdreg':adt.FP8E4M3, 'cdreg':adt.FP32},
+            {'adreg':adt.FP8E4M3, 'bdreg':adt.FP8E4M3, 'cdreg':adt.FP16},
 
-            adt_triple(a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32),
-            adt_triple(a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP16),
-            adt_triple(a_dt=adt.FP8E4M3, b_dt=adt.FP8E4M3, c_dt=adt.FP32),
-            adt_triple(a_dt=adt.FP8E4M3, b_dt=adt.FP8E4M3, c_dt=adt.FP16),
+            {'adreg':adt.FP8E5M2, 'bdreg':adt.FP8E5M2, 'cdreg':adt.FP32},
+            {'adreg':adt.FP8E5M2, 'bdreg':adt.FP8E5M2, 'cdreg':adt.FP16},
+            {'adreg':adt.FP8E4M3, 'bdreg':adt.FP8E4M3, 'cdreg':adt.FP32},
+            {'adreg':adt.FP8E4M3, 'bdreg':adt.FP8E4M3, 'cdreg':adt.FP16},
 
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT64),
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.SINT8,  b_dt=adt.SINT8,  c_dt=adt.SINT32),
+            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT64},
+            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
+            {'adreg':adt.SINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT32},
 
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.UINT16, c_dt=adt.UINT64),
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.UINT16, c_dt=adt.UINT32),
-            adt_triple(a_dt=adt.UINT8,  b_dt=adt.UINT8,  c_dt=adt.UINT32),
+            {'adreg':adt.UINT16, 'bdreg':adt.UINT16, 'cdreg':adt.UINT64},
+            {'adreg':adt.UINT16, 'bdreg':adt.UINT16, 'cdreg':adt.UINT32},
+            {'adreg':adt.UINT8, 'bdreg':adt.UINT8, 'cdreg':adt.UINT32},
 
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.UINT16, c_dt=adt.SINT64),
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.UINT16, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.SINT8,  b_dt=adt.UINT8,  c_dt=adt.SINT32),
+            {'adreg':adt.SINT16, 'bdreg':adt.UINT16, 'cdreg':adt.SINT64},
+            {'adreg':adt.SINT16, 'bdreg':adt.UINT16, 'cdreg':adt.SINT32},
+            {'adreg':adt.SINT8, 'bdreg':adt.UINT8, 'cdreg':adt.SINT32},
 
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.SINT16, c_dt=adt.SINT64),
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.SINT16, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.UINT8,  b_dt=adt.SINT8,  c_dt=adt.SINT32),
+            {'adreg':adt.UINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT64},
+            {'adreg':adt.UINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
+            {'adreg':adt.UINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT32},
         ]
 
     def mopx_inst_str(self, a_dt : adt, b_dt : adt, suf : str) -> str:
@@ -118,16 +118,14 @@ class sme_fopa(opd3):
 
     # modfier set is only read, therefore a mutable default is ok
     # pylint: disable-next=dangerous-default-value
-    def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
-                 a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[mod] = set(),
-                 **kwargs) -> str:
-        self.check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
-        self.check_modifiers(modifiers=modifiers)
+    def implementation(self, *,
+                       adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+                       a_dt : adt, b_dt : adt, c_dt : adt,
+                       modifiers : set[mod] = set(),
+                       **kwargs) -> str:
 
         if not isinstance(cdreg, sme_treg):
             raise ValueError(f"{cdreg} is not an sme_treg")
-
         if not isinstance(adreg, sve_vreg):
             raise ValueError(f"{adreg} is not an sve_vreg")
         if not isinstance(bdreg, sve_vreg):

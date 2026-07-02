@@ -22,19 +22,17 @@ class sve_fma(neon_fma):
         if not all(isinstance(d, sve_vreg) for d in dregs):
             raise ValueError("All dregs of a SVE opd3 must be sve_vreg")
 
-    def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
-                 a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[mod] = set(),
-                 **kwargs) -> str:
-        self.check_triple_and_modifiers(
-                a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,
-                modifiers=modifiers)
-
+    def implementation(self, *,
+                       adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+                       a_dt : adt, b_dt : adt, c_dt : adt,
+                       modifiers : set[mod] = set(),
+                       **kwargs) -> str:
         sve_preg = 'p0/m'
         if mod.MASK in modifiers:
             if 'mreg' not in kwargs:
                 raise ValueError("MASK modifier, but no mreg parameter passed")
             sve_preg=kwargs['mreg']+"/m"
-        return super().__call__(adreg=adreg, bdreg=bdreg, cdreg=cdreg,
-                         a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,
-                         modifiers=modifiers,sve_preg=sve_preg,**kwargs)
+        return super().implementation(
+                adreg=adreg, bdreg=bdreg, cdreg=cdreg,
+                a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,
+                modifiers=modifiers,sve_preg=sve_preg,**kwargs)

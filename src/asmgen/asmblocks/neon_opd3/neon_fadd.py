@@ -35,39 +35,30 @@ class neon_fadd(neon_opd3_base):
         if not all(isinstance(d, neon_vreg) for d in dregs):
             raise ValueError("All dregs of a NEON opd3 must be neon_vreg")
 
-    def check_triple(self, a_dt : adt, b_dt : adt, c_dt : adt):
-        super().check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
-
-        if adt_is_float(c_dt) and (adt_size(c_dt) > adt_size(a_dt)):
-            raise ValueError("NEON FADD has no widening FP version")
-
-        if adt_size(c_dt)//adt_size(a_dt) > 2:
-            raise ValueError("NEON FADD has only 2xways widening")
-
-    def supported_triples(self) -> list[adt_triple]:
+    def supported_dts(self) -> list[dict[str,adt]]:
         return [
-            adt_triple(a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64),
-            adt_triple(a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32),
-            adt_triple(a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16),
+            {'adreg':adt.FP64, 'bdreg':adt.FP64, 'cdreg':adt.FP64},
+            {'adreg':adt.FP32, 'bdreg':adt.FP32, 'cdreg':adt.FP32},
+            {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP16},
 
-            adt_triple(a_dt=adt.SINT32, b_dt=adt.SINT32, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT16),
-            adt_triple(a_dt=adt.SINT8,  b_dt=adt.SINT8,  c_dt=adt.SINT8),
+            {'adreg':adt.SINT32, 'bdreg':adt.SINT32, 'cdreg':adt.SINT32},
+            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT16},
+            {'adreg':adt.SINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT8},
 
-            adt_triple(a_dt=adt.UINT32, b_dt=adt.UINT32, c_dt=adt.UINT32),
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.UINT16, c_dt=adt.UINT16),
-            adt_triple(a_dt=adt.UINT8,  b_dt=adt.UINT8,  c_dt=adt.UINT8),
+            {'adreg':adt.UINT32, 'bdreg':adt.UINT32, 'cdreg':adt.UINT32},
+            {'adreg':adt.UINT16, 'bdreg':adt.UINT16, 'cdreg':adt.UINT16},
+            {'adreg':adt.UINT8, 'bdreg':adt.UINT8, 'cdreg':adt.UINT8},
 
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.SINT8, b_dt=adt.SINT8, c_dt=adt.SINT16),
+            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
+            {'adreg':adt.SINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT16},
 
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.UINT16, c_dt=adt.UINT32),
-            adt_triple(a_dt=adt.UINT8, b_dt=adt.UINT8, c_dt=adt.UINT16),
+            {'adreg':adt.UINT16, 'bdreg':adt.UINT16, 'cdreg':adt.UINT32},
+            {'adreg':adt.UINT8, 'bdreg':adt.UINT8, 'cdreg':adt.UINT16},
 
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.UINT16, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.SINT8, b_dt=adt.UINT8, c_dt=adt.SINT16),
+            {'adreg':adt.SINT16, 'bdreg':adt.UINT16, 'cdreg':adt.SINT32},
+            {'adreg':adt.SINT8, 'bdreg':adt.UINT8, 'cdreg':adt.SINT16},
 
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.SINT16, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.UINT8, b_dt=adt.SINT8, c_dt=adt.SINT16),
+            {'adreg':adt.UINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
+            {'adreg':adt.UINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT16},
 
         ]
