@@ -69,26 +69,23 @@ class avx_opd3_base(opd3):
         if mod.MASK in modifiers:
             raise NotImplementedError("AVX masked opd3 not yet implemented")
 
-    def supported_triples(self) -> list[adt_triple]:
+    def supported_dts(self) -> list[dict[str,adt]]:
         supported_list = [
-            adt_triple(a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64),
-            adt_triple(a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32),
+            {'adreg':adt.FP64, 'bdreg':adt.FP64, 'cdreg':adt.FP64},
+            {'adreg':adt.FP32, 'bdreg':adt.FP32, 'cdreg':adt.FP32},
         ]
         if self.has_fp16:
             supported_list.append(
-                    adt_triple(a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16))
+                    {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP16})
         return supported_list
 
     # modfier set is only read, therefore a mutable default is ok
     # pylint: disable-next=dangerous-default-value
-    def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
-                 a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[mod] = set(),
-                 **kwargs) -> str:
-        self.check_modifiers(modifiers=modifiers)
-        self.check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
-        if (a_dt != b_dt) or (a_dt != c_dt):
-            raise ValueError("A,B and C must have same type")
+    def implementation(self, *,
+                       adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+                     a_dt : adt, b_dt : adt, c_dt : adt,
+                     modifiers : set[mod] = set(),
+                     **kwargs) -> str:
 
         if any(not isinstance(r, avx_vreg) for r in (adreg,bdreg,cdreg)):
             raise ValueError("All dregs of an AVX opd3 must be avx_vreg")
