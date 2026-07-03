@@ -87,12 +87,13 @@ class test_x86_opdna1(unittest.TestCase):
 
     def test_missing_ioffset(self):
         """ Test kwargs validation for IOFFSET """
-        with self.assertRaisesRegex(ValueError, "Missing parameter: ioffset"):
+        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: ioffset"):
             self.load(dregs=[self.r8], areg=self.r15, dt=adt.UINT64, modifiers={mod.IOFFSET})
 
     def test_invalid_register_count(self):
         """ Verify exactly one register is strictly enforced """
-        with self.assertRaisesRegex(ValueError, "exactly one register"):
+        with self.assertRaisesRegex(ValueError,
+                                    "Invalid data type combination: adreg:UINT64, bdreg:UINT64"):
             self.load(dregs=[self.r8, self.r15], areg=self.r15, dt=adt.UINT64, modifiers={})
 
 if __name__ == '__main__':

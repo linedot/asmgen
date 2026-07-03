@@ -52,6 +52,10 @@ class x86_greg(greg_base):
 
         return name
 
+    @property
+    def idx(self) -> int:
+        return self.reg_idx
+
     def __str__(self) -> str:
         return self.name()
 
@@ -60,7 +64,11 @@ class avx_freg(freg_base):
     x86_64 scalar register (actually xmm)
     """
     def __init__(self, reg_idx : int):
-        self.idx = reg_idx
+        self.reg_idx = reg_idx
+
+    @property
+    def idx(self) -> int:
+        return self.reg_idx
 
     def __str__(self) -> str:
         return f"xmm{self.idx}"
@@ -70,7 +78,11 @@ class avx_vreg(vreg_base):
     AVX base vector register
     """
     def __init__(self, reg_idx : int):
-        self.idx = reg_idx
+        self.reg_idx = reg_idx
+
+    @property
+    def idx(self) -> int:
+        return self.reg_idx
 
     def __str__(self) -> str:
         raise NotImplementedError("Base avx_vreg used (use {x,y,z}mm_vreg instead)")
@@ -112,7 +124,11 @@ class avx512_mreg:
     def __init__(self, reg_idx : int):
         if 0 > reg_idx or 7 < reg_idx:
             raise ValueError(f"mask reg idx must be 0 <= idx <= 7 (is: {reg_idx})")
-        self.idx = reg_idx
+        self.reg_idx = reg_idx
+
+    @property
+    def idx(self) -> int:
+        return self.reg_idx
 
     def __str__(self) -> str:
         return f"k{self.idx}"

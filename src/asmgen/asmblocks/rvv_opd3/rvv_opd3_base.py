@@ -62,24 +62,6 @@ class rvv_opd3_base(opd3):
         if mod.MASK in modifiers:
             raise NotImplementedError("RVV masked opd3 not implemented yet")
 
-    def check_triple_and_modifiers(self,
-                                   a_dt : adt, b_dt : adt, c_dt : adt,
-                                   modifiers : set[mod]):
-        """
-        Combined datatype triple and modifier check
-
-
-        :param a_dt : Data type of the A component
-        :type a_dt : class:`asmgen.registers.asm_data_type`
-        :param b_dt : Data type of the B component
-        :type b_dt : class:`asmgen.registers.asm_data_type`
-        :param c_dt : Data type of the C component
-        :type c_dt : class:`asmgen.registers.asm_data_type`
-        :param modifiers: set containing the modifiers to check
-        :type modifiers: set[class:`asmgen.asmblocks.operations.opd3_modifier`]
-        :raises ValueError: If an unsupported modifier/datatype is in the specified set
-        """
-
 
     def supported_dts(self) -> list[dict[str,adt]]:
         return [
@@ -111,6 +93,18 @@ class rvv_opd3_base(opd3):
             {'adreg':adt.UINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
             {'adreg':adt.UINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT16},
         ]
+    
+    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
+        return []
+
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {}
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+        raise ValueError("No restriction {rstr} on operand {op} for RVV opd3")
 
     def inst_prefix(self, a_dt : adt, b_dt : adt, c_dt : adt) -> str:
         """

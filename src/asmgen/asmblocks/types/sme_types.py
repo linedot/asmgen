@@ -25,7 +25,11 @@ class sme_treg(treg_base):
         if reg_idx > max_tiles:
             raise ValueError(f"SME has no tile {reg_idx} for data type {dt}")
 
-        self.reg_str = f"za{reg_idx}"
+        self.reg_idx = reg_idx
+
+    @property
+    def idx(self) -> int:
+        return self.reg_idx
 
     def __str__(self) -> str:
-        return self.reg_str
+        return f"za{self.idx}"

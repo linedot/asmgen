@@ -9,7 +9,7 @@ from typing import Callable
 from ..aarch64_opdna1.aarch64_opdna1_base import aarch64_opdna1
 from ..types.aarch64_types import aarch64_greg, aarch64_freg
 from ..types.sve_types import sve_vreg, sve_preg
-from ..operations import opdna1_modifier as mod, opdna1_action, opdna1
+from ..operations import opdna1_modifier as mod, opdna1_action, opdna1, operand_restriction
 from ...registers import asm_data_type as adt, adt_size, data_reg
 
 class sve_opdna1(opdna1):
@@ -28,11 +28,13 @@ class sve_opdna1(opdna1):
         return "ld" if self.action == opdna1_action.LOAD else "st"
 
     def supported_dts(self) -> list[adt]:
-        return [
+        sup_dts = [
             adt.FP64, adt.FP32, adt.FP16, adt.BF16, adt.FP8E4M3, adt.FP8E5M2,
             adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8,
             adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8
         ]
+
+        return [{'adreg':dt, 'bdreg':dt, 'cdreg':dt, 'ddreg':dt} for dt in sup_dts]
 
     def check_modifiers(self, modifiers: set[mod]):
         if mod.TINDEX in modifiers:
@@ -63,30 +65,39 @@ class sve_opdna1(opdna1):
           (mod.VOFFSET in modifiers or mod.IOFFSET in modifiers):
             raise ValueError("VINDEX cannot be combined with IOFFSET/VOFFSET")
 
-    def check_required_parameters(self, dregs: list[data_reg],
-                                  modifiers: set[mod], **kwargs):
+    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
         required = []
         if mod.IOFFSET in modifiers:
-            required.append("ioffset")
+            required.append({"ioffset"})
         if mod.VOFFSET in modifiers:
-            required.append("voffset")
+            required.append({"voffset"})
         if mod.GOFFSET in modifiers:
-            required.append("offreg")
+            required.append({"offreg"})
         if mod.STRUCT in modifiers:
-            required.append("nstructs")
+            required.append({"nstructs"})
         if mod.VINDEX in modifiers:
-            required.append("vidxreg")
-            required.append("it")
+            required.append({"vidxreg"})
+            required.append({"it"})
 
-        for p in required:
-            if p not in kwargs:
-                raise ValueError(f"Missing parameter: {p}")
+        return required
 
-        nstructs = kwargs.get("nstructs", 1)
-        if mod.STRUCT not in modifiers and len(dregs) != 1:
-            raise ValueError("Multiple registers provided but STRUCT modifier is missing")
-        if mod.STRUCT in modifiers and len(dregs) != nstructs:
-            raise ValueError(f"Number of dregs differs from nstructs ({len(dregs)} != {nstructs})")
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {
+            'bdreg' : operand_restriction.IDXOTHERPLUSNMOD,
+            'cdreg' : operand_restriction.IDXOTHERPLUSNMOD,
+            'ddreg' : operand_restriction.IDXOTHERPLUSNMOD,
+        }
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+
+        if op in {'bdreg', 'cdreg', 'ddreg'}:
+            return (chr(ord(op[0])+1)+'dreg', 1, 32)
+
+        raise ValueError("No restriction {rstr} on operand {op} for SVE opdna1")
+
 
     def get_mem_suffix(self, dt: adt) -> str:
         """ Memory view size (e.g., ld1w for 32-bit words) """
@@ -138,27 +149,31 @@ class sve_opdna1(opdna1):
 
         return f"[{areg}]"
 
-    def __call__(self, *, dregs: list, areg: aarch64_greg, dt: adt,
-                 modifiers: set[mod], **kwargs) -> str:
+    def implementation(self, *, dregs: list, agreg: aarch64_greg, a_dt: adt,
+                       modifiers: set[mod], **kwargs) -> str:
                  
         if not dregs:
             raise ValueError("No dregs provided")
 
         # Forward scalars to AArch64 base
         if isinstance(dregs[0], (aarch64_greg, aarch64_freg)):
-            return self.scalar_opdna1(dregs=dregs, areg=areg,
-                                      dt=dt, modifiers=modifiers, **kwargs)
+            return self.scalar_opdna1(dregs=dregs, areg=agreg,
+                                      dt=a_dt, modifiers=modifiers, **kwargs)
 
         if not all(isinstance(reg, sve_vreg) for reg in dregs):
             raise ValueError("Mixed or invalid register types for SVE vector operation")
 
-        self.check_required_parameters(dregs=dregs, modifiers=modifiers, **kwargs)
-        self.check_modifiers(modifiers)
-        self.check_dt(dt)
+
+        # checks not covered by standard checks
+        nstructs = kwargs.get("nstructs", 1)
+        if mod.STRUCT not in modifiers and len(dregs) != 1:
+            raise ValueError("Multiple registers provided but STRUCT modifier is missing")
+        if mod.STRUCT in modifiers and len(dregs) != nstructs:
+            raise ValueError(f"Number of dregs differs from nstructs ({len(dregs)} != {nstructs})")
 
         # 1. Resolve Suffixes
-        msuf = self.get_mem_suffix(dt)
-        esuf = self.get_element_suffix(dt)
+        msuf = self.get_mem_suffix(a_dt)
+        esuf = self.get_element_suffix(a_dt)
 
         # 2. Build Base Instruction (e.g. ld1w, ld2d, ld1rw)
         nstructs = kwargs.get("nstructs", 1)
@@ -175,6 +190,6 @@ class sve_opdna1(opdna1):
 
         # 4. Resolve Registers and Addressing
         dregs_str = ", ".join([f"{r}{esuf}" for r in dregs])
-        addressing = self.get_addressing(areg, modifiers, dt, **kwargs)
+        addressing = self.get_addressing(agreg, modifiers, a_dt, **kwargs)
 
         return self.asmwrap(f"{inst} {{{dregs_str}}}, {preg_str}, {addressing}")

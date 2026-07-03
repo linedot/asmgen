@@ -6,7 +6,7 @@
 """
 SVE register types
 """
-from ...registers import vreg_base
+from ...registers import vreg_base,mreg_base
 
 #pylint: disable=too-few-public-methods
 class sve_vreg(vreg_base):
@@ -14,17 +14,26 @@ class sve_vreg(vreg_base):
     SVE vector register
     """
     def __init__(self, reg_idx : int):
-        self.idx = reg_idx
+        self.reg_idx = reg_idx
+
+    @property
+    def idx(self) -> int:
+        return self.reg_idx
+
     def __str__(self) -> str:
         return f"z{self.idx}"
 
-class sve_preg:
+class sve_preg(mreg_base):
     """
     SVE predicate register
     """
     def __init__(self, reg_idx : int, is_pn : bool = False):
-        self.idx = reg_idx
+        self.reg_idx = reg_idx
         self.is_pn = is_pn
+
+    @property
+    def idx(self) -> int:
+        return self.reg_idx
 
     def __str__(self) -> str:
         return f"pn{self.idx}" if self.is_pn else f"p{self.idx}"

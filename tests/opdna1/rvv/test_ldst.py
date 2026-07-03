@@ -78,10 +78,10 @@ class test_rvv_opdna1(unittest.TestCase):
 
     def test_missing_required_parameters(self):
         """ Test kwargs validation for VINDEX and STRUCT """
-        with self.assertRaisesRegex(ValueError, "Missing parameter: vidxreg"):
+        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: vidxreg"):
             self.rvv.load(dregs=self.vs[:1], areg=self.t0, dt=adt.FP32, modifiers={mod.VINDEX})
             
-        with self.assertRaisesRegex(ValueError, "Missing parameter: nstructs"):
+        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: nstructs"):
             self.rvv.load(dregs=self.vs[:1], areg=self.t0, dt=adt.FP32, modifiers={mod.STRUCT})
 
 if __name__ == '__main__':

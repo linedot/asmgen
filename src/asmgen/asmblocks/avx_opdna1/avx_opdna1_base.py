@@ -30,11 +30,22 @@ class avx_opdna1(opdna1):
         self.scalar_opdna1 = x86_opdna1(action=action, asmwrap=asmwrap, rpref=rpref)
 
     def supported_dts(self) -> list[adt]:
-        return [
-            adt.FP64, adt.FP32, adt.FP16, adt.BF16,
-            adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8,
-            adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8
+        sup_dts = [
+            adt.FP64,
+            adt.FP32,
+            adt.FP16,
+            adt.BF16,
+            adt.SINT64,
+            adt.SINT32,
+            adt.SINT16,
+            adt.SINT8,
+            adt.UINT64,
+            adt.UINT32,
+            adt.UINT16,
+            adt.UINT8
         ]
+
+        return [{'adreg': dt} for dt in sup_dts]
 
     def check_modifiers(self, modifiers: set[mod]):
         if mod.TINDEX in modifiers:
@@ -68,28 +79,35 @@ class avx_opdna1(opdna1):
             if mod.VOFFSET in modifiers or mod.IOFFSET in modifiers:
                 raise ValueError("VINDEX cannot be combined with IOFFSET/VOFFSET")
 
-    def check_required_parameters(self, dregs: list[data_reg], modifiers: set[mod],
-                                  **kwargs):
+    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
 
         required_extra_params = []
         if mod.IOFFSET in modifiers:
-            required_extra_params.append("ioffset")
+            required_extra_params.append({"ioffset"})
 
         if mod.VOFFSET in modifiers:
-            required_extra_params.append("voffset")
+            required_extra_params.append({"voffset"})
 
         if mod.VINDEX in modifiers:
-            required_extra_params.append("vidxreg")
-            required_extra_params.append("it")
+            required_extra_params.append({"vidxreg"})
+            required_extra_params.append({"it"})
 
         if mod.ILANE in modifiers:
-            required_extra_params.append("lane")
-
-        for p in required_extra_params:
-            if p not in kwargs:
-                raise ValueError(f"Missing parameter: {p}")
+            required_extra_params.append({"lane"})
 
 
+        return required_extra_params
+
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {}
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+        raise ValueError("No restriction {rstr} on operand {op} for AVX opd3")
+
+        
     def get_addressing(self, areg: x86_greg, modifiers: set[mod], **kwargs) -> str:
         offset = 0
         # TODO: lost track again whether i had this be bytes or elements, double check
@@ -127,36 +145,32 @@ class avx_opdna1(opdna1):
         raise NotImplementedError("Missing lane store implementation")
 
 
-    def __call__(self, *, dregs: list[data_reg], areg: x86_greg, dt: adt,
-                 modifiers: set[mod], **kwargs) -> str:
+    def implementation(self, *, dregs: list[data_reg], agreg: x86_greg, a_dt: adt,
+                       modifiers: set[mod], **kwargs) -> str:
         if not dregs:
             raise ValueError("No dregs provided")
 
         if isinstance(dregs[0], (x86_greg, avx_freg)):
-            return self.scalar_opdna1(dregs=dregs, areg=areg, dt=dt,
+            return self.scalar_opdna1(dregs=dregs, areg=agreg, dt=a_dt,
                                       modifiers=modifiers, **kwargs)
 
         if not all(isinstance(r, avx_vreg) for r in dregs):
             raise ValueError("AVX opdna1: All data registers must be vector registers")
 
 
-        self.check_modifiers(modifiers)
-        self.check_required_parameters(dregs, modifiers, **kwargs)
-        self.check_dt(dt)
-
         dreg = dregs[0]
 
-        addressing = self.get_addressing(areg, modifiers, **kwargs)
+        addressing = self.get_addressing(agreg, modifiers, **kwargs)
 
 
         if mod.BCAST in modifiers:
-            return self.asmwrap(self.build_bcast(dreg, areg, dt, addressing))
+            return self.asmwrap(self.build_bcast(dreg, agreg, a_dt, addressing))
 
         if mod.VINDEX in modifiers:
             if self.action == opdna1_action.LOAD:
-                return self.asmwrap(self.build_gather(dreg, areg, dt, **kwargs))
+                return self.asmwrap(self.build_gather(dreg, agreg, a_dt, **kwargs))
             if self.action == opdna1_action.STORE:
-                return self.asmwrap(self.build_scatter(dreg, areg, dt, **kwargs))
+                return self.asmwrap(self.build_scatter(dreg, agreg, a_dt, **kwargs))
 
             # Potentially adding prefetches or something else in the future
             raise ValueError(f"Action {self.action} with VINDEX not implemented")
@@ -164,12 +178,12 @@ class avx_opdna1(opdna1):
         if mod.ILANE in modifiers:
             lane = kwargs["lane"]
             if self.action == opdna1_action.LOAD:
-                return self.asmwrap(self.build_lane_load(dreg, areg, dt, lane, addressing))
+                return self.asmwrap(self.build_lane_load(dreg, agreg, a_dt, lane, addressing))
             else:
-                return self.asmwrap(self.build_lane_store(dreg, areg, dt, lane, addressing))
+                return self.asmwrap(self.build_lane_store(dreg, agreg, a_dt, lane, addressing))
 
         pdreg = self.rpref(dreg)
-        inst = self.get_vector_mnemonic(dt)
+        inst = self.get_vector_mnemonic(a_dt)
         if self.action == opdna1_action.LOAD:
             return self.asmwrap(f"{inst} {addressing}, {pdreg}")
         else:

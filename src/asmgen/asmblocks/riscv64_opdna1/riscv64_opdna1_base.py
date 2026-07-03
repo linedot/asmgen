@@ -33,9 +33,11 @@ class riscv64_opdna1(opdna1):
 
     def supported_dts(self) -> list[adt]:
 
-        return [adt.FP64, adt.FP32, adt.FP16,
-                adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8,
-                adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8]
+        sup_dts = [adt.FP64, adt.FP32, adt.FP16,
+                   adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8,
+                   adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8]
+
+        return [{'adreg': dt} for dt in sup_dts]
 
     def get_dt_suffix(self, dt : adt):
         size_map = {1: "b", 2: "h", 4: "w", 8: "d", 16: "q"}
@@ -79,24 +81,28 @@ class riscv64_opdna1(opdna1):
         offset = kwargs.get("ioffset", 0) if mod.IOFFSET in modifiers else 0
         return f"{offset}({areg})"
 
-    def check_required_parameters(self, dregs : list[data_reg],  modifiers: set[mod], **kwargs):
+    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
 
         required_extra_params = []
 
         if mod.IOFFSET in modifiers:
-            required_extra_params.append("ioffset")
+            required_extra_params.append({"ioffset"})
 
-        for p in required_extra_params:
-            if p not in kwargs:
-                raise ValueError(f"Missing parameter: {p}")
+        return required_extra_params
+
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {}
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+        raise ValueError("No restriction {rstr} on operand {op} for RISC-V +D/F opd3")
 
 
-    def __call__(self, *, dregs : list[data_reg], areg : greg_type, dt : adt,
-                 modifiers : set[opdna1_modifier], **kwargs) -> str:
+    def implementation(self, *, dregs : list[data_reg], agreg : greg_type, a_dt : adt,
+                       modifiers : set[opdna1_modifier], **kwargs) -> str:
 
-        self.check_modifiers(modifiers)
-        self.check_required_parameters(dregs, modifiers, **kwargs)
-        self.check_dt(dt)
 
         if len(dregs) != 1:
             raise ValueError("RISC-V +D/F load/store uses one and only one register")
@@ -111,8 +117,8 @@ class riscv64_opdna1(opdna1):
             inst = "f"+inst
 
 
-        inst += self.get_dt_suffix(dt)
-        addressing = self.get_addressing(areg, modifiers, **kwargs)
+        inst += self.get_dt_suffix(a_dt)
+        addressing = self.get_addressing(agreg, modifiers, **kwargs)
 
         return self.asmwrap(f"{inst} {dreg}, {addressing}")
 

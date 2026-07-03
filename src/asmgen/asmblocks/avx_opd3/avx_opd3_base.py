@@ -79,6 +79,20 @@ class avx_opd3_base(opd3):
                     {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP16})
         return supported_list
 
+    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
+
+        required_extra_params = []
+        return required_extra_params
+
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {}
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+        raise ValueError("No restriction {rstr} on operand {op} for AVX opd3")
+
     # modfier set is only read, therefore a mutable default is ok
     # pylint: disable-next=dangerous-default-value
     def implementation(self, *,

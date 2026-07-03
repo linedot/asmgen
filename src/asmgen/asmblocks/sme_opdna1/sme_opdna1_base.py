@@ -6,7 +6,7 @@
 import math
 from typing import Callable
 
-from ..operations import opdna1_modifier as mod, opdna1_action, opdna1
+from ..operations import opdna1_modifier as mod, opdna1_action, opdna1, operand_restriction
 from ...registers import asm_data_type as adt, adt_size, data_reg
 
 from ..types.aarch64_types import aarch64_greg
@@ -72,37 +72,53 @@ class sme_opdna1(opdna1):
         if len(addr_mods) > 1:
             raise ValueError(f"Mutually exclusive addressing modifiers used: {addr_mods}")
 
-    def check_required_parameters(self, dregs: list[data_reg], modifiers: set[mod], **kwargs):
+    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
         required = []
         
         if mod.ROW in modifiers:
-            required.append("rowreg")
-            required.append("immrow")
+            required.append({"rowreg"})
+            required.append({"immrow"})
         if mod.COL in modifiers:
-            required.append("colreg")
-            required.append("immcol")
+            required.append({"colreg"})
+            required.append({"immcol"})
         if mod.IOFFSET in modifiers:
-            required.append("ioffset")
+            required.append({"ioffset"})
         if mod.VOFFSET in modifiers:
-            required.append("voffset")
+            required.append({"voffset"})
         if mod.GOFFSET in modifiers:
-            required.append("offreg")
+            required.append({"offreg"})
 
-        for p in required:
-            if p not in kwargs:
-                raise ValueError(f"Missing parameter: {p}")
+        return required
 
 
-        # SME specific register count constraints
-        if mod.NT in modifiers:
-            if len(dregs) not in [1, 2, 4]:
-                raise ValueError(("SME2 non-temporal operations require 1, 2, or"
-                                 f" 4 vector registers, got {len(dregs)}"))
-                
-        if mod.ROW in modifiers or mod.COL in modifiers:
-            if len(dregs) != 1:
-                raise ValueError(("SME tile slice operations accept exactly one "
-                                 f"sme_treg, got {len(dregs)}"))
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {
+            'bdreg' : operand_restriction.IDXOTHERPLUSNMOD,
+            'cdreg' : operand_restriction.IDXOTHERPLUSNMOD,
+            'ddreg' : operand_restriction.IDXOTHERPLUSNMOD,
+            'rowreg': operand_restriction.IDXMIN,
+            'rowreg': operand_restriction.IDXMAX,
+            'colreg': operand_restriction.IDXMIN,
+            'colreg': operand_restriction.IDXMAX,
+        }
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+
+        if op in {'bdreg', 'cdreg', 'ddreg'} and \
+          rstr == operand_restriction.IDXOTHERPLUSNMOD:
+            return (chr(ord(op[0])+1)+'dreg', 1, 32)
+
+        if op in {'rowreg', 'colreg'} and \
+          rstr == operand_restriction.IDXMAX:
+            return 15
+        if op in {'rowreg', 'colreg'} and \
+          rstr == operand_restriction.IDXMIN:
+            return 12
+
+        raise ValueError("No restriction {rstr} on operand {op} for SVE opdna1")
 
     def get_mem_suffix(self, dt: adt) -> str:
         size = adt_size(dt)
@@ -138,8 +154,8 @@ class sme_opdna1(opdna1):
 
         return f"[{areg}]"
 
-    def __call__(self, *, dregs: list, areg: aarch64_greg, dt: adt,
-                 modifiers: set[mod], **kwargs) -> str:
+    def implementation(self, *, dregs: list, agreg: aarch64_greg, a_dt: adt,
+                       modifiers: set[mod], **kwargs) -> str:
                  
         if not dregs:
             raise ValueError("No dregs provided")
@@ -147,17 +163,23 @@ class sme_opdna1(opdna1):
         # --- ROUTING LOGIC ---
         # If it's not a Tile Register AND it's not a Non-Temporal instruction, SVE handles it.
         if not isinstance(dregs[0], sme_treg) and mod.NT not in modifiers:
-            return self.sve_opdna1(dregs=dregs, areg=areg, dt=dt,
+            return self.sve_opdna1(dregs=dregs, areg=agreg, dt=a_dt,
                                    modifiers=modifiers, **kwargs)
 
-        # --- SME NATIVE LOGIC ---
-        self.check_required_parameters(dregs=dregs, modifiers=modifiers, **kwargs)
-        self.check_modifiers(modifiers)
-        self.check_dt(dt)
+        msuf = self.get_mem_suffix(a_dt)
+        esuf = self.get_element_suffix(a_dt)
+        addressing = self.get_addressing(agreg, modifiers, a_dt, **kwargs)
 
-        msuf = self.get_mem_suffix(dt)
-        esuf = self.get_element_suffix(dt)
-        addressing = self.get_addressing(areg, modifiers, dt, **kwargs)
+        # SME specific checks not handled by default checks
+        if mod.NT in modifiers:
+            if len(dregs) not in [1, 2, 4]:
+                raise ValueError(("SME2 non-temporal operations require 1, 2, or"
+                                 f" 4 vector registers, got {len(dregs)}"))
+                
+        if mod.ROW in modifiers or mod.COL in modifiers:
+            if len(dregs) != 1:
+                raise ValueError(("SME tile slice operations accept exactly one "
+                                 f"sme_treg, got {len(dregs)}"))
 
         # 1. Tile Slice (ZA)
         if isinstance(dregs[0], sme_treg):

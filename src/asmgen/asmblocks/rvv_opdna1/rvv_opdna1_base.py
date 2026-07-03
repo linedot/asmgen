@@ -45,7 +45,9 @@ class rvv_opdna1(opdna1):
     def supported_dts(self) -> list[adt]:
        
         # TODO: more types
-        return [adt.FP64, adt.FP32, adt.FP16]
+        sup_dts = [adt.FP64, adt.FP32, adt.FP16]
+
+        return [{'adreg':dt, 'bdreg':dt, 'cdreg':dt, 'ddreg':dt} for dt in sup_dts]
 
     def check_modifiers(self, modifiers : set[opdna1_modifier]):
 
@@ -80,27 +82,28 @@ class rvv_opdna1(opdna1):
             raise ValueError("mod.GSTRIDE and mod.VINDEX are mutually exclusive")
 
 
-    def check_required_parameters(self, dregs : list[data_reg],  modifiers: set[mod], **kwargs):
+    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
 
         required_extra_params = []
 
         if mod.VINDEX in modifiers:
-            required_extra_params.append("vidxreg")
-            required_extra_params.append("it")
+            required_extra_params.append({"vidxreg"})
+            required_extra_params.append({"it"})
         if mod.STRUCT in modifiers:
-            required_extra_params.append("nstructs")
+            required_extra_params.append({"nstructs"})
         if mod.GSTRIDE in modifiers:
-            required_extra_params.append("streg")
+            required_extra_params.append({"streg"})
 
-        for p in required_extra_params:
-            if p not in kwargs:
-                raise ValueError(f"Missing parameter: {p}")
+        return required_extra_params
 
-        if mod.STRUCT in modifiers:
-            # Need to check but if it raises here, it'd raise later anyway
-            nstructs = kwargs["nstructs"]
-            if nstructs != len(dregs):
-                raise ValueError(f"{nstructs} nstructs specified but only {len(dregs)} dregs given")
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {}
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+        raise ValueError("No restriction {rstr} on operand {op} for RVV opdna1")
 
 
     def get_instruction(self, base : str,
@@ -154,23 +157,26 @@ class rvv_opdna1(opdna1):
         return base_addr
 
 
-    def __call__(self, *, dregs : list[data_reg], areg : greg_type, dt : adt,
-                 modifiers : set[mod], **kwargs) -> str:
+    def implementation(self, *, dregs : list[data_reg], agreg : greg_type, a_dt : adt,
+                       modifiers : set[mod], **kwargs) -> str:
                  
         if not dregs:
             raise ValueError("No dregs provided")
 
         # If scalar registers are passed, forward to base RISC-V
         if isinstance(dregs[0], (riscv64_greg, riscv64_freg)):
-            return self.scalar_opdna1(dregs=dregs, areg=areg, dt=dt,
+            return self.scalar_opdna1(dregs=dregs, areg=agreg, dt=a_dt,
                                       modifiers=modifiers, **kwargs)
 
-        self.check_modifiers(modifiers)
-        self.check_dt(dt)
-        self.check_required_parameters(dregs, modifiers, **kwargs)
-        inst = self.get_instruction(self.inst_base, modifiers, dt, **kwargs)
-        addressing = self.get_addressing(areg, modifiers, **kwargs)
+        inst = self.get_instruction(self.inst_base, modifiers, a_dt, **kwargs)
+        addressing = self.get_addressing(agreg, modifiers, **kwargs)
 
+        if mod.STRUCT in modifiers:
+            # Need to check but if it raises here, it'd raise later anyway
+            nstructs = kwargs["nstructs"]
+            if nstructs != len(dregs):
+                raise ValueError(
+                        f"{nstructs} nstructs specified but only {len(dregs)} dregs given")
 
         v = rvv_vreg(0)
 

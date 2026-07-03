@@ -129,13 +129,13 @@ class test_aarch64_opdna1(unittest.TestCase):
 
     def test_missing_required_parameters(self):
         """ Test that omitting required kwargs for modifiers raises ValueError """
-        with self.assertRaisesRegex(ValueError, "Missing one of: ioffset"):
+        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: ioffset"):
             self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, modifiers={mod.IOFFSET})
 
-        with self.assertRaisesRegex(ValueError, "Missing one of: offreg"):
+        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: offreg"):
             self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, modifiers={mod.GOFFSET})
 
-        with self.assertRaisesRegex(ValueError, "Missing one of: iinc, increg"):
+        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: iinc, increg"):
             self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, modifiers={mod.POSTINC})
 
     def test_mutually_exclusive_parameters(self):
@@ -156,10 +156,16 @@ class test_aarch64_opdna1(unittest.TestCase):
 
     def test_invalid_register_count(self):
         """ Test that providing too many or too few dregs raises an error """
-        with self.assertRaisesRegex(ValueError, "uses exactly one register"):
+        with self.assertRaisesRegex(ValueError,
+                                    # This doesn't get hit anymore, fails at dt check already
+                                    # "uses exactly one register"
+                                    "Invalid data type combination"
+                                    ):
             self.load(dregs=[self.x1, self.x2], areg=self.x0, dt=adt.UINT64, modifiers={})
             
-        with self.assertRaisesRegex(ValueError, "uses exactly one register"):
+        with self.assertRaisesRegex(ValueError,
+                                    "No dregs passed to opdna1 operation"
+                                    ):
             self.load(dregs=[], areg=self.x0, dt=adt.UINT64, modifiers={})
 
 if __name__ == '__main__':

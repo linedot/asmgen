@@ -17,7 +17,11 @@ class aarch64_greg(greg_base):
         self.reg_str = f"x{reg_idx}"
         if reg_idx == 31:
             self.reg_str = "sp"
-        self.idx = reg_idx
+        self.reg_idx = reg_idx
+
+    @property
+    def idx(self) -> int:
+        return self.reg_idx
 
     def get_wreg(self) -> str:
         """
@@ -48,8 +52,12 @@ class aarch64_freg(freg_base):
         adt.FP128    : 'q',
     }
     def __init__(self, reg_idx : int, dt : adt):
-        self.idx = reg_idx
+        self.reg_idx = reg_idx
         self.dt = dt
+
+    @property
+    def idx(self):
+        return self.reg_idx
 
     def retype(self, dt : adt):
         return aarch64_freg(reg_idx=self.idx, dt=dt)

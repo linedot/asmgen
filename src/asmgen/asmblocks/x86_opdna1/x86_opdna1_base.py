@@ -23,11 +23,13 @@ class x86_opdna1(opdna1):
         self.rpref = rpref
 
     def supported_dts(self) -> list[adt]:
-        return [
+        sup_dts = [
             adt.FP64, adt.FP32, adt.FP16, adt.BF16,
             adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8,
             adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8
         ]
+
+        return [{'adreg': dt} for dt in sup_dts]
 
     def check_modifiers(self, modifiers: set[mod]):
         if mod.TINDEX in modifiers:
@@ -61,9 +63,20 @@ class x86_opdna1(opdna1):
         if mod.NT in modifiers:
             raise NotImplementedError("Non-temporals for Base X86 not yet implemented")
 
-    def check_required_parameters(self, dregs: list, modifiers: set[mod], **kwargs):
-        if mod.IOFFSET in modifiers and "ioffset" not in kwargs:
-            raise ValueError("Missing parameter: ioffset")
+    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
+        if mod.IOFFSET in modifiers:
+            return [{'ioffset'}]
+
+        return []
+
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {}
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+        raise ValueError("No restriction {rstr} on operand {op} for X86_64 opd3")
 
     def get_scalar_suffix(self, dt: adt, is_freg: bool) -> str:
         size = adt_size(dt)
@@ -87,8 +100,8 @@ class x86_opdna1(opdna1):
         pareg = self.rpref(areg)
         return f"{offset}({pareg})" if offset != 0 else f"({pareg})"
 
-    def __call__(self, *, dregs: list, areg: x86_greg, dt: adt,
-                 modifiers: set[mod], **kwargs) -> str:
+    def implementation(self, *, dregs: list, agreg: x86_greg, a_dt: adt,
+                       modifiers: set[mod], **kwargs) -> str:
                  
         if len(dregs) != 1:
             raise ValueError("x86 scalar load/store uses exactly one register")
@@ -97,15 +110,11 @@ class x86_opdna1(opdna1):
         if not isinstance(dreg, (x86_greg, avx_freg)):
             raise ValueError("x86_opdna1 requires scalar registers (x86_greg or avx_freg)")
 
-        self.check_modifiers(modifiers)
-        self.check_required_parameters(dregs, modifiers, **kwargs)
-        self.check_dt(dt)
-
         is_freg = isinstance(dreg, avx_freg)
         base_inst = "vmov" if is_freg else "mov"
-        inst = f"{base_inst}{self.get_scalar_suffix(dt, is_freg)}"
+        inst = f"{base_inst}{self.get_scalar_suffix(a_dt, is_freg)}"
         
-        addressing = self.get_addressing(areg, modifiers, **kwargs)
+        addressing = self.get_addressing(agreg, modifiers, **kwargs)
 
         pdreg = self.rpref(dreg)
 

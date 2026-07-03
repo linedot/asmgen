@@ -407,7 +407,39 @@ class greg_base(ABC):
         raise NotImplementedError(NIE_MESSAGE)
     @abstractmethod
     def __str__(self):
+        """
+        Return the string representation of the register
+        """
         raise NotImplementedError(NIE_MESSAGE)
+
+    @property
+    @abstractmethod
+    def idx(self):
+        """
+        Return the numeric index of the register
+        """
+
+
+class mreg_base(ABC):
+    """
+    Base class for mask registers
+    """
+    @abstractmethod
+    def __init__(self, reg_idx : int):
+        raise NotImplementedError(NIE_MESSAGE)
+    @abstractmethod
+    def __str__(self):
+        """
+        Return the string representation of the register
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @property
+    @abstractmethod
+    def idx(self):
+        """
+        Return the numeric index of the register
+        """
 
 class data_reg(ABC):
     """
@@ -419,6 +451,13 @@ class data_reg(ABC):
     @abstractmethod
     def __str__(self):
         raise NotImplementedError(NIE_MESSAGE)
+
+    @property
+    @abstractmethod
+    def idx(self):
+        """
+        Return the numeric index of the register
+        """
 
 class freg_base(data_reg):
     """

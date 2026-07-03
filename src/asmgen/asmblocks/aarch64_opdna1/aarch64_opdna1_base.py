@@ -30,11 +30,21 @@ class aarch64_opdna1(opdna1):
         else:
             raise ValueError(f"Invalid action: {self.action}")
 
-    def supported_dts(self) -> list[adt]:
+    def supported_dts(self) -> list[dict[str,adt]]:
         return [
-            adt.FP64, adt.FP32, adt.FP16, adt.FP8E4M3, adt.FP8E5M2,
-            adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8,
-            adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8
+            {'adreg': adt.FP64},
+            {'adreg': adt.FP32},
+            {'adreg': adt.FP16},
+            {'adreg': adt.FP8E4M3},
+            {'adreg': adt.FP8E5M2},
+            {'adreg': adt.SINT64},
+            {'adreg': adt.SINT32},
+            {'adreg': adt.SINT16},
+            {'adreg': adt.SINT8},
+            {'adreg': adt.UINT64},
+            {'adreg': adt.UINT32},
+            {'adreg': adt.UINT16},
+            {'adreg': adt.UINT8}
         ]
 
     def check_modifiers(self, modifiers: set[mod]):
@@ -71,7 +81,16 @@ class aarch64_opdna1(opdna1):
         if mod.NT in modifiers:
             raise NotImplementedError("Non-temporals for Base AArch64 not yet implemented")
 
-    def check_required_parameters(self, dregs : list[data_reg],  modifiers: set[mod], **kwargs):
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {}
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+        raise ValueError("No restriction {rstr} on operand {op} for NEON opd3")
+
+    def get_required_params(self, modifiers : set[mod]) -> list[str]:
 
         required_extra_params = []
 
@@ -84,12 +103,7 @@ class aarch64_opdna1(opdna1):
         if mod.POSTINC in modifiers:
             required_extra_params.append({"iinc","increg"})
 
-        for p in required_extra_params:
-            params_specified = len(p.intersection(set(kwargs.keys())))
-            if params_specified > 1:
-                raise ValueError(f"{', '.join(sorted(p))} are mutually exclusive")
-            if params_specified == 0:
-                raise ValueError(f"Missing one of: {', '.join(sorted(p))}")
+        return required_extra_params
 
     def get_addressing(self,
                        areg: aarch64_greg,
@@ -139,24 +153,21 @@ class aarch64_opdna1(opdna1):
             
         return base 
 
-    def __call__(self, *, dregs: list, areg: aarch64_greg, dt: adt,
-                 modifiers: set[mod], **kwargs) -> str:
+    def implementation(self, *, dregs: list, agreg: aarch64_greg, a_dt: adt,
+                       modifiers: set[mod], **kwargs) -> str:
         if not all(isinstance(r, (aarch64_greg, aarch64_freg)) for r in dregs):
             raise ValueError(
                     "aarch64_opdna1 requires scalar registers (greg/freg)")
                      
-        self.check_modifiers(modifiers)
-        self.check_required_parameters(dregs=dregs, modifiers=modifiers, **kwargs)
-        self.check_dt(dt)
 
         if len(dregs) != 1:
             raise ValueError(
                     "AArch64 scalar load/store uses exactly one register.")
 
-        dreg = dregs[0].retype(dt=dt)
+        dreg = dregs[0].retype(dt=a_dt)
         is_freg = isinstance(dreg, aarch64_freg)
         
-        inst = self.get_inst_mnemonic(dt, is_freg)
-        addressing = self.get_addressing(areg, modifiers, **kwargs)
+        inst = self.get_inst_mnemonic(a_dt, is_freg)
+        addressing = self.get_addressing(agreg, modifiers, **kwargs)
 
         return self.asmwrap(f"{inst} {dreg}, {addressing}")

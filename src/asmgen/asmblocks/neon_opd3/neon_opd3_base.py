@@ -15,7 +15,12 @@ from ...registers import (
     adt_is_float,adt_is_int,
     data_reg
 )
-from ..operations import opd3,widening_method,opd3_modifier as mod
+from ..operations import (
+    opd3,
+    widening_method,
+    opd3_modifier as mod,
+    operand_restriction
+)
 
 class neon_opd3_base(opd3):
     """
@@ -44,6 +49,26 @@ class neon_opd3_base(opd3):
         if mod.REGIDX in modifiers:
             raise ValueError("NEON has no regidx form")
         # Don't check for MASK here, since SVE inherits from this
+
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {}
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+        raise ValueError("No restriction {rstr} on operand {op} for NEON opd3")
+
+
+    def get_required_params(self, modifiers : set[mod]) -> list[str]:
+
+        params = []
+        if mod.IDX in modifiers:
+            params.append({'idx'})
+        if mod.PART in modifiers:
+            params.append({'part'})
+
+        return params
 
     
     def check_valid_registers(self, dregs : list[data_reg]) -> bool:
@@ -155,9 +180,9 @@ class neon_opd3_base(opd3):
 
         part = 0
         if adt_size(a_dt) < adt_size(c_dt):
-            if (not mod.PART in modifiers) or ('part' not in kwargs):
+            if mod.PART not in modifiers:
                 raise ValueError(
-                        "NEON requires 'PART' modifier and argument for widening operations")
+                        "NEON requires 'PART' modifier for widening operations")
             part = kwargs['part']
 
         # This allows the SVE version to use the same codepath
@@ -175,8 +200,6 @@ class neon_opd3_base(opd3):
 
         idx = 0
         if mod.IDX in modifiers:
-            if 'idx' not in kwargs:
-                raise ValueError("'idx' modifier specified, but not 'idx' parameter")
             idx = kwargs['idx']
 
 

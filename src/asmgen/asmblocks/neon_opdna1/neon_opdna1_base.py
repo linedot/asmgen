@@ -6,7 +6,7 @@
 from ..aarch64_opdna1.aarch64_opdna1_base import aarch64_opdna1
 from ..types.neon_types import neon_vreg
 from ..types.aarch64_types import aarch64_greg,aarch64_freg
-from ..operations import opdna1_modifier as mod, opdna1_action, opdna1
+from ..operations import opdna1_modifier as mod, opdna1_action, opdna1,operand_restriction
 from ...registers import asm_data_type as adt, adt_size
 
 from typing import Callable
@@ -33,11 +33,21 @@ class neon_opdna1(opdna1):
         else:
             raise ValueError(f"Invalid action: {self.action}")
 
-    def supported_dts(self) -> list[adt]:
+    def supported_dts(self) -> list[dict[str,adt]]:
         return [
-            adt.FP64, adt.FP32, adt.FP16, adt.FP8E4M3, adt.FP8E5M2,
-            adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8,
-            adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8
+            {'adreg': adt.FP64, 'bdreg': adt.FP64, 'cdreg': adt.FP64, 'ddreg': adt.FP64},
+            {'adreg': adt.FP32, 'bdreg': adt.FP32, 'cdreg': adt.FP32, 'ddreg': adt.FP32},
+            {'adreg': adt.FP16, 'bdreg': adt.FP16, 'cdreg': adt.FP16, 'ddreg': adt.FP16},
+            {'adreg': adt.FP8E4M3, 'bdreg': adt.FP8E4M3, 'cdreg': adt.FP8E4M3, 'ddreg': adt.FP8E4M3},
+            {'adreg': adt.FP8E5M2, 'bdreg': adt.FP8E5M2, 'cdreg': adt.FP8E5M2, 'ddreg': adt.FP8E5M2},
+            {'adreg': adt.SINT64, 'bdreg': adt.SINT64, 'cdreg': adt.SINT64, 'ddreg': adt.SINT64},
+            {'adreg': adt.SINT32, 'bdreg': adt.SINT32, 'cdreg': adt.SINT32, 'ddreg': adt.SINT32},
+            {'adreg': adt.SINT16, 'bdreg': adt.SINT16, 'cdreg': adt.SINT16, 'ddreg': adt.SINT16},
+            {'adreg': adt.SINT8, 'bdreg': adt.SINT8, 'cdreg': adt.SINT8, 'ddreg': adt.SINT8},
+            {'adreg': adt.UINT64, 'bdreg': adt.UINT64, 'cdreg': adt.UINT64, 'ddreg': adt.UINT64},
+            {'adreg': adt.UINT32, 'bdreg': adt.UINT32, 'cdreg': adt.UINT32, 'ddreg': adt.UINT32},
+            {'adreg': adt.UINT16, 'bdreg': adt.UINT16, 'cdreg': adt.UINT16, 'ddreg': adt.UINT16},
+            {'adreg': adt.UINT8, 'bdreg': adt.UINT8, 'cdreg': adt.UINT8, 'ddreg': adt.UINT8}
         ]
 
     def check_modifiers(self, modifiers: set[mod]):
@@ -77,7 +87,24 @@ class neon_opdna1(opdna1):
             if mod.ILANE in modifiers:
                 raise ValueError("BCAST cannot be combined with ILANE")
 
-    def check_required_parameters(self, dregs : list[data_reg],  modifiers: set[mod], **kwargs):
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        rstrs = {
+            'bdreg' : operand_restriction.IDXOTHERPLUSN,
+            'cdreg' : operand_restriction.IDXOTHERPLUSN,
+            'ddreg' : operand_restriction.IDXOTHERPLUSN,
+        }
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+
+        if op in {'bdreg', 'cdreg', 'ddreg'} and \
+          rstr == operand_restriction.IDXOTHERPLUSNMOD:
+            return (chr(ord(op[0])+1)+'dreg', 1)
+
+        raise ValueError("No restriction {rstr} on operand {op} for NEON opd3")
+
+    def get_required_params(self, modifiers: set[mod]) -> list[str]:
 
         required_extra_params = []
 
@@ -96,19 +123,8 @@ class neon_opdna1(opdna1):
         if mod.POSTINC in modifiers:
             required_extra_params.append({"iinc","increg"})
 
-        for p in required_extra_params:
-            params_specified = len(p.intersection(set(kwargs.keys())))
-            if params_specified > 1:
-                raise ValueError(f"{', '.join(sorted(p))} are mutually exclusive")
-            if params_specified == 0:
-                raise ValueError(f"Missing one of: {', '.join(sorted(p))}")
+        return required_extra_params
 
-        nstructs = kwargs.get("nstructs", 1)
-        if mod.STRUCT not in modifiers and len(dregs) != 1:
-            raise ValueError("Multiple registers provided but STRUCT modifier is missing")
-
-        if mod.STRUCT in modifiers and len(dregs) != nstructs:
-            raise ValueError(f"Number of dregs differs from nstructs ({len(dregs)} != {nstructs})")
 
     def get_arrangement(self, dt: adt) -> str:
         size = adt_size(dt)
@@ -151,26 +167,23 @@ class neon_opdna1(opdna1):
 
         return base_addr
 
-    def __call__(self, *, dregs: list, areg: aarch64_greg, dt: adt,
-                 modifiers: set[mod], **kwargs) -> str:
+    def implementation(self, *,
+                       dregs: list, agreg: aarch64_greg, a_dt: adt,
+                       modifiers: set[mod], **kwargs) -> str:
                  
         if not dregs:
             raise ValueError("No dregs provided")
 
         # If scalar registers are passed, forward to base AArch64
         if isinstance(dregs[0], (aarch64_greg, aarch64_freg)):
-            return self.scalar_opdna1(dregs=dregs, areg=areg, dt=dt,
+            return self.scalar_opdna1(dregs=dregs, areg=agreg, dt=a_dt,
                                       modifiers=modifiers, **kwargs)
 
         # Vector Logic Enforced Here
         if not all(isinstance(reg, neon_vreg) for reg in dregs):
             raise ValueError("Mixed or invalid register types for NEON vector operation")
 
-        self.check_required_parameters(dregs=dregs, modifiers=modifiers, **kwargs)
-        self.check_modifiers(modifiers)
-        self.check_dt(dt)
-
-        addressing = self.get_addressing(areg, modifiers, **kwargs)
+        addressing = self.get_addressing(agreg, modifiers, **kwargs)
 
         # Case 1: LDR / STR for IOFFSET / VOFFSET
         if mod.VOFFSET in modifiers or mod.IOFFSET in modifiers:
@@ -182,18 +195,25 @@ class neon_opdna1(opdna1):
             if dregs[i].idx != (dregs[i-1].idx + 1) % 32:
                 raise ValueError("NEON segmented registers must be contiguous.")
 
-        # Core instruction building
         nstructs = kwargs.get("nstructs",1)
+        # Checks not covered by standard parameter tests
+        if mod.STRUCT not in modifiers and len(dregs) != 1:
+            raise ValueError(
+                    "Multiple registers provided but STRUCT modifier is missing")
+        if mod.STRUCT in modifiers and len(dregs) != nstructs:
+            raise ValueError(
+                    f"Number of dregs differs from nstructs ({len(dregs)} != {nstructs})")
+
         inst = f"{self.inst_base}{nstructs}r" if mod.BCAST in modifiers else f"{self.inst_base}{nstructs}"
         
         if mod.ILANE in modifiers:
             lane = kwargs.get("lane")
             if lane is None: raise ValueError("ILANE requires 'lane' parameter")
-            arrangement = self.get_element_suffix(dt)
+            arrangement = self.get_element_suffix(a_dt)
             reg_list_str = ", ".join([f"{r}{arrangement}" for r in dregs])
             dreg_str = f"{{{reg_list_str}}}[{lane}]"
         else:
-            arrangement = self.get_arrangement(dt)
+            arrangement = self.get_arrangement(a_dt)
             reg_list_str = ", ".join([f"{r}{arrangement}" for r in dregs])
             dreg_str = f"{{{reg_list_str}}}"
 

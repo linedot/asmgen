@@ -88,6 +88,21 @@ class sme_fopa(opd3):
             {'adreg':adt.UINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT32},
         ]
 
+    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
+
+        required_extra_params = []
+
+        return required_extra_params
+
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {}
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+        raise ValueError("No restriction {rstr} on operand {op} for SME opd3")
+
     def mopx_inst_str(self, a_dt : adt, b_dt : adt, suf : str) -> str:
         """
         Choose the correct base MOPX instruction based on specified types

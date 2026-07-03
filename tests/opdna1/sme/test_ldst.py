@@ -53,7 +53,7 @@ class test_sme_opdna1(unittest.TestCase):
 
     def test_sme_tile_missing_kwargs(self):
         """ Ensure missing rowreg/colreg throws an error """
-        with self.assertRaisesRegex(ValueError, "Missing parameter: rowreg"):
+        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: rowreg"):
             self.load(dregs=[self.za0], areg=self.x0, dt=adt.FP64, modifiers={mod.ROW})
 
     def test_sme2_nontemporal_strided(self):

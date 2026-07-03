@@ -118,7 +118,7 @@ class test_neon_opdna1(unittest.TestCase):
 
     def test_missing_required_params_sorted(self):
         """ Verify Option 1 sorting is working for missing parameters """
-        with self.assertRaisesRegex(ValueError, "Missing one of: iinc, increg"):
+        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: iinc, increg"):
             self.gen.load(dregs=[self.v0], areg=self.x0, dt=adt.FP32, modifiers={mod.POSTINC})
 
 if __name__ == '__main__':
