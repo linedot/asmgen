@@ -17,9 +17,11 @@ from ...registers import (
     adt_is_signed,adt_is_unsigned,
     data_reg
 )
-from ..operations import opd3,widening_method,modifier
-
+from ..operations import opd3,widening_method,opd3_modifier as mod
 from ...util import NIE_MESSAGE
+
+from ..types.riscv64_types import riscv64_freg
+from ..types.rvv_types import rvv_vreg
 
 class rvv_opd3_base(opd3):
     """
@@ -34,12 +36,12 @@ class rvv_opd3_base(opd3):
         self.operand_order = [2,0,1]
 
     @abstractmethod
-    def get_base_inst(self, modifiers : set[modifier]) -> str:
+    def get_base_inst(self, modifiers : set[mod]) -> str:
         """
         Return the base instruction name based on the specified modifiers
 
         :param modifiers: set of modifiers to check the name for
-        :type modifiers: set[class:`asmgen.asmblocks.operations.modifier`]
+        :type modifiers: set[class:`asmgen.asmblocks.operations.opd3_modifier`]
         :return: ASM instruction name
         :rtype: str
         """
@@ -49,77 +51,60 @@ class rvv_opd3_base(opd3):
     def widening_method(self) -> widening_method:
         return widening_method.VEC_GROUP
 
-    def check_modifiers(self, modifiers : set[modifier]):
-        if modifier.REGIDX in modifiers:
+
+    def check_modifiers(self, modifiers : set[mod]):
+        if mod.REGIDX in modifiers:
             raise ValueError("RVV has no regidx form")
-        if modifier.IDX in modifiers:
+        if mod.IDX in modifiers:
             raise ValueError("RVV has no idx form")
-        if modifier.PART in modifiers:
+        if mod.PART in modifiers:
             raise ValueError("RVV has no partial instructions (using vgroups instead)")
-
-    def check_triple_and_modifiers(self,
-                                   a_dt : adt, b_dt : adt, c_dt : adt,
-                                   modifiers : set[modifier]):
-        """
-        Combined datatype triple and modifier check
+        if mod.MASK in modifiers:
+            raise NotImplementedError("RVV masked opd3 not implemented yet")
 
 
-        :param a_dt : Data type of the A component
-        :type a_dt : class:`asmgen.registers.asm_data_type`
-        :param b_dt : Data type of the B component
-        :type b_dt : class:`asmgen.registers.asm_data_type`
-        :param c_dt : Data type of the C component
-        :type c_dt : class:`asmgen.registers.asm_data_type`
-        :param modifiers: set containing the modifiers to check
-        :type modifiers: set[class:`asmgen.asmblocks.operations.modifier`]
-        :raises ValueError: If an unsupported modifier/datatype is in the specified set
-        """
-        super().check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
-        self.check_modifiers(modifiers=modifiers)
-
-        if a_dt != b_dt:
-            raise ValueError("A and B must have same type")
-        if adt_size(a_dt) > adt_size(c_dt):
-            raise ValueError("C type can't have smaller size than A/B type")
-        if (adt_is_float(c_dt) and adt_is_int(a_dt)) or\
-           (adt_is_float(a_dt) and adt_is_int(c_dt)):
-            raise ValueError("Accumulator and multiplicands must be both either fp or int types")
-        if adt_size(a_dt) < adt_size(c_dt):
-            if adt_is_int(c_dt) and modifier.NP in modifiers:
-                raise ValueError("RVV has no np form for widening integer operation")
-        if (adt_size(c_dt)//adt_size(a_dt)) > 2:
-            raise ValueError("RVV only supports 2*SEW widening")
-
-    def supported_triples(self) -> list[adt_triple]:
+    def supported_dts(self) -> list[dict[str,adt]]:
         return [
-            adt_triple(a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64),
-            adt_triple(a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32),
-            adt_triple(a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16),
+            {'adreg':adt.FP64, 'bdreg':adt.FP64, 'cdreg':adt.FP64},
+            {'adreg':adt.FP32, 'bdreg':adt.FP32, 'cdreg':adt.FP32},
+            {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP16},
 
-            adt_triple(a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP64),
-            adt_triple(a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32),
+            {'adreg':adt.FP32, 'bdreg':adt.FP32, 'cdreg':adt.FP64},
+            {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP32},
 
-            adt_triple(a_dt=adt.SINT64, b_dt=adt.SINT64, c_dt=adt.SINT64),
-            adt_triple(a_dt=adt.SINT32, b_dt=adt.SINT32, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT16),
-            adt_triple(a_dt=adt.SINT8,  b_dt=adt.SINT8,  c_dt=adt.SINT8),
+            {'adreg':adt.SINT64, 'bdreg':adt.SINT64, 'cdreg':adt.SINT64},
+            {'adreg':adt.SINT32, 'bdreg':adt.SINT32, 'cdreg':adt.SINT32},
+            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT16},
+            {'adreg':adt.SINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT8},
 
-            adt_triple(a_dt=adt.SINT32, b_dt=adt.SINT32, c_dt=adt.SINT64),
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.SINT8,  b_dt=adt.SINT8,  c_dt=adt.SINT16),
+            {'adreg':adt.SINT32, 'bdreg':adt.SINT32, 'cdreg':adt.SINT64},
+            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
+            {'adreg':adt.SINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT16},
 
-            adt_triple(a_dt=adt.UINT32, b_dt=adt.UINT32, c_dt=adt.UINT64),
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.UINT16, c_dt=adt.UINT32),
-            adt_triple(a_dt=adt.UINT8,  b_dt=adt.UINT8,  c_dt=adt.UINT16),
+            {'adreg':adt.UINT32, 'bdreg':adt.UINT32, 'cdreg':adt.UINT64},
+            {'adreg':adt.UINT16, 'bdreg':adt.UINT16, 'cdreg':adt.UINT32},
+            {'adreg':adt.UINT8, 'bdreg':adt.UINT8, 'cdreg':adt.UINT16},
 
-            adt_triple(a_dt=adt.SINT32, b_dt=adt.UINT32, c_dt=adt.SINT64),
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.UINT16, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.SINT8,  b_dt=adt.UINT8,  c_dt=adt.SINT16),
+            {'adreg':adt.SINT32, 'bdreg':adt.UINT32, 'cdreg':adt.SINT64},
+            {'adreg':adt.SINT16, 'bdreg':adt.UINT16, 'cdreg':adt.SINT32},
+            {'adreg':adt.SINT8, 'bdreg':adt.UINT8, 'cdreg':adt.SINT16},
 
-            adt_triple(a_dt=adt.UINT32, b_dt=adt.SINT32, c_dt=adt.SINT64),
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.SINT16, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.UINT8,  b_dt=adt.SINT8,  c_dt=adt.SINT16),
+            {'adreg':adt.UINT32, 'bdreg':adt.SINT32, 'cdreg':adt.SINT64},
+            {'adreg':adt.UINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
+            {'adreg':adt.UINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT16},
         ]
+    
+    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
+        return []
+
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {}
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+        raise ValueError("No restriction {rstr} on operand {op} for RVV opd3")
 
     def inst_prefix(self, a_dt : adt, b_dt : adt, c_dt : adt) -> str:
         """
@@ -174,20 +159,38 @@ class rvv_opd3_base(opd3):
 
     # modfier set is only read, therefore a mutable default is ok
     # pylint: disable-next=dangerous-default-value,too-many-locals
-    def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
-                 a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[modifier] = set(),
-                 **kwargs) -> str:
+    def implementation(self, *,
+                       adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+                       a_dt : adt, b_dt : adt, c_dt : adt,
+                       modifiers : set[mod] = set(),
+                       **kwargs) -> str:
 
-        self.check_triple_and_modifiers(
-                a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,
-                modifiers=modifiers)
 
+        invalid_regs = False
+        # check registers
+        if mod.VF not in modifiers:
+            if not all(isinstance(r, rvv_vreg) for r in (adreg,bdreg,cdreg)):
+                invalid_regs = True
+        else:
+            if not all(isinstance(r, rvv_vreg) for r in (adreg,cdreg)) or \
+                    not isinstance(bdreg, riscv64_freg):
+                invalid_regs = True
+
+        if invalid_regs:
+            raise ValueError(
+                    ("Either all dregs of an RVV opd3 must be rvv_vreg"
+                     " or a and c must be rvv_vreg and b must be riscv64_freg"))
+
+        # RVV specific check not covered by standard checks
+        if adt_size(a_dt) < adt_size(c_dt):
+            if adt_is_int(c_dt) and mod.NP in modifiers:
+                raise ValueError(
+                        "RVV has no np form for widening integer operation")
 
         pref = self.inst_prefix(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
         mix_pref = "w" if adt_size(c_dt)>adt_size(a_dt) else ""
         suf = self.inst_suffix(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
-        form_suf = "vf" if modifier.VF in modifiers else "vv"
+        form_suf = "vf" if mod.VF in modifiers else "vv"
 
         base_inst = self.get_base_inst(modifiers=modifiers)
 

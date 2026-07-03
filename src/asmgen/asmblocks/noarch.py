@@ -141,10 +141,10 @@ class asmgen(ABC):
         :return: Wrapped instruction string
         :rtype: str
         """
+        lines = code.strip().split('\n')
         if self.output_inline:
-            return f"\"{code}\\n\\t\"\n"
-
-        return f"{code}\n"
+            return "".join(f"\"{line}\\n\\t\"\n" for line in lines)
+        return "".join(f"{line}\n" for line in lines)
 
     @staticmethod
     def operands(inputs : list[tuple[str,str,str]],

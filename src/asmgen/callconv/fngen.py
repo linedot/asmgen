@@ -68,11 +68,14 @@ class fngen:
 
         loadblock = ''
 
+        raw_sp_shift = sr_count*8
+        aligned_sp_shift = ((raw_sp_shift + cc.spalign - 1) // cc.spalign) * cc.spalign
+
         for name,(tag,off) in self.required_loads.items():
             loadblock += self.gen.asmwrap(f"# loading {name}")
             loadblock += self.gen.load_greg(
                     areg=self.gen.greg(cc.spreg),
-                    offset=off+sr_count*8, # Assuming 64 bit/ 8 byte pointers
+                    offset=off+aligned_sp_shift, # Assuming 64 bit/ 8 byte pointers
                     dst=self.gen.greg(self.rt.aliased_regs[tag][name])
             )
 

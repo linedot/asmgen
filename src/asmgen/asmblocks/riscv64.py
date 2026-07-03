@@ -20,6 +20,9 @@ from .types.riscv64_types import riscv64_freg, riscv64_greg
 from ..callconv.callconv import callconv
 
 
+from .riscv64_opdna1 import riscv64_load,riscv64_store
+
+
 # pylint: disable=too-many-public-methods
 
 class riscv64(asmgen):
@@ -74,12 +77,20 @@ class riscv64(asmgen):
             }
         self.default_callconv = "rvg"
 
+        self.load = riscv64_load(asmwrap=self.asmwrap)
+        self.store = riscv64_store(asmwrap=self.asmwrap)
+
     def create_callconv(self, name : str = "default"):
 
         if "default" == name:
             name = self.default_callconv
 
         return deepcopy(self.callconvs[name])
+
+    def get_param_value(self, name : str) -> int|str:
+        if "dummy" == name:
+            return "dummy"
+        raise ValueError(f"Invalid isa parameter \"{name}\"")
 
     def greg(self, reg_idx : int) -> greg_base:
         return riscv64_greg(reg_idx)

@@ -7,7 +7,7 @@
 AVX fma instruction
 """
 
-from ..operations import modifier
+from ..operations import opd3_modifier as mod
 
 from .avx_opd3_base import avx_opd3_base
 
@@ -16,5 +16,5 @@ class avx_fma(avx_opd3_base):
     AVX implementation of fma
     """
 
-    def get_base_inst(self, modifiers):
-        return "vfnmadd231" if modifier.NP in modifiers else "vfmadd231"
+    def get_base_inst(self, modifiers : set[mod]):
+        return "vfnmadd231" if mod.NP in modifiers else "vfmadd231"

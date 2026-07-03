@@ -53,7 +53,7 @@ class test_callconv_gemmukr(unittest.TestCase):
         self.gregs_used = []
         self.fregs_used = []
 
-        for name,(tag,idx,in_stack) in self.cc.get_params().items():
+        for name,(tag,idx,in_stack,dt) in self.cc.get_params().items():
 
             location = ''
             if not in_stack:

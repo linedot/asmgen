@@ -15,9 +15,9 @@ from ...registers import (
     asm_index_type as ait,
     data_reg,
 )
-from ..operations import opd3,widening_method,modifier
+from ..operations import opd3,widening_method,opd3_modifier as mod
 
-from ..types.avx_types import reg_prefixer
+from ..types.avx_types import reg_prefixer, avx_vreg
 
 from ...util import NIE_MESSAGE
 
@@ -42,12 +42,12 @@ class avx_opd3_base(opd3):
         self.has_fp16 = has_fp16
 
     @abstractmethod
-    def get_base_inst(self, modifiers : set[modifier]) -> str:
+    def get_base_inst(self, modifiers : set[mod]) -> str:
         """
         Return the base instruction name based on the specified modifiers
 
         :param modifiers: set of modifiers to check the name for
-        :type modifiers: set[class:`asmgen.asmblocks.operations.modifier`]
+        :type modifiers: set[class:`asmgen.asmblocks.operations.opd3_modifier`]
         :return: ASM instruction name
         :rtype: str
         """
@@ -57,36 +57,52 @@ class avx_opd3_base(opd3):
     def widening_method(self) -> widening_method:
         return widening_method.NONE
 
-    def check_modifiers(self, modifiers : set[modifier]):
-        if modifier.VF in modifiers:
+    def check_modifiers(self, modifiers : set[mod]):
+        if mod.VF in modifiers:
             raise ValueError("AVX has no vf form")
-        if modifier.REGIDX in modifiers:
+        if mod.REGIDX in modifiers:
             raise ValueError("AVX has no regidx form")
-        if modifier.IDX in modifiers:
+        if mod.IDX in modifiers:
             raise ValueError("AVX has no idx form")
-        if modifier.PART in modifiers:
+        if mod.PART in modifiers:
             raise ValueError("AVX has no partial instructions")
+        if mod.MASK in modifiers:
+            raise NotImplementedError("AVX masked opd3 not yet implemented")
 
-    def supported_triples(self) -> list[adt_triple]:
+    def supported_dts(self) -> list[dict[str,adt]]:
         supported_list = [
-            adt_triple(a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64),
-            adt_triple(a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32),
+            {'adreg':adt.FP64, 'bdreg':adt.FP64, 'cdreg':adt.FP64},
+            {'adreg':adt.FP32, 'bdreg':adt.FP32, 'cdreg':adt.FP32},
         ]
         if self.has_fp16:
             supported_list.append(
-                    adt_triple(a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16))
+                    {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP16})
         return supported_list
+
+    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
+
+        required_extra_params = []
+        return required_extra_params
+
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
+        # No restriction on any operands
+        return {}
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]:
+        raise ValueError("No restriction {rstr} on operand {op} for AVX opd3")
 
     # modfier set is only read, therefore a mutable default is ok
     # pylint: disable-next=dangerous-default-value
-    def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
-                 a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[modifier] = set(),
-                 **kwargs) -> str:
-        self.check_modifiers(modifiers=modifiers)
-        self.check_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
-        if (a_dt != b_dt) or (a_dt != c_dt):
-            raise ValueError("A,B and C must have same type")
+    def implementation(self, *,
+                       adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+                     a_dt : adt, b_dt : adt, c_dt : adt,
+                     modifiers : set[mod] = set(),
+                     **kwargs) -> str:
+
+        if any(not isinstance(r, avx_vreg) for r in (adreg,bdreg,cdreg)):
+            raise ValueError("All dregs of an AVX opd3 must be avx_vreg")
 
         inst = self.get_base_inst(modifiers=modifiers)
 

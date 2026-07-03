@@ -9,7 +9,7 @@ RVV 1.0 and 0.7.1 fused-multiply-accumulate
 
 from typing import Callable
 
-from ..operations import modifier
+from ..operations import opd3_modifier as mod
 
 from .rvv_opd3_base import rvv_opd3_base
 
@@ -24,5 +24,5 @@ class rvv_fma(rvv_opd3_base):
 
         self.operand_order = [2,1,0]
 
-    def get_base_inst(self, modifiers : set[modifier]):
-        return "nmsac" if modifier.NP in modifiers else "macc"
+    def get_base_inst(self, modifiers : set[mod]):
+        return "nmsac" if mod.NP in modifiers else "macc"

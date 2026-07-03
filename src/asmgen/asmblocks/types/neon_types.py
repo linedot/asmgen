@@ -14,6 +14,10 @@ class neon_vreg(vreg_base):
     NEON/ASIMD vector register
     """
     def __init__(self, reg_idx : int):
-        self.idx = reg_idx
+        self.reg_idx = reg_idx
     def __str__(self) -> str:
         return f"v{self.idx}"
+
+    @property
+    def idx(self) -> int:
+        return self.reg_idx

@@ -4,7 +4,7 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 """
-Contains the base class for AVX opd3 operations
+Contains the base class for AVX opd3 tests
 """
 import unittest
 

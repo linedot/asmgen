@@ -84,3 +84,17 @@ class test_avx_fmul(test_avx_opd3):
                 bdreg=self.gen512.vreg(2),
                 cdreg=self.gen512.vreg(0),
                 a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16))
+
+    def test_wrong_registers(self):
+        """
+        Tests that the correct error is raised if wrong registers are passed
+        to the operation
+        """
+        with self.assertRaisesRegex(
+                ValueError,
+                "All dregs of an AVX opd3 must be avx_vreg"):
+            self.gen128.fmul(
+                    adreg=self.gen128.vreg(1),
+                    bdreg=self.gen128.vreg(2),
+                    cdreg=self.gen128.freg(0,dt=adt.FP64),
+                    a_dt=adt.FP64,b_dt=adt.FP64,c_dt=adt.FP64)

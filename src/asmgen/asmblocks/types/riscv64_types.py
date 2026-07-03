@@ -25,10 +25,14 @@ class riscv64_greg(greg_base):
             ['ra', 'sp', 'gp', 'tp', 's0', 'zero']
 
     def __init__(self, reg_idx : int):
-        self.reg_str = riscv64_greg.names[reg_idx]
+        self.reg_idx = reg_idx
+
+    @property
+    def idx(self) -> int:
+        return self.reg_idx
 
     def __str__(self) -> str:
-        return self.reg_str
+        return riscv64_greg.names[self.idx]
 
 class riscv64_freg(freg_base):
     """
@@ -38,7 +42,11 @@ class riscv64_freg(freg_base):
     names = [f'f{i}' for i in range(32)]
 
     def __init__(self, reg_idx : int):
-        self.reg_str = riscv64_freg.names[reg_idx]
+        self.reg_idx = reg_idx
+
+    @property
+    def idx(self) -> int:
+        return self.reg_idx
 
     def __str__(self) -> str:
-        return self.reg_str
+        return riscv64_freg.names[self.idx]

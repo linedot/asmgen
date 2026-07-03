@@ -13,6 +13,9 @@ from ...registers import (
     adt_triple,
 )
 from .neon_opd3_base import neon_opd3_base
+from ..types.neon_types import neon_vreg
+
+from ..operations import opd3_modifier as mod
 
 class neon_fma(neon_opd3_base):
     """
@@ -20,25 +23,33 @@ class neon_fma(neon_opd3_base):
     """
 
     inst_base = "ml"
+    def check_modifiers(self, modifiers : set[mod]):
+        super().check_modifiers(modifiers=modifiers)
+        if mod.MASK in modifiers:
+            raise ValueError("NEON fma has no masked form")
 
-    def supported_triples(self) -> list[adt_triple]:
+    def check_valid_registers(self, dregs : list[data_reg]) -> bool:
+        if not all(isinstance(d, neon_vreg) for d in dregs):
+            raise ValueError("All dregs of a NEON opd3 must be neon_vreg")
+
+    def supported_dts(self) -> list[dict[str,adt]]:
         return [
-            adt_triple(a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64),
-            adt_triple(a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32),
-            adt_triple(a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16),
+            {'adreg':adt.FP64, 'bdreg':adt.FP64, 'cdreg':adt.FP64},
+            {'adreg':adt.FP32, 'bdreg':adt.FP32, 'cdreg':adt.FP32},
+            {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP16},
 
-            adt_triple(a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32),
+            {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP32},
 
-            adt_triple(a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32),
-            adt_triple(a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP16),
-            adt_triple(a_dt=adt.FP8E4M3, b_dt=adt.FP8E4M3, c_dt=adt.FP32),
-            adt_triple(a_dt=adt.FP8E4M3, b_dt=adt.FP8E4M3, c_dt=adt.FP16),
+            {'adreg':adt.FP8E5M2, 'bdreg':adt.FP8E5M2, 'cdreg':adt.FP32},
+            {'adreg':adt.FP8E5M2, 'bdreg':adt.FP8E5M2, 'cdreg':adt.FP16},
+            {'adreg':adt.FP8E4M3, 'bdreg':adt.FP8E4M3, 'cdreg':adt.FP32},
+            {'adreg':adt.FP8E4M3, 'bdreg':adt.FP8E4M3, 'cdreg':adt.FP16},
 
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT64),
-            adt_triple(a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT32),
-            adt_triple(a_dt=adt.SINT8,  b_dt=adt.SINT8,  c_dt=adt.SINT32),
+            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT64},
+            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
+            {'adreg':adt.SINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT32},
 
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.UINT16, c_dt=adt.UINT64),
-            adt_triple(a_dt=adt.UINT16, b_dt=adt.UINT16, c_dt=adt.UINT32),
-            adt_triple(a_dt=adt.UINT8,  b_dt=adt.UINT8,  c_dt=adt.UINT32),
+            {'adreg':adt.UINT16, 'bdreg':adt.UINT16, 'cdreg':adt.UINT64},
+            {'adreg':adt.UINT16, 'bdreg':adt.UINT16, 'cdreg':adt.UINT32},
+            {'adreg':adt.UINT8, 'bdreg':adt.UINT8, 'cdreg':adt.UINT32},
         ]

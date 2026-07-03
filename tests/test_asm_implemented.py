@@ -180,6 +180,7 @@ def get_rt(gen : asmgen, name: str) -> reg_tracker:
 function_tests = [
         ['simd_size', None],
         ['get_parameters', None],
+        ['get_param_value', {'name' : lambda gen : 'dummy'}],
         ['c_simd_size_function', None],
         ['is_vla', None],
         ['supported_on_host', None],
@@ -317,6 +318,9 @@ function_tests = [
         ['load_vector', {'areg' : lambda gen : gen.greg(0),
                          'vreg' : lambda gen : gen.vreg(0),
                          'dt' :  lambda gen : adt.DOUBLE}],
+        ['fill_vector', {'sreg' : lambda gen : gen.freg(0, dt=adt.DOUBLE),
+                         'vreg' : lambda gen : gen.vreg(1),
+                         'dt' : lambda gen : adt.DOUBLE}],
         ['load_vector_lane', {'areg' : lambda gen : gen.greg(0),
                               'vreg' : lambda gen : gen.vreg(0),
                               'lane' : lambda gen : 1,

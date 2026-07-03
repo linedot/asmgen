@@ -14,7 +14,11 @@ class rvv_vreg(vreg_base):
     RVV vector register
     """
     def __init__(self, reg_idx : int):
-        self.reg_str = f"v{reg_idx}"
+        self.reg_idx = reg_idx
+        
+    @property
+    def idx(self) -> int:
+        return self.reg_idx
 
     def __str__(self) -> str:
-        return self.reg_str
+        return f"v{self.idx}"

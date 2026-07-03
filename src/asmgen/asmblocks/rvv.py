@@ -20,6 +20,7 @@ from .riscv64 import riscv64
 from .types.rvv_types import rvv_vreg
 
 from .rvv_opd3 import rvv_fma,rvv_fmul,rvv_fadd
+from .rvv_opdna1 import rvv_load,rvv_store
 
 
 # pylint: disable=too-many-public-methods
@@ -51,14 +52,18 @@ class rvv(riscv64):
 
         self.lmul = 1
 
+        self.load = rvv_load(asmwrap=self.asmwrap,
+                             lmul_getter=lambda : self.lmul)
+        self.store = rvv_store(asmwrap=self.asmwrap,
+                               lmul_getter=lambda : self.lmul)
+
     def get_parameters(self) -> list[str]:
         return ["LMUL"]
 
     def get_param_value(self, name : str) -> int|str:
-        if "LMUL" != name:
-            raise ValueError(f"Invalid isa parameter: {name}")
-
-        return self.lmul
+        if "LMUL" == name:
+            return self.lmul
+        return super().get_param_value(name)
 
     def set_parameter(self, name : str, value : int|str):
         if "LMUL" == name:

@@ -16,6 +16,198 @@ from ..registers import (
     adt_triple,
 )
 
+class operand_restriction(Enum):
+    IDXMIN        = auto() # There is a minimum allowed index
+    IDXMAX        = auto() # There is a maximum allowed index
+    IDXONEOF      = auto() # Index has to be element of a set
+    IDXMULTIPLEOF = auto() # Index has to be a multiple of an integer (i.e 2: 2,4,6)
+    IDXOTHERPLUSN = auto() # Index depends on index of another parameter and
+                           # has to be other idx + n
+    IDXOTHERPLUSNMOD = auto() # same as the one before but modulo a value (SVE)
+
+#TODO: There is a good argument for implementing explicit classes for constraints, i.e
+# class operand_constraint(ABC):
+#     @abstractmethod
+#     def validate(self, name, val, context):
+#         """Throws an error if the value is illegal"""
+#
+#     @abstractmethod
+#     def valid_values(self, name, val, context):
+#         """Returns an iterable with valid values to use in allocator/param generator"""
+#
+# Implement restrictions/constraints in this manner in the future
+
+def make_ord_prefix(i : int) -> 'str':
+    if i > 25 or i < 0:
+        raise ValueError("index outside of allowed range [0,25]")
+
+    return chr(ord('a')+i)
+
+class operation(ABC):
+    """
+    Abstraction over operations/instructions
+    """
+
+    NIE_MESSAGE="Inheriting class must implement this method"
+
+    @abstractmethod
+    def supported_dts(self) -> list[dict[str,adt]]:
+        """
+        Returns a list of valid datatypes for each argument
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    @abstractmethod
+    def get_required_params(self, modifiers : set[Enum]) -> list[set[str]]:
+        """
+        Based on supplied modifiers, return a list of additional
+        parameters
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    @abstractmethod
+    def get_operand_restrictions(self, op : str) -> set[operand_restriction]:
+        """
+        For a specific operand get a set of required restrictions if any
+        apply
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    @abstractmethod
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) \
+      -> int|set[int]|tuple[str,int]|tuple[str,int,int]:
+        """
+        For a specific operand and restriction type, get the value for
+        the restriction
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    @abstractmethod
+    def check_modifiers(self, modifiers : set[Enum]):
+        """
+        Confirm validity of the supplied modifier combination
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def check_dts(self, dts : dict[str,adt]):
+        
+        # <= on items is true if it's a subset
+        if not any(dts.items() <= sup_dts.items() for sup_dts in self.supported_dts()):
+            err_msg = "Invalid data type combination: "
+            err_msg += ", ".join(f"{oprnd}:{dt.name}" for oprnd,dt in dts.items())
+            raise ValueError(err_msg)
+
+    def check_operand_restrictions(self,
+                                   kwargs : dict[str,int|greg_type|data_reg|adt]):
+
+        for name, oprnd in kwargs.items():
+            rstrs = self.get_operand_restrictions(name)
+            if not rstrs:
+                continue
+
+            if operand_restriction.IDXMIN in rstrs:
+                minval = self.get_operand_restriction_value(
+                        op=name,
+                        rstr=operand_restriction.IDXMIN)
+                if oprnd.idx < minval:
+                    raise ValueError(f"{name} index must be >= {minval}")
+
+            if operand_restriction.IDXMAX in rstrs:
+                maxval = self.get_operand_restriction_value(
+                        op=name,
+                        rstr=operand_restriction.IDXMAX)
+                if oprnd.idx > maxval:
+                    raise ValueError(f"{name} index must be <= {maxval}")
+
+            if operand_restriction.IDXONEOF in rstrs:
+                valset = self.get_operand_restriction_value(
+                        op=name,
+                        rstr=operand_restriction.IDXONEOF)
+                if oprnd.idx not in valset:
+                    raise ValueError(f"{name} index must be one of {valset}")
+
+            if operand_restriction.IDXMULTIPLEOF in rstrs:
+                multiple = self.get_operand_restriction_value(
+                        op=name,
+                        rstrs=operand_restriction.IDXMULTIPLEOF)
+                if 0 != (oprnd.idx % multiple):
+                    raise ValueError(f"{name} index must be a multiple of {multiple}")
+
+            if operand_restriction.IDXOTHERPLUSN in rstrs:
+                other,offset = self.get_operand_restriction_value(
+                        op=name,
+                        rstrs=operand_restriction.IDXOTHERPLUSN)
+                if oprnd.idx != kwargs[other].idx+offset:
+                    raise ValueError(
+                            f"{name} index must be index of {other} plus {offset}")
+
+            if operand_restriction.IDXOTHERPLUSNMOD in rstrs:
+                other,offset,modval = self.get_operand_restriction_value(
+                        op=name,
+                        rstrs=operand_restriction.IDXOTHERPLUSNMOD)
+                if oprnd.idx != (kwargs[other].idx+offset) % modval:
+                    raise ValueError(
+                            (f"{name} index must be index of {other} "
+                             f"plus {offset} modulo {modval}"))
+
+    def execute(self, *,
+                dregs : list[data_reg],
+                gregs : list[greg_type],
+                dts : dict[str,adt],
+                modifiers : set[Enum],
+                **kwargs) -> str:
+        """
+        Performs checks on all arguments, generates the parameters for the underlying
+        implementation and calls it
+        """
+
+        if len(dregs) < 1:
+            raise ValueError("No dregs passed to opdna1 operation")
+
+        self.check_modifiers(modifiers)
+        self.check_dts(dts)
+
+        extra_params = self.get_required_params(modifiers)
+        for p in extra_params:
+            params_specified = len(p.intersection(set(kwargs.keys())))
+            if params_specified > 1:
+                raise ValueError(f"{', '.join(sorted(p))} are mutually exclusive")
+            if params_specified == 0:
+                raise ValueError(f"Missing one of these parameters: {', '.join(sorted(p))}")
+
+        # generate dreg args
+        for i,reg in enumerate(dregs):
+            pfx = make_ord_prefix(i)
+            dreg_name = f"{pfx}dreg"
+            dt_name = f"{pfx}_dt"
+            kwargs[dreg_name] = reg
+            kwargs[dt_name] = dts[dreg_name]
+
+        for i,reg in enumerate(gregs):
+            pfx = make_ord_prefix(i)
+            greg_name = f"{pfx}greg"
+            kwargs[greg_name] = reg
+
+        
+        self.check_operand_restrictions(kwargs)
+
+        kwargs['modifiers'] = modifiers
+        
+        # opdna1 has a different interface
+        kwargs['dregs'] = dregs
+
+        return self.implementation(**kwargs)
+
+
+    @abstractmethod
+    def implementation(self, **kwargs) -> str:
+        """
+        Actual implementation of the operation to be implemented
+        by the inheriting class
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
 class widening_method(Enum):
     """
     Possible methods ISAs can have for widening instructions
@@ -26,9 +218,9 @@ class widening_method(Enum):
     DOT_NEIGHBOURS = auto()
     SPLIT_INSTRUCTIONS = auto()
 
-class modifier(Enum):
+class opd3_modifier(Enum):
     """
-    Possible modifiers for an instruction/operation
+    Possible modifiers for an opd3 instruction/operation
     """
     NP = auto()
     IDX = auto()
@@ -37,7 +229,8 @@ class modifier(Enum):
     VF = auto()
     MASK = auto()
 
-class opd3(ABC):
+
+class opd3(operation):
     """
     Assembly/IR instruction with 3 data operands
 
@@ -71,31 +264,22 @@ class opd3(ABC):
         raise NotImplementedError(self.NIE_MESSAGE)
 
     @abstractmethod
-    def supported_triples(self) -> list[adt_triple]:
-        """
-        Return the list of supported data type combinations
-        
-        :return : list of supported data type combinations
-        :rtype : class:`asmgen.registers.adt_triple`
-        """
-        raise NotImplementedError(self.NIE_MESSAGE)
-
-    @abstractmethod
-    def check_modifiers(self, modifiers : set[modifier]):
+    def check_modifiers(self, modifiers : set[opd3_modifier]):
         """
         Checks whether the operations supports the specified modifiers
 
 
         :param modifiers: set containing the modifiers to check
-        :type modifiers: set[class:`asmgen.asmblocks.operations.modifier`]
+        :type modifiers: set[class:`asmgen.asmblocks.operations.opd3_modifier`]
         :raises ValueError: If an unsupported modifier is in the specified set
         """
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    @abstractmethod
-    def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+    def __call__(self, *,
+                 adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                  a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[modifier], **kwargs) -> str:
+                 modifiers : set[opd3_modifier] = set(),
+                 **kwargs) -> str:
         """
         Return the ASM/IR instruction
         
@@ -114,23 +298,15 @@ class opd3(ABC):
         :return : ASM/IR instruction corresponding to the operation
         :rtype : str
         """
-        raise NotImplementedError(self.NIE_MESSAGE)
 
-    def check_triple(self, a_dt : adt, b_dt : adt, c_dt : adt):
-        """
-        Check if the operation supports the specified data type combination
-        
-        :param a_dt : Data type of the A component
-        :type a_dt : class:`asmgen.registers.asm_data_type`
-        :param b_dt : Data type of the B component
-        :type b_dt : class:`asmgen.registers.asm_data_type`
-        :param c_dt : Data type of the C component
-        :type c_dt : class:`asmgen.registers.asm_data_type`
-        :raises ValueError: if an unsupported datatype combination is passed
-        """
-        triple = adt_triple(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
-        if triple not in self.supported_triples():
-            raise ValueError(f"Unsupported type combination a={a_dt},b={b_dt},c={c_dt}")
+        return self.execute(
+            dregs=[adreg,bdreg,cdreg],
+            gregs=[],
+            dts={'adreg':a_dt,'bdreg':b_dt,'cdreg':c_dt},
+            modifiers=modifiers,
+            **kwargs
+        )
+
 
 class dummy_opd3(opd3):
     """
@@ -141,12 +317,144 @@ class dummy_opd3(opd3):
     def widening_method(self) -> widening_method:
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    def supported_triples(self) -> list[adt_triple]:
+    def supported_dts(self) -> list[dict[str,adt]]:
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    def check_modifiers(self, modifiers : set[modifier]):
+    def check_modifiers(self, modifiers : set[opd3_modifier]):
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    def __call__(self, *, adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
-                 a_dt : adt, b_dt : adt, c_dt : adt, modifiers : set[modifier], **kwargs) -> str:
+    def get_required_params(self, modifiers : set[opd3_modifier]) -> list[set[str]]:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def get_operand_restrictions(self, op : str) -> set[operand_restriction]:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) -> int:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def implementation(self, *,
+                       adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+                       a_dt : adt, b_dt : adt, c_dt : adt,
+                       modifiers : set[opd3_modifier], **kwargs) -> str:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+class opdna1_modifier(Enum):
+    """
+    Possible modifiers for an instruction/operation
+    """
+    ILANE = auto()   # select lane with an immediate
+    GLANE = auto()   # select lane with a greg
+    TOFFSET = auto() # 2D offset in number of tiles
+    VOFFSET = auto() # 1D offset in number of vectors
+    IOFFSET = auto() # 1D offset in number of elements
+    GOFFSET = auto() # 1D offset given by greg
+    TINDEX = auto()  # 2D tile contains per-element indices/offsets
+    VINDEX = auto()  # 1D vector contains per-element indices/offsets
+    GSTRIDE = auto() # stride between elements given by greg
+    ISTRIDE = auto() # stride between elements given by immediate
+    POSTINC = auto() # increment address greg after operation
+    STRUCT = auto()  # load a structure with multiple components 
+                     # (i.e [Re,Im], [x,y,z] or [r,g,b,a])
+    BCAST = auto()   # Broadcast one value into all lanes
+    MASK  = auto()   # Masked operation
+    ROW = auto()     # Row of a treg
+    COL = auto()     # Column of a treg
+    NT  = auto()     # Non-temporal ld/st
+
+class opdna1_action(Enum):
+    """
+    Possible opdna1 actions
+    """
+    LOAD = auto()
+    STORE = auto()
+
+class opdna1(operation):
+    """
+    Assembly/IR instruction with n data operand and 1 address operand
+
+    Absraction for loads/stores (maybe also prefetches)
+    """
+    NIE_MESSAGE="Method not implemented"
+
+    @abstractmethod
+    def supported_dts(self) -> list[dict[str,adt]]:
+        """
+        Return the list of supported data types
+        
+        :return : list of supported data types
+        :rtype : class:`asmgen.registers.asm_data_type`
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    @abstractmethod
+    def check_modifiers(self, modifiers : set[opdna1_modifier]):
+        """
+        Checks whether the operations supports the specified modifiers
+
+
+        :param modifiers: set containing the modifiers to check
+        :type modifiers: set[class:`asmgen.asmblocks.operations.opd1a1_modifier`]
+        :raises ValueError: If an unsupported modifier is in the specified set
+        """
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def __call__(self, *, dregs : list[data_reg],
+                 areg : greg_type, dt : adt,
+                 modifiers : set[opdna1_modifier], **kwargs) -> str:
+        """
+        Return the ASM/IR instruction
+        
+        :param dregs : Data registers
+        :type dregs : list[class:`asmgen.registers.data_reg`]
+        :param areg : Address register
+        :type areg : class:`asmgen.registers.greg_type`
+        :param dt : Data type
+        :type dt : class:`asmgen.registers.asm_data_type`
+        :return : ASM/IR instruction corresponding to the operation
+        :rtype : str
+        """
+
+        return self.execute(
+            dregs=dregs,
+            gregs=[areg],
+            dts={
+                make_ord_prefix(i)+'dreg' : dt for i in range(len(dregs))
+            },
+            modifiers=modifiers,
+            **kwargs
+        )
+
+    @abstractmethod
+    def implementation(self, *, dregs : list[data_reg],
+                       agreg : greg_type, a_dt : adt,
+                       modifiers : set[opdna1_modifier], **kwargs) -> str:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+
+class dummy_opdna1(opdna1):
+    """
+    Dummy opd1a1 operation; ISAs assign this by default to operations they do not support
+    """
+
+    def supported_dts(self) -> list[adt_triple]:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def check_modifiers(self, modifiers : set[opdna1_modifier]):
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def get_required_params(self, modifiers : set[opdna1_modifier]) -> list[str]:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def get_operand_restrictions(self, op : str) -> set[operand_restriction]:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def get_operand_restriction_value(self, op : str,
+                                      rstr : operand_restriction) -> int:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
+    def implementation(self, *,
+                       dregs : list[data_reg], agreg : greg_type,
+                       a_dt : adt,
+                       modifiers : set[opdna1_modifier], **kwargs) -> str:
         raise NotImplementedError(self.NIE_MESSAGE)
