@@ -92,24 +92,34 @@ class sme_opdna1(opdna1):
 
 
     def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
-        # No restriction on any operands
-        return {
-            'bdreg' : operand_restriction.IDXOTHERPLUSNMOD,
-            'cdreg' : operand_restriction.IDXOTHERPLUSNMOD,
-            'ddreg' : operand_restriction.IDXOTHERPLUSNMOD,
-            'rowreg': operand_restriction.IDXMIN,
-            'rowreg': operand_restriction.IDXMAX,
-            'colreg': operand_restriction.IDXMIN,
-            'colreg': operand_restriction.IDXMAX,
+        rstrs = {
+            'bdreg' : {operand_restriction.IDXOTHERPLUSNMOD},
+            'cdreg' : {operand_restriction.IDXOTHERPLUSNMOD},
+            'ddreg' : {operand_restriction.IDXOTHERPLUSNMOD},
+            'rowreg': {operand_restriction.IDXMIN,
+                       operand_restriction.IDXMAX},
+            'colreg': {operand_restriction.IDXMIN,
+                       operand_restriction.IDXMAX},
         }
+        
+        if oprnd in rstrs:
+            return rstrs[oprnd]
+        
+        return set()
 
     def get_operand_restriction_value(self, op : str,
+                                      modifiers : set[mod],
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]:
 
-        if op in {'bdreg', 'cdreg', 'ddreg'} and \
-          rstr == operand_restriction.IDXOTHERPLUSNMOD:
-            return (chr(ord(op[0])+1)+'dreg', 1, 32)
+        if mod.NT in modifiers:
+            if op in {'bdreg', 'cdreg', 'ddreg'} and \
+              rstr == operand_restriction.IDXOTHERPLUSNMOD:
+                return (chr(ord(op[0])-1)+'dreg', 8, 32)
+        else:
+            if op in {'bdreg', 'cdreg', 'ddreg'} and \
+              rstr == operand_restriction.IDXOTHERPLUSNMOD:
+                return (chr(ord(op[0])-1)+'dreg', 1, 32)
 
         if op in {'rowreg', 'colreg'} and \
           rstr == operand_restriction.IDXMAX:

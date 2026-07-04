@@ -101,6 +101,7 @@ class rvv_opdna1(opdna1):
         return {}
 
     def get_operand_restriction_value(self, op : str,
+                                      modifiers : set[mod],
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]:
         raise ValueError("No restriction {rstr} on operand {op} for RVV opdna1")

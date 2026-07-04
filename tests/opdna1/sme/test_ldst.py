@@ -17,6 +17,10 @@ class test_sme_opdna1(unittest.TestCase):
         
         # GP registers for slice indices (usually w12-w15)
         self.w12 = aarch64_greg(12) 
+
+        # GP regs for testing col/row restriction
+        self.w5  = aarch64_greg(5)
+        self.w17  = aarch64_greg(17)
         
         self.z0 = sve_vreg(0)
         self.z8 = sve_vreg(8)
@@ -46,8 +50,10 @@ class test_sme_opdna1(unittest.TestCase):
     def test_sme_tile_slice_col_with_goffset(self):
         """ Test ZA tile vertical (col) slice with scalar offset """
         self.assertEqual(
-            self.store(dregs=[sme_treg(0,dt=adt.FP32)], areg=self.x0, dt=adt.FP32, 
-                       modifiers={mod.COL, mod.GOFFSET}, colreg=self.w12, offreg=self.x1, immcol=1),
+            self.store(dregs=[sme_treg(0,dt=adt.FP32)],
+                       areg=self.x0, dt=adt.FP32, 
+                       modifiers={mod.COL, mod.GOFFSET},
+                       colreg=self.w12, offreg=self.x1, immcol=1),
             "st1w {za0v.s[w12, 1]}, p0, [x0, x1, lsl #2]\n"
         )
 
@@ -55,6 +61,28 @@ class test_sme_opdna1(unittest.TestCase):
         """ Ensure missing rowreg/colreg throws an error """
         with self.assertRaisesRegex(ValueError, "Missing one of these parameters: rowreg"):
             self.load(dregs=[self.za0], areg=self.x0, dt=adt.FP64, modifiers={mod.ROW})
+
+    def test_sme_rowreg_index_too_small(self):
+        """ Ensure too small rowreg/colreg index throws an error """
+        with self.assertRaisesRegex(ValueError,
+                                    "rowreg index must be >= 12"):
+            self.load(dregs=[self.za0],
+                      areg=self.x0,
+                      dt=adt.FP64,
+                      modifiers={mod.ROW},
+                      rowreg=self.w5,
+                      immrow=0)
+
+    def test_sme_rowreg_index_too_big(self):
+        """ Ensure too small rowreg/colreg index throws an error """
+        with self.assertRaisesRegex(ValueError,
+                                    "rowreg index must be <= 15"):
+            self.load(dregs=[self.za0],
+                      areg=self.x0,
+                      dt=adt.FP64,
+                      modifiers={mod.ROW},
+                      rowreg=self.w17,
+                      immrow=0)
 
     def test_sme2_nontemporal_strided(self):
         """ Test SME2 LDNT1D with multiple strided registers and MUL VL """

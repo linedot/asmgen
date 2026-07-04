@@ -99,6 +99,7 @@ class operation(ABC):
             raise ValueError(err_msg)
 
     def check_operand_restrictions(self,
+                                   modifiers : set[Enum],
                                    kwargs : dict[str,int|greg_type|data_reg|adt]):
 
         for name, oprnd in kwargs.items():
@@ -109,6 +110,7 @@ class operation(ABC):
             if operand_restriction.IDXMIN in rstrs:
                 minval = self.get_operand_restriction_value(
                         op=name,
+                        modifiers=modifiers,
                         rstr=operand_restriction.IDXMIN)
                 if oprnd.idx < minval:
                     raise ValueError(f"{name} index must be >= {minval}")
@@ -116,6 +118,7 @@ class operation(ABC):
             if operand_restriction.IDXMAX in rstrs:
                 maxval = self.get_operand_restriction_value(
                         op=name,
+                        modifiers=modifiers,
                         rstr=operand_restriction.IDXMAX)
                 if oprnd.idx > maxval:
                     raise ValueError(f"{name} index must be <= {maxval}")
@@ -123,6 +126,7 @@ class operation(ABC):
             if operand_restriction.IDXONEOF in rstrs:
                 valset = self.get_operand_restriction_value(
                         op=name,
+                        modifiers=modifiers,
                         rstr=operand_restriction.IDXONEOF)
                 if oprnd.idx not in valset:
                     raise ValueError(f"{name} index must be one of {valset}")
@@ -130,14 +134,16 @@ class operation(ABC):
             if operand_restriction.IDXMULTIPLEOF in rstrs:
                 multiple = self.get_operand_restriction_value(
                         op=name,
-                        rstrs=operand_restriction.IDXMULTIPLEOF)
+                        modifiers=modifiers,
+                        rstr=operand_restriction.IDXMULTIPLEOF)
                 if 0 != (oprnd.idx % multiple):
                     raise ValueError(f"{name} index must be a multiple of {multiple}")
 
             if operand_restriction.IDXOTHERPLUSN in rstrs:
                 other,offset = self.get_operand_restriction_value(
                         op=name,
-                        rstrs=operand_restriction.IDXOTHERPLUSN)
+                        modifiers=modifiers,
+                        rstr=operand_restriction.IDXOTHERPLUSN)
                 if oprnd.idx != kwargs[other].idx+offset:
                     raise ValueError(
                             f"{name} index must be index of {other} plus {offset}")
@@ -145,7 +151,8 @@ class operation(ABC):
             if operand_restriction.IDXOTHERPLUSNMOD in rstrs:
                 other,offset,modval = self.get_operand_restriction_value(
                         op=name,
-                        rstrs=operand_restriction.IDXOTHERPLUSNMOD)
+                        modifiers=modifiers,
+                        rstr=operand_restriction.IDXOTHERPLUSNMOD)
                 if oprnd.idx != (kwargs[other].idx+offset) % modval:
                     raise ValueError(
                             (f"{name} index must be index of {other} "
@@ -190,7 +197,7 @@ class operation(ABC):
             kwargs[greg_name] = reg
 
         
-        self.check_operand_restrictions(kwargs)
+        self.check_operand_restrictions(modifiers=modifiers, kwargs=kwargs)
 
         kwargs['modifiers'] = modifiers
         

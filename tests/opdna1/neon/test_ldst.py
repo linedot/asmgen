@@ -101,7 +101,8 @@ class test_neon_opdna1(unittest.TestCase):
 
     def test_non_contiguous_registers(self):
         """ Segmented structural loads must use contiguous registers """
-        with self.assertRaisesRegex(ValueError, "segmented registers must be contiguous"):
+        with self.assertRaisesRegex(ValueError,
+                                    "bdreg index must be index of adreg plus 1"):
             self.gen.load(dregs=[self.v0, self.v2], areg=self.x0, dt=adt.FP32, 
                       modifiers={mod.STRUCT}, nstructs=2)
 
