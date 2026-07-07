@@ -25,17 +25,114 @@ class operand_restriction(Enum):
                            # has to be other idx + n
     IDXOTHERPLUSNMOD = auto() # same as the one before but modulo a value (SVE)
 
-#TODO: There is a good argument for implementing explicit classes for constraints, i.e
-# class operand_constraint(ABC):
-#     @abstractmethod
-#     def validate(self, name, val, context):
-#         """Throws an error if the value is illegal"""
-#
-#     @abstractmethod
-#     def valid_values(self, name, val, context):
-#         """Returns an iterable with valid values to use in allocator/param generator"""
-#
-# Implement restrictions/constraints in this manner in the future
+class ArgumentDependencyError(Exception):
+    def __init__(self, name: str, deps: list[str]):
+        self.name = name
+        self.deps = deps
+        depstr = ", ".join(deps)
+        self.msg = f"unset dependency(ies) for {name}: {depstr}"
+
+        super().__init(self.msg)
+
+class operand_constraint(ABC):
+
+    type value_type = int|set[int]|tuple[str,int]|tuple[str,int,int]
+
+    def modify_context(modifiers : set[Enum],
+                       context : dict[str,value_type]) -> dict[str,value_type]:
+        """
+        modifies context based on specified modifiers and returns it,
+        leaving original context unchanged. To be overriden by inheriting class.
+
+        :param modifiers: modifiers to apply to the operation 
+                          (like opd3_modifier.* or opdna1_modifier.*)
+        :param context: dictionary of already assigned argument values
+        """
+
+        return context
+
+
+    def __call__(self, name : str,
+                 modifiers : set[Enum],
+                 val : value_type,
+                 context: dict[str,value_type]):
+        """
+        Use this to validate the value for a given operand
+        
+        :param name: name of the argument (like 'adreg')
+        :param modifiers: modifiers to apply to the operation 
+                          (like opd3_modifier.* or opdna1_modifier.*)
+        :param val: value to check for the argument
+        :param context: dictionary of already assigned argument values
+
+        :raises ArgumentDependencyError: If the operand depends on the value
+                                         of another operand and it is unset
+        :raises ValueError: if the value is invalid
+        """
+
+        ctx = context
+        if modifiers:
+            if type(modifiers[0]) == Enum:
+                raise ValueError("Modfier type can't be a raw Enum")
+            if any(type(m) != type(modifiers[0]) for m in modifiers):
+                raise ValueError("All modifiers must be of the same type")
+            ctx = self.modify_context(modifiers=modifiers, context=context)
+
+        self.validate(name=name, val=val, context=ctx)
+
+    def __iter__(self, name : str,
+                 modifiers: set[Enum],
+                 context: dict[str,value_type]) \
+                         -> Iterable[value_type]:
+
+        """
+        Use this to iterate over valid values for a given operand
+        
+        :param name: name of the argument (like 'adreg')
+        :param modifiers: modifiers to apply to the operation 
+                          (like opd3_modifier.* or opdna1_modifier.*)
+        :param context: dictionary of already assigned argument values
+
+        :raises ArgumentDependencyError: If the operand depends on the value
+                                         of another operand and it is unset
+        """
+        ctx = context
+        if modifiers:
+            if type(modifiers[0]) == Enum:
+                raise ValueError("Modfier type can't be a raw Enum")
+            if any(type(m) != type(modifiers[0]) for m in modifiers):
+                raise ValueError("All modifiers must be of the same type")
+            ctx = self.modify_context(modifiers=modifiers, context=context)
+
+        for v in self.valid_values(name=name, context=ctx):
+            yield v
+
+    @abstractmethod
+    def validate(self, name : str, val : value_type, context : dict[str,value_type]):
+        """
+        Checks if a value is valid for an argument and raises an Error if it is not.
+        To be implemented by an inheriting class
+        
+        :param name: name of the argument (like 'adreg')
+        :param context: dictionary of already assigned argument values
+
+        :raises ArgumentDependencyError: If the operand depends on the value
+                                         of another operand and it is unset
+        :raises ValueError: if the value is invalid
+        """
+
+    @abstractmethod
+    def valid_values(self, name : str, context : dict[str,value_type]):
+        """
+        Returns an iterable over valid values for a given operand. To
+        be implemented by an inheriting class
+        
+        :param name: name of the argument (like 'adreg')
+        :param context: dictionary of already assigned argument values
+
+        :raises ArgumentDependencyError: If the operand depends on the value
+                                         of another operand and it is unset
+        """
 
 def make_ord_prefix(i : int) -> 'str':
     if i > 25 or i < 0:
