@@ -4,17 +4,12 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 """
-RISC-V +D/F store instructions
+operation modifier
 """
-from typing import Callable
 
-from ..op import opdna1_action as action
-from .riscv64_opdna1_base import riscv64_opdna1
+from enum import Enum
 
-class riscv64_store(riscv64_opdna1):
+class operation_modifier(Enum):
     """
-    RISC-V freg and greg stores
+    Operation modifier base class for type hinting and safety
     """
-
-    def __init__(self, asmwrap : Callable[[str],str]):
-        super().__init__(action=action.STORE, asmwrap=asmwrap)

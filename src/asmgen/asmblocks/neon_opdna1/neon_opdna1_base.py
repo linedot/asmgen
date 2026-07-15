@@ -14,6 +14,8 @@ from ..operations import (
 )
 from ...registers import asm_data_type as adt, adt_size
 
+from ..operand.neon.constraints import neon_otherplusnmod_constraint, neon_vreg_noerror_constraint
+
 from typing import Callable
 
 class neon_opdna1(opdna1):
@@ -27,7 +29,21 @@ class neon_opdna1(opdna1):
         self.action = action
         self.asmwrap = asmwrap
 
+
+        self.constraints = {
+            s : [neon_vreg_noerror_constraint()] for s in ['adreg','bdreg','cdreg','ddreg']
+        }
+
+        self.constraints['bdreg'].append(
+                neon_otherplusnmod_constraint(other='adreg',offset=1,modval=32))
+        self.constraints['cdreg'].append(
+                neon_otherplusnmod_constraint(other='bdreg',offset=1,modval=32))
+        self.constraints['ddreg'].append(
+                neon_otherplusnmod_constraint(other='cdreg',offset=1,modval=32))
+
         self.scalar_opdna1 = aarch64_opdna1(action=action, asmwrap=asmwrap)
+
+        self.constraints.update(self.scalar_opdna1.constraints)
 
     @property
     def inst_base(self):
@@ -91,28 +107,6 @@ class neon_opdna1(opdna1):
                 raise ValueError("BCAST modifier is only valid for LOAD operations")
             if mod.ILANE in modifiers:
                 raise ValueError("BCAST cannot be combined with ILANE")
-
-    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
-        rstrs = {
-            'bdreg' : {operand_restriction.IDXOTHERPLUSN},
-            'cdreg' : {operand_restriction.IDXOTHERPLUSN},
-            'ddreg' : {operand_restriction.IDXOTHERPLUSN},
-        }
-
-        if oprnd in rstrs:
-            return rstrs[oprnd]
-        return set()
-
-    def get_operand_restriction_value(self, oprnd : str,
-                                      modifiers : set[mod],
-                                      rstr : operand_restriction) \
-      -> int|set[int]|tuple[str,int]:
-
-        if oprnd in {'bdreg', 'cdreg', 'ddreg'} and \
-          rstr == operand_restriction.IDXOTHERPLUSN:
-            return (chr(ord(oprnd[0])-1)+'dreg', 1)
-
-        raise ValueError("No restriction {rstr} on operand {op} for NEON opd3")
 
     def get_required_params(self, modifiers: set[mod]) -> list[str]:
 

@@ -16,9 +16,12 @@ from ..operations import (
 from ...registers import asm_data_type as adt, adt_size, data_reg
 
 from ..types.aarch64_types import aarch64_greg
-from ..types.sve_types import sve_preg
+from ..types.sve_types import sve_preg,sve_vreg
 from ..types.sme_types import sme_treg
 from ..sve_opdna1 import sve_opdna1
+
+
+
 
 class sme_opdna1(opdna1):
     """
@@ -32,6 +35,36 @@ class sme_opdna1(opdna1):
         self.asmwrap = asmwrap
 
         self.sve_opdna1 = sve_opdna1(action=action, asmwrap=asmwrap)
+
+
+        rowcolreg_constraint = minmax_constraint(
+                    what= 'index',
+                    getint= lambda v : v.int,
+                    makeval= lambda i : aarch64_greg(reg_idx=i),
+                    minval = 12,
+                    maxval = 15
+                 )
+
+        self.constraints = {
+            'rowreg' : [rowcolreg_constraint],
+            'colreg' : [rowcolreg_constraint],
+            'adreg' : [nt_dreg_oneof_constraint(
+                valset= {i for i in range(32)})],
+            'bdreg' : [nt_dreg_otherplusnmod_constraint(
+                other='adreg',
+                offset=1,
+                modval=32)],
+            'cdreg' : [nt_dreg_otherplusnmod_constraint(
+                other='bdreg',
+                offset=1,
+                modval=32)],
+            'ddreg' : [nt_dreg_otherplusnmod_constraint(
+                other='cdreg',
+                offset=1,
+                modval=32)],
+        }
+
+        self.constraints['adreg'].append(sme_treg_noerror_constraint)
 
     @property
     def inst_base(self):
@@ -96,45 +129,6 @@ class sme_opdna1(opdna1):
 
         return required
 
-
-    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
-        rstrs = {
-            'bdreg' : {operand_restriction.IDXOTHERPLUSNMOD},
-            'cdreg' : {operand_restriction.IDXOTHERPLUSNMOD},
-            'ddreg' : {operand_restriction.IDXOTHERPLUSNMOD},
-            'rowreg': {operand_restriction.IDXMIN,
-                       operand_restriction.IDXMAX},
-            'colreg': {operand_restriction.IDXMIN,
-                       operand_restriction.IDXMAX},
-        }
-        
-        if oprnd in rstrs:
-            return rstrs[oprnd]
-        
-        return set()
-
-    def get_operand_restriction_value(self, oprnd : str,
-                                      modifiers : set[mod],
-                                      rstr : operand_restriction) \
-      -> int|set[int]|tuple[str,int]:
-
-        if mod.NT in modifiers:
-            if oprnd in {'bdreg', 'cdreg', 'ddreg'} and \
-              rstr == operand_restriction.IDXOTHERPLUSNMOD:
-                return (chr(ord(oprnd[0])-1)+'dreg', 8, 32)
-        else:
-            if oprnd in {'bdreg', 'cdreg', 'ddreg'} and \
-              rstr == operand_restriction.IDXOTHERPLUSNMOD:
-                return (chr(ord(oprnd[0])-1)+'dreg', 1, 32)
-
-        if oprnd in {'rowreg', 'colreg'} and \
-          rstr == operand_restriction.IDXMAX:
-            return 15
-        if oprnd in {'rowreg', 'colreg'} and \
-          rstr == operand_restriction.IDXMIN:
-            return 12
-
-        raise ValueError("No restriction {rstr} on operand {op} for SVE opdna1")
 
     def get_mem_suffix(self, dt: adt) -> str:
         size = adt_size(dt)

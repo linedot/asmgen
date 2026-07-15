@@ -41,6 +41,12 @@ class sme_fopa(opd3):
         self.asmwrap = asmwrap
         self.dt_suffixes = dt_suffixes
 
+        self.constraints = {
+                'adreg' : [sve_vreg_noerror_constraint()],
+                'bdreg' : [sve_vreg_noerror_constraint()],
+                'cdreg' : [sme_treg_noerror_constraint()],
+                }
+
     def check_modifiers(self, modifiers : set[mod]):
         
         if mod.IDX in modifiers:
@@ -99,6 +105,7 @@ class sme_fopa(opd3):
 
         return required_extra_params
 
+<<<<<<< HEAD
     def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
         # No restriction on any operands
         return {}
@@ -108,6 +115,12 @@ class sme_fopa(opd3):
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]:
         raise ValueError("No restriction {rstr} on operand {op} for SME opd3")
+=======
+    def get_operand_constraints(self, oprnd : str) -> list[operand_constraint]:
+        if oprnd in self.constraints:
+            return self.constraints[oprnd]
+        return []
+>>>>>>> a883371 (WIP: constraints/signatures/operation rewrite)
 
     def mopx_inst_str(self, a_dt : adt, b_dt : adt, suf : str) -> str:
         """

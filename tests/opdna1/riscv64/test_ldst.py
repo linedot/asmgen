@@ -5,7 +5,7 @@
 # ------------------------------------------------------------------------------
 import unittest
 
-from asmgen.asmblocks.operations import opdna1_action, opdna1_modifier as mod
+from asmgen.asmblocks.op import opdna1_action, opdna1_modifier as mod
 from asmgen.registers import asm_data_type as adt
 from asmgen.asmblocks.types.riscv64_types import riscv64_greg, riscv64_freg
 from asmgen.asmblocks.riscv64_opdna1.riscv64_opdna1_base import riscv64_opdna1
@@ -65,7 +65,10 @@ class test_riscv64_opdna1(unittest.TestCase):
                         mod.TOFFSET, mod.VOFFSET, mod.ISTRIDE, mod.GSTRIDE, mod.STRUCT]
         for invalid_mod in invalid_mods:
             with self.subTest(modifier=invalid_mod):
-                with self.assertRaisesRegex(ValueError, r"RISC-V \+D/F has no"):
+                with self.assertRaisesRegex(
+                        ValueError,
+                        ("riscv64_opdna1 does not support these modifiers "
+                        f"at all: {{{invalid_mod.name}}}")):
                     self.load(dregs=[self.t2], areg=self.t1, dt=adt.UINT64, modifiers={invalid_mod})
 
 if __name__ == '__main__':
