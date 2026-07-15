@@ -105,23 +105,6 @@ class sme_fopa(opd3):
 
         return required_extra_params
 
-<<<<<<< HEAD
-    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
-        # No restriction on any operands
-        return {}
-
-    def get_operand_restriction_value(self, oprnd : str,
-                                      modifiers : set[mod],
-                                      rstr : operand_restriction) \
-      -> int|set[int]|tuple[str,int]:
-        raise ValueError("No restriction {rstr} on operand {op} for SME opd3")
-=======
-    def get_operand_constraints(self, oprnd : str) -> list[operand_constraint]:
-        if oprnd in self.constraints:
-            return self.constraints[oprnd]
-        return []
->>>>>>> a883371 (WIP: constraints/signatures/operation rewrite)
-
     def mopx_inst_str(self, a_dt : adt, b_dt : adt, suf : str) -> str:
         """
         Choose the correct base MOPX instruction based on specified types
