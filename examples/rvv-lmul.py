@@ -64,7 +64,7 @@ from asmgen.registers import (
         asm_data_type as adt,
         reg_tracker
 )
-from asmgen.asmblocks.operations import modifier as mod
+from asmgen.asmblocks.operations import opd3_modifier as mod
 
 
 def main():

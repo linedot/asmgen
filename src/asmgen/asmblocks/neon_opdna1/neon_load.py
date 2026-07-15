@@ -6,11 +6,10 @@
 """
 NEON load instructions
 """
+from typing import Callable
 
 from ..operations import opdna1_action as action
 from .neon_opdna1_base import neon_opdna1
-
-from typing import Callable
 
 class neon_load(neon_opdna1):
     """

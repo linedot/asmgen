@@ -7,6 +7,8 @@
 Base X86 load instructions
 """
 
+from typing import Callable
+
 from ..operations import opdna1_action as action
 from .x86_opdna1_base import x86_opdna1
 

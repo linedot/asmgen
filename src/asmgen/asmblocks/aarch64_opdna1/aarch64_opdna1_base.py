@@ -3,7 +3,12 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
-from ..operations import opdna1, opdna1_modifier as mod, opdna1_action
+from ..operations import (
+    opdna1,
+    opdna1_modifier as mod,
+    opdna1_action,
+    operand_restriction
+)
 from ...registers import asm_data_type as adt, adt_size
 
 from ..types.aarch64_types import aarch64_greg, aarch64_freg
@@ -85,7 +90,7 @@ class aarch64_opdna1(opdna1):
         # No restriction on any operands
         return {}
 
-    def get_operand_restriction_value(self, op : str,
+    def get_operand_restriction_value(self, oprnd : str,
                                       modifiers : set[mod],
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]:

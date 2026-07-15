@@ -4,10 +4,13 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 
+from typing import Callable
+
 from ..operations import (
     opdna1,
+    opdna1_modifier as mod,
     opdna1_action,
-    opdna1_modifier as mod
+    operand_restriction
 )
 from ...registers import asm_data_type as adt, adt_size, data_reg
 from ..types.avx_types import (
@@ -108,7 +111,6 @@ class avx_opdna1(opdna1):
       -> int|set[int]|tuple[str,int]:
         raise ValueError("No restriction {rstr} on operand {op} for AVX opd3")
 
-        
     def get_addressing(self, areg: x86_greg, modifiers: set[mod], **kwargs) -> str:
         offset = 0
         # TODO: lost track again whether i had this be bytes or elements, double check
@@ -213,13 +215,13 @@ class avx128_opdna1(avx_opdna1):
             if lane == 0: return f"vmovss {addressing}, {pdreg}"
             imm8 = lane << 4
             return f"vinsertps ${imm8}, {addressing}, {pdreg}, {pdreg}"
-            
+
         # Everything else uses integer domain inserts (vpinsrb/w/d/q)
         if size == 1: return f"vpinsrb ${lane}, {addressing}, {pdreg}, {pdreg}"
         if size == 2: return f"vpinsrw ${lane}, {addressing}, {pdreg}, {pdreg}"
         if size == 4: return f"vpinsrd ${lane}, {addressing}, {pdreg}, {pdreg}"
         if size == 8: return f"vpinsrq ${lane}, {addressing}, {pdreg}, {pdreg}"
-        
+
         raise ValueError(f"Unsupported lane load size: {size}")
 
     def build_lane_store(self, dreg: xmm_vreg, areg: x86_greg, dt: adt,
@@ -231,25 +233,25 @@ class avx128_opdna1(avx_opdna1):
             if lane == 0: return f"vmovsd {pdreg},{addressing}"
             if lane == 1: return f"vmovhpd {pdreg},{addressing}"
             raise ValueError(f"FP64 lane {lane} out of bounds")
-        
+
         # Float 32 uses extractps
         if dt == adt.FP32:
             imm8 = lane << 4
             return f"vextractps ${imm8}, {pdreg}, {addressing}"
-            
+
         # Integer domain extracts (vpextrb/w/d/q)
         if size == 1: return f"vpextrb ${lane}, {pdreg}, {addressing}"
         if size == 2: return f"vpextrw ${lane}, {pdreg}, {addressing}"
         if size == 4: return f"vpextrd ${lane}, {pdreg}, {addressing}"
         if size == 8: return f"vpextrq ${lane}, {pdreg}, {addressing}"
-        
+
         raise ValueError(f"Unsupported lane store size: {size}")
 
     def build_bcast(self, dreg: xmm_vreg, areg: x86_greg, dt: adt, addressing: str) -> str:
         suf = "ss" if adt_size(dt) == 4 else "sd"
         pdreg = self.rpref(dreg)
         return f"vbroadcast{suf} {addressing}, {pdreg}" 
-        
+
     def build_gather(self, dreg: xmm_vreg, areg: x86_greg, dt: adt, **kwargs) -> str:
         suf = "ps" if adt_size(dt) == 4 else "pd"
         isuf = "d" if adt_size(kwargs["it"]) == 4 else "q" 
@@ -258,7 +260,7 @@ class avx128_opdna1(avx_opdna1):
         pareg = self.rpref(areg)
         pvidxreg = self.rpref(vidxreg)
         pdreg = self.rpref(dreg)
-        
+
         return f"vgather{isuf}{suf} ({pareg}), {pvidxreg}, {pdreg}"
 
     def build_scatter(self, dreg: xmm_vreg, areg: x86_greg, dt: adt, **kwargs) -> str:
@@ -291,13 +293,13 @@ class avx512_opdna1(avx_opdna1):
 
         pareg = self.rpref(areg)
         pvidxreg = self.rpref(vidxreg)
-        
+
         addressing = f"({pareg},{pvidxreg},1)"
         maskreg = self.rpref(avx512_mreg(2))
         masksuf = "w" if adt_size(dt) == 4 else "q"
 
         pdreg = self.rpref(dreg)
-        
+
         return (f"kxnor{masksuf} {maskreg}, {maskreg}, {maskreg}\n"
                 f"vgather{isuf}{suf} {addressing}, {pdreg}{{{maskreg}}}")
 
@@ -308,10 +310,10 @@ class avx512_opdna1(avx_opdna1):
 
         pareg = self.rpref(areg)
         pvidxreg = self.rpref(vidxreg)
-        
+
         addressing = f"({pareg},{pvidxreg},1)"
         maskreg = self.rpref(avx512_mreg(2))
         masksuf = "w" if adt_size(dt) == 4 else "q"
-        
+
         return (f"kxnor{masksuf} {maskreg}, {maskreg}, {maskreg}\n"
                 f"vscatter{isuf}{suf} {dreg}, {addressing}{{{maskreg}}}")

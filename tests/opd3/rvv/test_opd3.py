@@ -101,7 +101,7 @@ class test_rvv_opd3(unittest.TestCase):
                              cdreg=self.gen.vreg(0),
                              a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32))
 
-    def test_fma_fp32(self):
+    def test_fma_fp16(self):
         """
         fp16 fma instruction
         """
@@ -163,7 +163,7 @@ class test_rvv_opd3(unittest.TestCase):
                              cdreg=self.gen.vreg(0),
                              a_dt=adt.SINT32, b_dt=adt.SINT32, c_dt=adt.SINT32))
 
-    def test_fma_sint32(self):
+    def test_fma_vf_fp16fp32(self):
         """
         fp16->fp32 widening negated-product VF-form instruction
         """

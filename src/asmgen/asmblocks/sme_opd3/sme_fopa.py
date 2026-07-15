@@ -19,7 +19,12 @@ from ...registers import (
     adt_is_unsigned,
     data_reg
 )
-from ..operations import opd3, opd3_modifier as mod
+from ..operations import (
+    opd3,
+    widening_method,
+    opd3_modifier as mod,
+    operand_restriction
+)
 from ..types.sme_types import sme_treg
 from ..types.sve_types import sve_vreg
 
@@ -98,7 +103,7 @@ class sme_fopa(opd3):
         # No restriction on any operands
         return {}
 
-    def get_operand_restriction_value(self, op : str,
+    def get_operand_restriction_value(self, oprnd : str,
                                       modifiers : set[mod],
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]:

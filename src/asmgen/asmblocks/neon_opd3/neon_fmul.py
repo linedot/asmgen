@@ -9,9 +9,8 @@ NEON/ASIMD fmul instruction
 
 from ...registers import (
     asm_data_type as adt,
-    adt_triple,
     adt_size,
-    adt_is_float,
+    data_reg
 )
 from ..operations import opd3_modifier as mod
 from .neon_opd3_base import neon_opd3_base

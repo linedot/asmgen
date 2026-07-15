@@ -7,20 +7,13 @@
 SME asm generator
 """
 
-from typing import Callable
-
 from ..registers import (
     asm_data_type as adt,
     reg_tracker,
-    adt_is_float,
-    adt_is_int,
-    adt_triple,
     adt_size,
-    data_reg,
     treg_base, vreg_base, greg_base,
 )
 from .sve import sve
-from .operations import opd3,widening_method,opd3_modifier as mod
 
 from .types.sme_types import sme_treg
 from .sme_opd3 import sme_fopa

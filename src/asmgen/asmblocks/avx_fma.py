@@ -772,7 +772,7 @@ class fma128(avxbase):
         suf = 's'+self.dt_suffixes[dt]
         ps = self.rpref(sreg)
         pv = self.rpref(vreg)
-        
+
         if 'sd' == suf:
             return self.asmwrap(f"vmovddup {ps}, {pv}")
         else:

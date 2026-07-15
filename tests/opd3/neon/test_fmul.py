@@ -14,7 +14,7 @@ from asmgen.asmblocks.operations import opd3_modifier as mod
 
 from .test_neon_opd3 import test_neon_opd3
 
-class test_neon_opd3(test_neon_opd3):
+class test_neon_fmul(test_neon_opd3):
     """
     Tests NEON/ASIMD opd3 operations
     """

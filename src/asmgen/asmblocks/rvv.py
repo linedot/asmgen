@@ -7,7 +7,6 @@
 RISC-V RVV 1.0 asm generator and related types
 """
 
-from typing import Union
 from ..registers import (
     reg_tracker,
     asm_data_type as adt,
@@ -205,8 +204,6 @@ class rvv(riscv64):
 
     def fill_vector(self, *, sreg : freg_base,
                     vreg : vreg_base, dt : adt) -> str:
-        dt_suf = self.dt_suffixes[dt]
-
         return self.asmwrap(f"vfmv.v.f {vreg}, {sreg}")
 
     def load_vector(self, *, areg : greg_base,

@@ -3,8 +3,18 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
-from ..operations import opdna1,opdna1_modifier as mod, opdna1_action
-from ...registers import asm_data_type as adt, adt_size
+from ..operations import (
+    opdna1,
+    opdna1_modifier as mod,
+    opdna1_action,
+    operand_restriction
+)
+from ...registers import (
+    asm_data_type as adt,
+    adt_size,
+    data_reg,
+    greg_base
+)
 from ..types.riscv64_types import riscv64_greg,riscv64_freg
 
 from typing import Callable
@@ -43,7 +53,7 @@ class riscv64_opdna1(opdna1):
         size_map = {1: "b", 2: "h", 4: "w", 8: "d", 16: "q"}
         return size_map[adt_size(dt)]
 
-    def check_modifiers(self, modifiers : set[opdna1_modifier]):
+    def check_modifiers(self, modifiers : set[mod]):
 
         if mod.TINDEX in modifiers:
             raise ValueError("RISC-V +D/F has no ld/st with 2D tile offset indices")
@@ -94,15 +104,15 @@ class riscv64_opdna1(opdna1):
         # No restriction on any operands
         return {}
 
-    def get_operand_restriction_value(self, op : str,
+    def get_operand_restriction_value(self, oprnd : str,
                                       modifiers : set[mod],
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]:
         raise ValueError("No restriction {rstr} on operand {op} for RISC-V +D/F opd3")
 
 
-    def implementation(self, *, dregs : list[data_reg], agreg : greg_type, a_dt : adt,
-                       modifiers : set[opdna1_modifier], **kwargs) -> str:
+    def implementation(self, *, dregs : list[data_reg], agreg : greg_base, a_dt : adt,
+                       modifiers : set[mod], **kwargs) -> str:
 
 
         if len(dregs) != 1:

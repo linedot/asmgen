@@ -9,8 +9,10 @@ Abstract base classes for arithmetic operations/instructions
 
 from abc import ABC,abstractmethod
 from enum import Enum,auto
+from typing import Iterable
 
 from ..registers import (
+    greg_base,
     data_reg,
     asm_data_type as adt,
     adt_triple,
@@ -32,13 +34,14 @@ class ArgumentDependencyError(Exception):
         depstr = ", ".join(deps)
         self.msg = f"unset dependency(ies) for {name}: {depstr}"
 
-        super().__init(self.msg)
+        super().__init__(self.msg)
 
 class operand_constraint(ABC):
 
     type value_type = int|set[int]|tuple[str,int]|tuple[str,int,int]
 
-    def modify_context(modifiers : set[Enum],
+    def modify_context(self,
+                       modifiers : set[Enum],
                        context : dict[str,value_type]) -> dict[str,value_type]:
         """
         modifies context based on specified modifiers and returns it,
@@ -80,10 +83,11 @@ class operand_constraint(ABC):
 
         self.validate(name=name, val=val, context=ctx)
 
-    def __iter__(self, name : str,
-                 modifiers: set[Enum],
-                 context: dict[str,value_type]) \
-                         -> Iterable[value_type]:
+    def get_valid_values(self,
+                         name : str,
+                         modifiers: set[Enum],
+                         context: dict[str,value_type]) \
+                                 -> Iterable[value_type]:
 
         """
         Use this to iterate over valid values for a given operand
@@ -163,7 +167,7 @@ class operation(ABC):
         raise NotImplementedError(self.NIE_MESSAGE)
 
     @abstractmethod
-    def get_operand_restrictions(self, op : str) -> set[operand_restriction]:
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
         """
         For a specific operand get a set of required restrictions if any
         apply
@@ -171,7 +175,8 @@ class operation(ABC):
         raise NotImplementedError(self.NIE_MESSAGE)
 
     @abstractmethod
-    def get_operand_restriction_value(self, op : str,
+    def get_operand_restriction_value(self, oprnd : str,
+                                      modifiers: set[Enum],
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]|tuple[str,int,int]:
         """
@@ -197,7 +202,7 @@ class operation(ABC):
 
     def check_operand_restrictions(self,
                                    modifiers : set[Enum],
-                                   kwargs : dict[str,int|greg_type|data_reg|adt]):
+                                   kwargs : dict[str,int|greg_base|data_reg|adt]):
 
         for name, oprnd in kwargs.items():
             rstrs = self.get_operand_restrictions(name)
@@ -206,7 +211,7 @@ class operation(ABC):
 
             if operand_restriction.IDXMIN in rstrs:
                 minval = self.get_operand_restriction_value(
-                        op=name,
+                        oprnd=name,
                         modifiers=modifiers,
                         rstr=operand_restriction.IDXMIN)
                 if oprnd.idx < minval:
@@ -214,7 +219,7 @@ class operation(ABC):
 
             if operand_restriction.IDXMAX in rstrs:
                 maxval = self.get_operand_restriction_value(
-                        op=name,
+                        oprnd=name,
                         modifiers=modifiers,
                         rstr=operand_restriction.IDXMAX)
                 if oprnd.idx > maxval:
@@ -222,7 +227,7 @@ class operation(ABC):
 
             if operand_restriction.IDXONEOF in rstrs:
                 valset = self.get_operand_restriction_value(
-                        op=name,
+                        oprnd=name,
                         modifiers=modifiers,
                         rstr=operand_restriction.IDXONEOF)
                 if oprnd.idx not in valset:
@@ -230,7 +235,7 @@ class operation(ABC):
 
             if operand_restriction.IDXMULTIPLEOF in rstrs:
                 multiple = self.get_operand_restriction_value(
-                        op=name,
+                        oprnd=name,
                         modifiers=modifiers,
                         rstr=operand_restriction.IDXMULTIPLEOF)
                 if 0 != (oprnd.idx % multiple):
@@ -238,7 +243,7 @@ class operation(ABC):
 
             if operand_restriction.IDXOTHERPLUSN in rstrs:
                 other,offset = self.get_operand_restriction_value(
-                        op=name,
+                        oprnd=name,
                         modifiers=modifiers,
                         rstr=operand_restriction.IDXOTHERPLUSN)
                 if oprnd.idx != kwargs[other].idx+offset:
@@ -247,7 +252,7 @@ class operation(ABC):
 
             if operand_restriction.IDXOTHERPLUSNMOD in rstrs:
                 other,offset,modval = self.get_operand_restriction_value(
-                        op=name,
+                        oprnd=name,
                         modifiers=modifiers,
                         rstr=operand_restriction.IDXOTHERPLUSNMOD)
                 if oprnd.idx != (kwargs[other].idx+offset) % modval:
@@ -257,7 +262,7 @@ class operation(ABC):
 
     def execute(self, *,
                 dregs : list[data_reg],
-                gregs : list[greg_type],
+                gregs : list[greg_base],
                 dts : dict[str,adt],
                 modifiers : set[Enum],
                 **kwargs) -> str:
@@ -430,10 +435,12 @@ class dummy_opd3(opd3):
     def get_required_params(self, modifiers : set[opd3_modifier]) -> list[set[str]]:
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    def get_operand_restrictions(self, op : str) -> set[operand_restriction]:
+    def get_operand_restrictions(self, oprnd : str,
+                                 modifiers : set[Enum]) -> set[operand_restriction]:
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    def get_operand_restriction_value(self, op : str,
+    def get_operand_restriction_value(self, oprnd : str,
+                                      modifiers : set[Enum],
                                       rstr : operand_restriction) -> int:
         raise NotImplementedError(self.NIE_MESSAGE)
 
@@ -504,7 +511,7 @@ class opdna1(operation):
         raise NotImplementedError(self.NIE_MESSAGE)
 
     def __call__(self, *, dregs : list[data_reg],
-                 areg : greg_type, dt : adt,
+                 areg : greg_base, dt : adt,
                  modifiers : set[opdna1_modifier], **kwargs) -> str:
         """
         Return the ASM/IR instruction
@@ -512,7 +519,7 @@ class opdna1(operation):
         :param dregs : Data registers
         :type dregs : list[class:`asmgen.registers.data_reg`]
         :param areg : Address register
-        :type areg : class:`asmgen.registers.greg_type`
+        :type areg : class:`asmgen.registers.greg_base`
         :param dt : Data type
         :type dt : class:`asmgen.registers.asm_data_type`
         :return : ASM/IR instruction corresponding to the operation
@@ -531,7 +538,7 @@ class opdna1(operation):
 
     @abstractmethod
     def implementation(self, *, dregs : list[data_reg],
-                       agreg : greg_type, a_dt : adt,
+                       agreg : greg_base, a_dt : adt,
                        modifiers : set[opdna1_modifier], **kwargs) -> str:
         raise NotImplementedError(self.NIE_MESSAGE)
 
@@ -550,7 +557,7 @@ class dummy_opdna1(opdna1):
     def get_required_params(self, modifiers : set[opdna1_modifier]) -> list[str]:
         raise NotImplementedError(self.NIE_MESSAGE)
 
-    def get_operand_restrictions(self, op : str) -> set[operand_restriction]:
+    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
         raise NotImplementedError(self.NIE_MESSAGE)
 
     def get_operand_restriction_value(self, op : str,
@@ -558,7 +565,7 @@ class dummy_opdna1(opdna1):
         raise NotImplementedError(self.NIE_MESSAGE)
 
     def implementation(self, *,
-                       dregs : list[data_reg], agreg : greg_type,
+                       dregs : list[data_reg], agreg : greg_base,
                        a_dt : adt,
                        modifiers : set[opdna1_modifier], **kwargs) -> str:
         raise NotImplementedError(self.NIE_MESSAGE)

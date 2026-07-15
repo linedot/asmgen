@@ -6,7 +6,12 @@
 from ..aarch64_opdna1.aarch64_opdna1_base import aarch64_opdna1
 from ..types.neon_types import neon_vreg
 from ..types.aarch64_types import aarch64_greg,aarch64_freg
-from ..operations import opdna1_modifier as mod, opdna1_action, opdna1,operand_restriction
+from ..operations import (
+    opdna1,
+    opdna1_modifier as mod,
+    opdna1_action,
+    operand_restriction
+)
 from ...registers import asm_data_type as adt, adt_size
 
 from typing import Callable
@@ -98,14 +103,14 @@ class neon_opdna1(opdna1):
             return rstrs[oprnd]
         return set()
 
-    def get_operand_restriction_value(self, op : str,
+    def get_operand_restriction_value(self, oprnd : str,
                                       modifiers : set[mod],
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]:
 
-        if op in {'bdreg', 'cdreg', 'ddreg'} and \
+        if oprnd in {'bdreg', 'cdreg', 'ddreg'} and \
           rstr == operand_restriction.IDXOTHERPLUSN:
-            return (chr(ord(op[0])-1)+'dreg', 1)
+            return (chr(ord(oprnd[0])-1)+'dreg', 1)
 
         raise ValueError("No restriction {rstr} on operand {op} for NEON opd3")
 

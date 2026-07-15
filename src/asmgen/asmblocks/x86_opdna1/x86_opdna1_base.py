@@ -3,7 +3,13 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
-from ..operations import opdna1, opdna1_modifier as mod, opdna1_action
+from ..operations import (
+    opdna1,
+    opdna1_modifier as mod,
+    opdna1_action,
+    operand_restriction
+)
+
 from ...registers import asm_data_type as adt, adt_size
 from ..types.avx_types import x86_greg, avx_freg
 

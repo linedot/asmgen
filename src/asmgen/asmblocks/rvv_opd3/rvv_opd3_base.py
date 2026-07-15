@@ -17,7 +17,12 @@ from ...registers import (
     adt_is_signed,adt_is_unsigned,
     data_reg
 )
-from ..operations import opd3,widening_method,opd3_modifier as mod
+from ..operations import (
+    opd3,
+    widening_method,
+    opd3_modifier as mod,
+    operand_restriction
+)
 from ...util import NIE_MESSAGE
 
 from ..types.riscv64_types import riscv64_freg
@@ -93,7 +98,7 @@ class rvv_opd3_base(opd3):
             {'adreg':adt.UINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
             {'adreg':adt.UINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT16},
         ]
-    
+
     def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
         return []
 
@@ -101,7 +106,7 @@ class rvv_opd3_base(opd3):
         # No restriction on any operands
         return {}
 
-    def get_operand_restriction_value(self, op : str,
+    def get_operand_restriction_value(self, oprnd : str,
                                       modifiers : set[mod],
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]:

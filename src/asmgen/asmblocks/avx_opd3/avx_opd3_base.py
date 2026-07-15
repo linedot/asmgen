@@ -15,7 +15,12 @@ from ...registers import (
     asm_index_type as ait,
     data_reg,
 )
-from ..operations import opd3,widening_method,opd3_modifier as mod
+from ..operations import (
+    opd3,
+    widening_method,
+    opd3_modifier as mod,
+    operand_restriction
+)
 
 from ..types.avx_types import reg_prefixer, avx_vreg
 
@@ -88,7 +93,7 @@ class avx_opd3_base(opd3):
         # No restriction on any operands
         return {}
 
-    def get_operand_restriction_value(self, op : str,
+    def get_operand_restriction_value(self, oprnd : str,
                                       modifiers : set[mod],
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]:

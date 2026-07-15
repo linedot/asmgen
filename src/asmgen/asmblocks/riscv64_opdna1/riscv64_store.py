@@ -6,11 +6,10 @@
 """
 RISC-V +D/F store instructions
 """
+from typing import Callable
 
 from ..operations import opdna1_action as action
 from .riscv64_opdna1_base import riscv64_opdna1
-
-from typing import Callable
 
 class riscv64_store(riscv64_opdna1):
     """

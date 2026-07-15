@@ -14,7 +14,7 @@ from asmgen.asmblocks.operations import opd3_modifier as mod
 
 from .test_sve_opd3 import test_sve_opd3
 
-class test_sve_opd3(test_sve_opd3):
+class test_sve_fmla(test_sve_opd3):
     """
     Tests SVE opd3 operations
     """

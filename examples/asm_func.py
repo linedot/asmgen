@@ -35,7 +35,7 @@ from asmgen.asmblocks.noarch import asmgen
 from asmgen.callconv.callconv import callconv
 from asmgen.callconv.fngen import fngen
 from asmgen.asmblocks.noarch import comparison
-from asmgen.asmblocks.operations import modifier as mod
+from asmgen.asmblocks.operations import opd3_modifier as mod
 
 import sys
 import importlib

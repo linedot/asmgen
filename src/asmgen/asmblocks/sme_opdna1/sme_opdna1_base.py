@@ -6,7 +6,13 @@
 import math
 from typing import Callable
 
-from ..operations import opdna1_modifier as mod, opdna1_action, opdna1, operand_restriction
+from ..operations import (
+    opdna1,
+    opdna1_modifier as mod,
+    opdna1_action,
+    operand_restriction
+)
+
 from ...registers import asm_data_type as adt, adt_size, data_reg
 
 from ..types.aarch64_types import aarch64_greg
@@ -107,24 +113,24 @@ class sme_opdna1(opdna1):
         
         return set()
 
-    def get_operand_restriction_value(self, op : str,
+    def get_operand_restriction_value(self, oprnd : str,
                                       modifiers : set[mod],
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]:
 
         if mod.NT in modifiers:
-            if op in {'bdreg', 'cdreg', 'ddreg'} and \
+            if oprnd in {'bdreg', 'cdreg', 'ddreg'} and \
               rstr == operand_restriction.IDXOTHERPLUSNMOD:
-                return (chr(ord(op[0])-1)+'dreg', 8, 32)
+                return (chr(ord(oprnd[0])-1)+'dreg', 8, 32)
         else:
-            if op in {'bdreg', 'cdreg', 'ddreg'} and \
+            if oprnd in {'bdreg', 'cdreg', 'ddreg'} and \
               rstr == operand_restriction.IDXOTHERPLUSNMOD:
-                return (chr(ord(op[0])-1)+'dreg', 1, 32)
+                return (chr(ord(oprnd[0])-1)+'dreg', 1, 32)
 
-        if op in {'rowreg', 'colreg'} and \
+        if oprnd in {'rowreg', 'colreg'} and \
           rstr == operand_restriction.IDXMAX:
             return 15
-        if op in {'rowreg', 'colreg'} and \
+        if oprnd in {'rowreg', 'colreg'} and \
           rstr == operand_restriction.IDXMIN:
             return 12
 

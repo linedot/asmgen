@@ -15,7 +15,7 @@ class rvv_vreg(vreg_base):
     """
     def __init__(self, reg_idx : int):
         self.reg_idx = reg_idx
-        
+
     @property
     def idx(self) -> int:
         return self.reg_idx

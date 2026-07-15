@@ -7,6 +7,8 @@
 AVX/FMA/AVX2/AVX512 store instructions
 """
 
+from typing import Callable
+
 from ..operations import opdna1_action as action
 from .avx_opdna1_base import avx128_opdna1,avx256_opdna1,avx512_opdna1
 

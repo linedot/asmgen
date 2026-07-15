@@ -10,7 +10,7 @@ NEON/ASIMD fma instruction
 
 from ...registers import (
     asm_data_type as adt,
-    adt_triple,
+    data_reg,
 )
 from .neon_opd3_base import neon_opd3_base
 from ..types.neon_types import neon_vreg

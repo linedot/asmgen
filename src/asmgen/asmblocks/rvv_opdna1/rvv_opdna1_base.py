@@ -6,9 +6,20 @@
 """
 RVV 1.0 and 0.7.1 opdna1 base
 """
-from ...registers import asm_data_type as adt,adt_size,data_reg
+from ...registers import (
+    asm_data_type as adt,
+    adt_size,
+    data_reg,
+    greg_base
+)
 
-from ..operations import opdna1_modifier as mod,opdna1_action,opdna1
+from ..operations import (
+    opdna1,
+    opdna1_modifier as mod,
+    opdna1_action,
+    operand_restriction
+)
+
 
 from ..riscv64_opdna1.riscv64_opdna1_base import riscv64_opdna1
 
@@ -49,7 +60,7 @@ class rvv_opdna1(opdna1):
 
         return [{'adreg':dt, 'bdreg':dt, 'cdreg':dt, 'ddreg':dt} for dt in sup_dts]
 
-    def check_modifiers(self, modifiers : set[opdna1_modifier]):
+    def check_modifiers(self, modifiers : set[mod]):
 
         # Unsupported
         if mod.TINDEX in modifiers:
@@ -100,7 +111,7 @@ class rvv_opdna1(opdna1):
         # No restriction on any operands
         return {}
 
-    def get_operand_restriction_value(self, op : str,
+    def get_operand_restriction_value(self, oprnd : str,
                                       modifiers : set[mod],
                                       rstr : operand_restriction) \
       -> int|set[int]|tuple[str,int]:
@@ -158,7 +169,8 @@ class rvv_opdna1(opdna1):
         return base_addr
 
 
-    def implementation(self, *, dregs : list[data_reg], agreg : greg_type, a_dt : adt,
+    def implementation(self, *, dregs : list[data_reg],
+                       agreg : greg_base, a_dt : adt,
                        modifiers : set[mod], **kwargs) -> str:
                  
         if not dregs:
