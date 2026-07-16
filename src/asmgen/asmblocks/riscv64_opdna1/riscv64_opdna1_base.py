@@ -3,6 +3,9 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
+"""
+RISCV64 +D/F opdna1 operations
+"""
 from ...registers import (
     asm_data_type as adt,
     adt_size,
