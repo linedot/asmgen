@@ -179,6 +179,30 @@ class test_rvv_opd3(unittest.TestCase):
                              modifiers={mod.NP,mod.VF},
                              widening_method=wm.VEC_GROUP))
 
+    def test_fma_vf_int32_np(self):
+        """
+        int16->int32 widening negated-product VF-form instruction is invalid in RVV
+        """
+        self.assertEqual(
+                "vnmsac.vx v0,t0,v2\n",
+                self.gen.fma(adreg=self.gen.vreg(2),
+                             bdreg=self.gen.greg(0),
+                             cdreg=self.gen.vreg(0),
+                             a_dt=adt.SINT32, b_dt=adt.SINT32, c_dt=adt.SINT32,
+                             modifiers={mod.NP,mod.VF}))
+
+    def test_fma_vf_int16int32_np_invalid(self):
+        """
+        int16->int32 widening negated-product VF-form instruction is invalid in RVV
+        """
+        with self.assertRaisesRegex(ValueError, "Invalid configuration for rvv_fma"):
+            self.gen.fma(adreg=self.gen.vreg(2),
+                         bdreg=self.gen.greg(0),
+                         cdreg=self.gen.vreg(0),
+                         a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT32,
+                         modifiers={mod.NP, mod.VF},
+                         widening_method=wm.VEC_GROUP)
+
 
     def test_wrong_registers(self):
         """
