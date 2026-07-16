@@ -19,16 +19,19 @@ from ...registers import asm_data_type as adt
 
 
 def make_riscv64_opdna1_signatures():
+    """
+    Generate signatures for RISCV64 +D/F opdna1 operations
+    """
     sigs = []
 
     floats = [adt.FP64, adt.FP32, adt.FP16, adt.FP8E4M3, adt.FP8E5M2]
     ints = [adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8,
             adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8]
-    
+
     for dt in floats:
         # normal fld without offset
         sigs.append(sig(
-        modifiers={},
+        modifiers=set(),
         structural_params={},
         operands={
             'adreg': osh(ot.REGISTER, rt.FP, dt),
@@ -49,7 +52,7 @@ def make_riscv64_opdna1_signatures():
     # Same for integers
     for dt in ints:
         sigs.append(sig(
-        modifiers={},
+        modifiers=set(),
         structural_params={},
         operands={
             'adreg': osh(ot.REGISTER, rt.GP, dt),
@@ -67,5 +70,3 @@ def make_riscv64_opdna1_signatures():
         ))
 
     return sigs
-
-

@@ -6,6 +6,9 @@
 """
 RVV 1.0 and 0.7.1 opdna1 base
 """
+
+from typing import Any,Callable
+
 from ...registers import (
     asm_data_type as adt,
     adt_size,
@@ -13,20 +16,20 @@ from ...registers import (
     greg_base
 )
 
-from ..operations import (
+from ..op import (
     opdna1,
     opdna1_modifier as mod,
     opdna1_action,
-    operand_restriction
+    operation_signature
 )
-
 
 from ..riscv64_opdna1.riscv64_opdna1_base import riscv64_opdna1
 
 from ..types.rvv_types import rvv_vreg
 from ..types.riscv64_types import riscv64_greg,riscv64_freg
 
-from typing import Callable
+
+from .signatures import make_rvv_opdna1_signatures
 
 class rvv_opdna1(opdna1):
     """
@@ -44,25 +47,29 @@ class rvv_opdna1(opdna1):
 
         self.scalar_opdna1 = riscv64_opdna1(action=action, asmwrap=asmwrap)
 
+        self.signatures = make_rvv_opdna1_signatures(self.get_lmul)
+        self.signatures.extend(self.scalar_opdna1.get_signatures())
+
+    def get_signatures(self) -> list[operation_signature]:
+        return self.signatures
+
     @property
     def inst_base(self):
+        """
+        Instruction base
+        """
         if self.action  == opdna1_action.LOAD:
             return "vl"
-        elif self.action == opdna1_action.STORE:
+        if self.action == opdna1_action.STORE:
             return "vs"
-        else:
-            raise ValueError(f"Invalid action: {self.action}")
+        raise ValueError(f"Invalid action: {self.action}")
 
-    def supported_dts(self) -> list[adt]:
-       
-        # TODO: more types
-        sup_dts = [adt.FP64, adt.FP32, adt.FP16]
-
-        return [{'adreg':dt, 'bdreg':dt, 'cdreg':dt, 'ddreg':dt} for dt in sup_dts]
-
-    def check_modifiers(self, modifiers : set[mod]):
-
-        # Unsupported
+    # I explicitly want it this way
+    # pylint: disable-next=too-many-branches
+    def diagnose_failure(self, modifiers : set[mod],
+                         kwargs : dict[str,Any],
+                         dts : dict[str,adt]):
+        # Unsupported modifiers
         if mod.TINDEX in modifiers:
             raise ValueError("RVV has no ld/st with 2D tile offset indices")
         if mod.GLANE in modifiers:
@@ -88,42 +95,39 @@ class rvv_opdna1(opdna1):
         if mod.NT in modifiers:
             raise NotImplementedError("Non-temporals for RVV not yet implemented")
 
-        #TODO: invalid combinations
         if (mod.GSTRIDE in modifiers) and (mod.VINDEX in modifiers):
             raise ValueError("mod.GSTRIDE and mod.VINDEX are mutually exclusive")
 
-
-    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
-
-        required_extra_params = []
-
+        # Missing args
         if mod.VINDEX in modifiers:
-            required_extra_params.append({"vidxreg"})
-            required_extra_params.append({"it"})
+            if "vidxreg" not in kwargs:
+                raise ValueError("Missing one of these parameters: vidxreg")
+            if "it" not in kwargs:
+                raise ValueError("Missing one of these parameters: it")
+
         if mod.STRUCT in modifiers:
-            required_extra_params.append({"nstructs"})
-        if mod.GSTRIDE in modifiers:
-            required_extra_params.append({"streg"})
+            if "nstructs" not in kwargs:
+                raise ValueError("Missing one of these parameters: nstructs")
 
-        return required_extra_params
-
-    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
-        # No restriction on any operands
-        return {}
-
-    def get_operand_restriction_value(self, oprnd : str,
-                                      modifiers : set[mod],
-                                      rstr : operand_restriction) \
-      -> int|set[int]|tuple[str,int]:
-        raise ValueError("No restriction {rstr} on operand {op} for RVV opdna1")
+        if mod.GSTRIDE in modifiers and "streg" not in kwargs:
+            raise ValueError("Missing one of these parameters: streg")
 
 
     def get_instruction(self, base : str,
-                        modifiers: set[mod], dt : adt, **kwargs):
+                        modifiers: set[mod], dt : adt, **kwargs) -> str:
+        """
+        Constructs the instruction mnemonic
 
-        inst_name = base 
-        
-        # vl/vs 
+        :param base: instruction base
+        :param modifiers: operation modifiers
+        :param dt: data type to use
+
+        :return: string containing the mnemonic
+        """
+
+        inst_name = base
+
+        # vl/vs
         # if mod.GSTRIDE: +s
         # if mod.VINDEX: +ux
         # if mod.STRUCT: +seg +{nf}
@@ -149,63 +153,52 @@ class rvv_opdna1(opdna1):
 
         return inst_name
 
-    def get_addressing(self, areg : riscv64_greg, modifiers: set[mod], **kwargs) -> str:
+    def get_addressing(self, areg : riscv64_greg,
+                       modifiers: set[mod], **kwargs) -> str:
+        """
+        Constructs the addressing string
+
+        :param areg: address register
+        :param modifiers: operation modifiers
+        
+        :return: string containing the addressing
+        """
         if not isinstance(areg, riscv64_greg):
             raise ValueError(f"{areg} is not a riscv64_greg")
 
         base_addr = f"({areg})"
-        
+
         if mod.GSTRIDE in modifiers:
             streg = kwargs["streg"]
             if not isinstance(streg, riscv64_greg):
                 raise ValueError(f"{streg} is not a riscv64_greg")
             return f"{base_addr}, {streg}"
-        elif mod.VINDEX in modifiers:
+
+        if mod.VINDEX in modifiers:
             vidxreg = kwargs["vidxreg"]
             if not isinstance(vidxreg, rvv_vreg):
                 raise ValueError(f"{vidxreg} is not a rvv_vreg")
             return f"{base_addr}, {vidxreg}"
-            
+
         return base_addr
 
 
     def implementation(self, *, dregs : list[data_reg],
                        agreg : greg_base, a_dt : adt,
                        modifiers : set[mod], **kwargs) -> str:
-                 
+
         if not dregs:
             raise ValueError("No dregs provided")
 
         # If scalar registers are passed, forward to base RISC-V
         if isinstance(dregs[0], (riscv64_greg, riscv64_freg)):
-            return self.scalar_opdna1(dregs=dregs, areg=agreg, dt=a_dt,
-                                      modifiers=modifiers, **kwargs)
+            return self.scalar_opdna1(
+                    dregs=dregs, areg=agreg, dt=a_dt,
+                    modifiers=modifiers, **kwargs)
 
         inst = self.get_instruction(self.inst_base, modifiers, a_dt, **kwargs)
         addressing = self.get_addressing(agreg, modifiers, **kwargs)
 
-        if mod.STRUCT in modifiers:
-            # Need to check but if it raises here, it'd raise later anyway
-            nstructs = kwargs["nstructs"]
-            if nstructs != len(dregs):
-                raise ValueError(
-                        f"{nstructs} nstructs specified but only {len(dregs)} dregs given")
-
-        v = rvv_vreg(0)
-
-        # MUST be vregs
-        if not all([isinstance(reg, rvv_vreg) for reg in dregs]):
-            raise ValueError("RVV opdna1: All dregs must be vregs")
-
-        for i in range(1, len(dregs)):
-            if dregs[i].reg_idx != dregs[i-1].reg_idx + self.get_lmul():
-                raise ValueError(
-                    f"Segmented registers must be consecutive. "
-                    f"Found {dregs[i-1]} followed by {dregs[i]}."
-                )
-
 
         dreg_str = str(dregs[0])
         return self.asmwrap(f"{inst} {dreg_str}, {addressing}")
-        
-        raise NotImplementedError(self.NIE_MESSAGE)

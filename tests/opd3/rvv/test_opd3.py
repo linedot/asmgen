@@ -11,7 +11,9 @@ import unittest
 from asmgen.asmblocks.rvv import rvv
 from asmgen.registers import asm_data_type as adt
 
-from asmgen.asmblocks.operations import opd3_modifier as mod
+from asmgen.asmblocks.op import opd3_modifier as mod
+
+from asmgen.asmblocks.op.opd3 import widening_method as wm
 
 class test_rvv_opd3(unittest.TestCase):
     """
@@ -78,9 +80,8 @@ class test_rvv_opd3(unittest.TestCase):
         fp64 fmul VF-form instruction with wrong dreg as freg
         """
 
-        
-        err_msg = ("Either all dregs of an RVV opd3 must be rvv_vreg"
-                   " or a and c must be rvv_vreg and b must be riscv64_freg")
+
+        err_msg = "Invalid configuration for rvv_fmul"
         with self.assertRaisesRegex(
                 ValueError, err_msg):
             self.gen.fmul(adreg=self.gen.freg(1, dt=adt.FP64),
@@ -123,7 +124,8 @@ class test_rvv_opd3(unittest.TestCase):
                 self.gen.fma(adreg=self.gen.vreg(2),
                              bdreg=self.gen.vreg(3),
                              cdreg=self.gen.vreg(0),
-                             a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32))
+                             a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32,
+                             widening_method=wm.VEC_GROUP))
 
 
     def test_fma_4ways_widening(self):
@@ -132,18 +134,19 @@ class test_rvv_opd3(unittest.TestCase):
         """
         # No more specific error message for 4-ways widening being invalid
         with self.assertRaisesRegex(
-                ValueError, "Invalid data type combination"):
+                ValueError, "Invalid configuration for rvv_fma"):
             self.gen.fma(adreg=self.gen.vreg(2),
                          bdreg=self.gen.vreg(3),
                          cdreg=self.gen.vreg(0),
-                         a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32)
+                         a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32,
+                         widening_method=wm.VEC_GROUP)
 
     def test_fmul_np(self):
         """
         fp64 fmul does not support NP mod
         """
         with self.assertRaisesRegex(
-                ValueError, "RVV fmul has no NP form"):
+                ValueError, "rvv_fmul does not support these modifiers at all: {NP}"):
             self.gen.fmul(adreg=self.gen.vreg(2),
                           bdreg=self.gen.vreg(3),
                           cdreg=self.gen.vreg(0),
@@ -173,7 +176,8 @@ class test_rvv_opd3(unittest.TestCase):
                              bdreg=self.gen.freg(0, adt.FP16),
                              cdreg=self.gen.vreg(0),
                              a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32,
-                             modifiers={mod.NP,mod.VF}))
+                             modifiers={mod.NP,mod.VF},
+                             widening_method=wm.VEC_GROUP))
 
 
     def test_wrong_registers(self):
@@ -181,8 +185,7 @@ class test_rvv_opd3(unittest.TestCase):
         Tests that the correct error is raised if wrong registers are passed
         to the operation
         """
-        err_msg = ("Either all dregs of an RVV opd3 must be rvv_vreg"
-                   " or a and c must be rvv_vreg and b must be riscv64_freg")
+        err_msg = "Invalid configuration for rvv_fma"
         with self.assertRaisesRegex(
                 ValueError, err_msg):
             self.gen.fma(

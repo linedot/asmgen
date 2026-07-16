@@ -3,16 +3,24 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
+"""
+Operation on n data operands and 1 address operand and related structures
+"""
 
 from enum import Enum,auto
 
 from abc import abstractmethod
 
-from .operation import operation
-from .modifier import operation_modifier
+from . import operation
+from . import operation_signature
+from . import operation_modifier
 from .misc import make_ord_prefix
 
-from ...registers import asm_data_type as adt, data_reg
+from ...registers import (
+    asm_data_type as adt,
+    data_reg,
+    greg_base
+)
 
 class opdna1_modifier(operation_modifier):
     """
@@ -29,7 +37,7 @@ class opdna1_modifier(operation_modifier):
     GSTRIDE = auto() # stride between elements given by greg
     ISTRIDE = auto() # stride between elements given by immediate
     POSTINC = auto() # increment address greg after operation
-    STRUCT = auto()  # load a structure with multiple components 
+    STRUCT = auto()  # load a structure with multiple components
                      # (i.e [Re,Im], [x,y,z] or [r,g,b,a])
     BCAST = auto()   # Broadcast one value into all lanes
     MASK  = auto()   # Masked operation
@@ -53,7 +61,7 @@ class opdna1(operation):
     NIE_MESSAGE="Method not implemented"
 
     def __call__(self, *, dregs : list[data_reg],
-                 areg : greg_type, dt : adt,
+                 areg : greg_base, dt : adt,
                  modifiers : set[opdna1_modifier], **kwargs) -> str:
         """
         Return the ASM/IR instruction
@@ -61,7 +69,7 @@ class opdna1(operation):
         :param dregs : Data registers
         :type dregs : list[class:`asmgen.registers.data_reg`]
         :param areg : Address register
-        :type areg : class:`asmgen.registers.greg_type`
+        :type areg : class:`asmgen.registers.greg_base`
         :param dt : Data type
         :type dt : class:`asmgen.registers.asm_data_type`
         :return : ASM/IR instruction corresponding to the operation
@@ -79,9 +87,13 @@ class opdna1(operation):
         )
 
     @abstractmethod
+    # pylint: disable-next=arguments-differ
     def implementation(self, *, dregs : list[data_reg],
-                       agreg : greg_type, a_dt : adt,
+                       agreg : greg_base, a_dt : adt,
                        modifiers : set[opdna1_modifier], **kwargs) -> str:
+        """
+        opdna1 implementation/call interface
+        """
         raise NotImplementedError(self.NIE_MESSAGE)
 
 
@@ -90,8 +102,11 @@ class dummy_opdna1(opdna1):
     Dummy opd1a1 operation; ISAs assign this by default to operations they do not support
     """
 
+    def get_signatures(self) -> list[operation_signature]:
+        raise NotImplementedError(self.NIE_MESSAGE)
+
     def implementation(self, *,
-                       dregs : list[data_reg], agreg : greg_type,
+                       dregs : list[data_reg], agreg : greg_base,
                        a_dt : adt,
                        modifiers : set[opdna1_modifier], **kwargs) -> str:
         raise NotImplementedError(self.NIE_MESSAGE)

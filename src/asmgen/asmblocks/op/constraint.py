@@ -7,9 +7,12 @@
 Classes for operand restrictions/constraints
 """
 
+from typing import Callable
+
 from abc import ABC, abstractmethod
-from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from .modifier import operation_modifier as mod
 
 from ...registers import (
     data_reg,
@@ -18,7 +21,12 @@ from ...registers import (
     asm_data_type as adt
 )
 
+# pylint: disable-next=invalid-name
 class ArgumentDependencyError(Exception):
+    """
+    Validation of an argument can't be performed because it
+    depends on another argument that wasn't specified
+    """
     def __init__(self, name: str, deps: list[str]):
         self.name = name
         self.deps = deps
@@ -27,22 +35,28 @@ class ArgumentDependencyError(Exception):
 
         super().__init__(self.msg)
 
+# pylint: disable-next=invalid-name
 class ConstraintDoesNotApplyError(Exception):
+    """
+    The constraint does not apply to an argument
+    """
     def __init__(self):
         super().__init__("This constraint does not apply in this specific case")
 
-type value_type = data_reg|greg_base|mreg_base|adt|int
+type ValueType = data_reg|greg_base|mreg_base|adt|int
 
-
+@dataclass
 class operand_constraint(ABC):
+    """
+    Constraint on operand values, like register indices or immediate values
+    """
+    params: dict[str, ValueType] = field(default_factory=dict, init=False)
 
-    def __init__(self):
-        self.params = {}
-
-    def specialize_params(name : str,
-                          modifiers : set[Enum],
-                          context : dict[str,value_type],
-                          params : dict[str,value_type]):
+    def specialize_params(self,
+                          name : str,
+                          modifiers : set[mod],
+                          context : dict[str,ValueType],
+                          params : dict[str,ValueType]):
         """
         modifies context based on specified modifiers and returns it,
         leaving original context unchanged. 
@@ -60,11 +74,10 @@ class operand_constraint(ABC):
             (Example: constraint only applies when a dreg is a vreg)
         """
 
-
     def __call__(self, name : str,
-                 modifiers : set[Enum],
-                 val : value_type,
-                 context: dict[str,value_type]):
+                 modifiers : set[mod],
+                 val : ValueType,
+                 context: dict[str,ValueType]):
         """
         Use this to validate the value for a given operand
         
@@ -81,58 +94,29 @@ class operand_constraint(ABC):
             (Example: constraint only applies when a dreg is a vreg)
         """
 
-        params = {}
+        active_params = self.params.copy()
         if modifiers:
-            if type(modifiers[0]) == Enum:
-                raise ValueError("Modfier type can't be a raw Enum")
-            if any(type(m) != type(modifiers[0]) for m in modifiers):
+            ref_modifier = next(iter(modifiers))
+
+            if not isinstance(ref_modifier, mod):
+                raise ValueError("Modifier type is not operation_modifier")
+            if len({type(m) for m in modifiers}) > 1:
                 raise ValueError("All modifiers must be of the same type")
 
             self.specialize_params(
                     name=name,
                     modifiers=modifiers,
-                    context=context, params=self.params)
+                    context=context,
+                    params=active_params)
 
-        self.validate(name=name, val=val, context=context, params=params)
-
-    def __iter__(self, name : str,
-                 modifiers: set[Enum],
-                 context: dict[str,value_type]) \
-                         -> Iterable[value_type]:
-
-        """
-        Use this to iterate over valid values for a given operand
-        
-        :param name: name of the argument (like 'adreg')
-        :param modifiers: modifiers to apply to the operation 
-                          (like opd3_modifier.* or opdna1_modifier.*)
-        :param context: dictionary of already assigned argument values
-
-        :raises ArgumentDependencyError: If the operand depends on the value
-                                         of another operand and it is unset
-        :raises ConstraintDoesNotApplyError: The constraint does not apply
-            (Example: constraint only applies when a dreg is a vreg)
-        """
-        params = {}
-        if modifiers:
-            if type(modifiers[0]) == Enum:
-                raise ValueError("Modfier type can't be a raw Enum")
-            if any(type(m) != type(modifiers[0]) for m in modifiers):
-                raise ValueError("All modifiers must be of the same type")
-            self.specialize_params(
-                    name=name,
-                    modifiers=modifiers,
-                    context=context, params=self.params)
-
-        for v in self.valid_values(name=name, context=context, params=params):
-            yield v
+        self.validate(name=name, val=val, context=context, params=active_params)
 
     @abstractmethod
     def validate(self,
                  name : str,
-                 val : value_type,
-                 context : dict[str,value_type],
-                 params : dict[str,value_type]):
+                 val : ValueType,
+                 context : dict[str,ValueType],
+                 params : dict[str,ValueType]):
         """
         Checks if a value is valid for an argument and raises an Error if it is not.
         To be implemented by an inheriting class
@@ -146,34 +130,29 @@ class operand_constraint(ABC):
         :raises ValueError: if the value is invalid
         """
 
-    @abstractmethod
-    def valid_values(self,
-                     name : str,
-                     context : dict[str,value_type],
-                     params : dict[str, value_type]):
-        """
-        Returns an iterable over valid values for a given operand. To
-        be implemented by an inheriting class
-        
-        :param name: name of the argument (like 'adreg')
-        :param context: other argument values
-        :param params: Constraint parameters
-
-        :raises ArgumentDependencyError: If the operand depends on the value
-                                         of another operand and it is unset
-        """
-
 @dataclass(kw_only=True)
 class intval_constraint(operand_constraint):
     """
+    Constraint on an integer property of the value
 
+    :param what: human-readable name for the property,
+                 used in error messages
+    :param getint: Callable retrieving the integer from the value
+    :param makeval: Callable constructing a value from an int
     """
     what : str = "value"
-    getint : Callable[[value_type],int] = lambda v : v
-    makeval : Callable[[int], value_type] = lambda d : d
+    getint : Callable[[ValueType],int] = lambda v : v
+    makeval : Callable[[int], ValueType] = lambda d : d
 
 @dataclass(kw_only=True)
 class minmax_constraint(intval_constraint):
+    """
+    Constraint limiting an integer value to a range between two
+    values inclusively
+
+    :param minval: Smallest allowed value
+    :param maxval: Largest allowed value
+    """
     minval: int
     maxval: int
     def __post_init__(self):
@@ -181,76 +160,72 @@ class minmax_constraint(intval_constraint):
         self.params['maxval'] = self.maxval
 
     def validate(self, name : str,
-                 val : value_type,
-                 context : dict[str,value_type],
-                 params : dict[str,value_type]):
+                 val : ValueType,
+                 context : dict[str,ValueType],
+                 params : dict[str,ValueType]):
 
         minval = params['minval']
         maxval = params['maxval']
 
         if self.getint(val) < minval:
-            raise ValueError(f"{self.what} of {self.name} must be >= {minval}")
+            raise ValueError(f"{self.what} of {name} must be >= {minval}")
         if self.getint(val) > maxval:
-            raise ValueError(f"{self.what} of {self.name} must be <= {maxnval}")
+            raise ValueError(f"{self.what} of {name} must be <= {maxval}")
 
-    def valid_values(self, name : str, context : dict[str, value_type]):
-
-        minval = params['minval']
-        maxval = params['maxval']
-
-        for i in range(minval, maxval+1):
-            yield self.makeval(i)
 
 @dataclass(kw_only=True)
 class oneof_constraint(intval_constraint):
+    """
+    Constraint limiting an integer value to a known set of values
+
+    :param valset: set of valid integer values
+    """
     valset: set[int]
     def __post_init__(self):
         self.params['valset'] = self.valset
 
     def validate(self, name : str,
-                 val : value_type,
-                 context : dict[str,value_type],
-                 params : dict[str,value_type]):
+                 val : ValueType,
+                 context : dict[str,ValueType],
+                 params : dict[str,ValueType]):
 
         valset = params['valset']
 
         if self.getint(val) not in valset:
-            raise ValueError(f"{self.what} of {self.name} must be one of: {valset}")
+            raise ValueError(f"{self.what} of {name} must be one of: {valset}")
 
-    def valid_values(self, name : str,
-                     context : dict[str, value_type],
-                     params : dict[str|value_type]):
-
-        valset = params['valset']
-        
-        for i in valset:
-            yield self.makeval(i)
 
 @dataclass(kw_only=True)
 class multiple_constraint(intval_constraint):
+    """
+    Constraint limiting an integer value to multiples of another
+    value
+
+    :param multiple: Value the integer has to be a multiple of
+    """
     multiple: int
     def __post_init__(self):
         self.params['multiple'] = self.multiple
 
-    def validate(self, name : str, val : value_type, context : dict[str,value_type], params : dict[str,value_type]):
+    def validate(self, name : str, val : ValueType,
+                 context : dict[str,ValueType],
+                 params : dict[str,ValueType]):
 
         multiple = params['multiple']
 
-        if 0 != (self.getval(val) % multiple):
-            raise ValueError(f"{self.what} of {self.name} must be a multiple of {multiple}")
-
-    def valid_values(self, name : str, context : dict[str, value_type]):
-
-        multiple = params['multiple']
-        minval = params.get('minval', 0)
-        maxval = params.get('maxval', 32)
-
-        for i in range(minval, maxval+1, multiple):
-            yield self.makeval(i)
+        if 0 != (self.getint(val) % multiple):
+            raise ValueError(f"{self.what} of {name} must be a multiple of {multiple}")
 
 
 @dataclass(kw_only=True)
 class otherplusn_constraint(intval_constraint):
+    """
+    Constraint limiting an integer value to the integer value
+    of another argument plus an integer offset
+
+    :param other: name of the dependency
+    :param offset: integer offset from the value of the dependency
+    """
     other: str
     offset: int
     def __post_init__(self):
@@ -258,29 +233,30 @@ class otherplusn_constraint(intval_constraint):
         self.params['offset'] = self.offset
 
     def validate(self, name : str,
-                 val : value_type,
-                 context : dict[str,value_type],
-                 params : dict[str,value_type]):
+                 val : ValueType,
+                 context : dict[str,ValueType],
+                 params : dict[str,ValueType]):
 
         other = params['other']
         otherint = self.getint(context[other])
         offset = params['offset']
 
         if self.getint(val) != otherint+offset:
-            raise ValueError((f"{self.what} of {self.name} must be "
+            raise ValueError((f"{self.what} of {name} must be "
                               f"{self.what} of {other} plus {offset}"))
-
-    def valid_values(self, name : str, context : dict[str, value_type]):
-
-        other = params['other']
-        otherint = self.getint(context[other])
-        offset = params['offset']
-
-        yield self.makeval(otherint+offset)
 
 
 @dataclass(kw_only=True)
 class otherplusnmod_constraint(intval_constraint):
+    """
+    Constraint limiting an integer value to the integer value
+    of another argument plus an integer offset modulo another 
+    integer value
+
+    :param other: name of the dependency
+    :param offset: integer offset from the value of the dependency
+    :param modval: modulo value to use for wrapping values around
+    """
     other: str
     offset: int
     modval: int
@@ -290,9 +266,9 @@ class otherplusnmod_constraint(intval_constraint):
         self.params['modval'] = self.modval
 
     def validate(self, name : str,
-                 val : value_type,
-                 context : dict[str,value_type],
-                 params : dict[str,value_type]):
+                 val : ValueType,
+                 context : dict[str,ValueType],
+                 params : dict[str,ValueType]):
 
         other = params['other']
 
@@ -304,16 +280,6 @@ class otherplusnmod_constraint(intval_constraint):
         modval = params['modval']
 
         if self.getint(val) != (otherint+offset) % modval:
-            raise ValueError((f"{self.what} of {self.name} must be "
+            raise ValueError((f"{self.what} of {name} must be "
                               f"{self.what} of {other} plus {offset} "
                               f"modulo {modval}"))
-
-    def valid_values(self, name : str, context : dict[str, value_type]):
-
-        other = params['other']
-        otherint = self.getint(context[other])
-        offset = params['offset']
-        modval = params['modval']
-
-        yield self.makeval((otherint+offset) % modval)
-

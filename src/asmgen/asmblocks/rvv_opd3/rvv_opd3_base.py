@@ -7,26 +7,24 @@
 RVV 1.0 and 0.7.1 opd3 base
 """
 from abc import abstractmethod
-from typing import Callable
+from typing import Callable,Any
 
 from ...registers import (
     asm_data_type as adt,
-    adt_triple,
     adt_size,
     adt_is_float,adt_is_int,
     adt_is_signed,adt_is_unsigned,
     data_reg
 )
-from ..operations import (
+from ..op import (
     opd3,
-    widening_method,
     opd3_modifier as mod,
-    operand_restriction
+    operation_signature
 )
 from ...util import NIE_MESSAGE
 
-from ..types.riscv64_types import riscv64_freg
-from ..types.rvv_types import rvv_vreg
+
+from .signatures import make_rvv_opd3_signatures
 
 class rvv_opd3_base(opd3):
     """
@@ -34,11 +32,18 @@ class rvv_opd3_base(opd3):
     opd3 operations
     """
 
+    supports_np = False
+
     def __init__(self,
                  asmwrap : Callable[[str],str]):
-        self.asmwrap = asmwrap
 
+        self.asmwrap = asmwrap
         self.operand_order = [2,0,1]
+
+        self.signatures = make_rvv_opd3_signatures(supports_np=self.supports_np)
+
+    def get_signatures(self) -> list[operation_signature]:
+        return self.signatures
 
     @abstractmethod
     def get_base_inst(self, modifiers : set[mod]) -> str:
@@ -52,12 +57,10 @@ class rvv_opd3_base(opd3):
         """
         raise NotImplementedError(NIE_MESSAGE)
 
-    @property
-    def widening_method(self) -> widening_method:
-        return widening_method.VEC_GROUP
 
-
-    def check_modifiers(self, modifiers : set[mod]):
+    def diagnose_failure(self, modifiers : set[mod],
+                         kwargs : dict[str,Any],
+                         dts : dict[str,adt]):
         if mod.REGIDX in modifiers:
             raise ValueError("RVV has no regidx form")
         if mod.IDX in modifiers:
@@ -67,50 +70,6 @@ class rvv_opd3_base(opd3):
         if mod.MASK in modifiers:
             raise NotImplementedError("RVV masked opd3 not implemented yet")
 
-
-    def supported_dts(self) -> list[dict[str,adt]]:
-        return [
-            {'adreg':adt.FP64, 'bdreg':adt.FP64, 'cdreg':adt.FP64},
-            {'adreg':adt.FP32, 'bdreg':adt.FP32, 'cdreg':adt.FP32},
-            {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP16},
-
-            {'adreg':adt.FP32, 'bdreg':adt.FP32, 'cdreg':adt.FP64},
-            {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP32},
-
-            {'adreg':adt.SINT64, 'bdreg':adt.SINT64, 'cdreg':adt.SINT64},
-            {'adreg':adt.SINT32, 'bdreg':adt.SINT32, 'cdreg':adt.SINT32},
-            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT16},
-            {'adreg':adt.SINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT8},
-
-            {'adreg':adt.SINT32, 'bdreg':adt.SINT32, 'cdreg':adt.SINT64},
-            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
-            {'adreg':adt.SINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT16},
-
-            {'adreg':adt.UINT32, 'bdreg':adt.UINT32, 'cdreg':adt.UINT64},
-            {'adreg':adt.UINT16, 'bdreg':adt.UINT16, 'cdreg':adt.UINT32},
-            {'adreg':adt.UINT8, 'bdreg':adt.UINT8, 'cdreg':adt.UINT16},
-
-            {'adreg':adt.SINT32, 'bdreg':adt.UINT32, 'cdreg':adt.SINT64},
-            {'adreg':adt.SINT16, 'bdreg':adt.UINT16, 'cdreg':adt.SINT32},
-            {'adreg':adt.SINT8, 'bdreg':adt.UINT8, 'cdreg':adt.SINT16},
-
-            {'adreg':adt.UINT32, 'bdreg':adt.SINT32, 'cdreg':adt.SINT64},
-            {'adreg':adt.UINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
-            {'adreg':adt.UINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT16},
-        ]
-
-    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
-        return []
-
-    def get_operand_restrictions(self, oprnd : str) -> set[operand_restriction]:
-        # No restriction on any operands
-        return {}
-
-    def get_operand_restriction_value(self, oprnd : str,
-                                      modifiers : set[mod],
-                                      rstr : operand_restriction) \
-      -> int|set[int]|tuple[str,int]:
-        raise ValueError("No restriction {rstr} on operand {op} for RVV opd3")
 
     def inst_prefix(self, a_dt : adt, b_dt : adt, c_dt : adt) -> str:
         """
@@ -168,35 +127,22 @@ class rvv_opd3_base(opd3):
     def implementation(self, *,
                        adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                        a_dt : adt, b_dt : adt, c_dt : adt,
-                       modifiers : set[mod] = set(),
+                       modifiers : set[mod] = None,
                        **kwargs) -> str:
 
+        modifiers = modifiers or set()
 
-        invalid_regs = False
-        # check registers
-        if mod.VF not in modifiers:
-            if not all(isinstance(r, rvv_vreg) for r in (adreg,bdreg,cdreg)):
-                invalid_regs = True
-        else:
-            if not all(isinstance(r, rvv_vreg) for r in (adreg,cdreg)) or \
-                    not isinstance(bdreg, riscv64_freg):
-                invalid_regs = True
-
-        if invalid_regs:
-            raise ValueError(
-                    ("Either all dregs of an RVV opd3 must be rvv_vreg"
-                     " or a and c must be rvv_vreg and b must be riscv64_freg"))
-
-        # RVV specific check not covered by standard checks
-        if adt_size(a_dt) < adt_size(c_dt):
-            if adt_is_int(c_dt) and mod.NP in modifiers:
-                raise ValueError(
-                        "RVV has no np form for widening integer operation")
 
         pref = self.inst_prefix(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
         mix_pref = "w" if adt_size(c_dt)>adt_size(a_dt) else ""
         suf = self.inst_suffix(a_dt=a_dt, b_dt=b_dt, c_dt=c_dt)
-        form_suf = "vf" if mod.VF in modifiers else "vv"
+
+        if mod.VF in modifiers and adt_is_int(c_dt):
+            form_suf = "vx"
+        elif mod.VF in modifiers and adt_is_float(c_dt):
+            form_suf = "vf"
+        else:
+            form_suf = "vv"
 
         base_inst = self.get_base_inst(modifiers=modifiers)
 

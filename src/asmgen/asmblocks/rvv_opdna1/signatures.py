@@ -1,0 +1,140 @@
+# ------------------------------------------------------------------------------
+# SPDX-License-Identifier: MIT OR GPL-3.0-or-later
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
+# ------------------------------------------------------------------------------
+"""
+Valid signatures for RVV opdna1 operations
+"""
+
+from dataclasses import dataclass
+from typing import Callable
+
+from ..op import (
+    operation_signature as sig,
+    operand_shape as osh,
+    operand_type as ot,
+    register_type as rt,
+    opdna1_modifier as mod
+)
+
+from ..op.constraint import otherplusn_constraint
+from ..op.misc import make_ord_prefix as mop
+
+from ..types.rvv_types import rvv_vreg
+
+from ...registers import (
+    asm_data_type as adt,
+    asm_index_type as ait,
+    adt_size
+)
+
+@dataclass(kw_only=True)
+class struct_constraint(otherplusn_constraint):
+    """
+    Constraint requiring segmented ld/st to use consecutive registers
+    """
+    what : str = 'index'
+    getint : Callable[[rvv_vreg],int] = lambda reg : reg.idx
+    makeval : Callable[[int],rvv_vreg] = lambda idx : rvv_vreg(reg_idx=idx)
+
+
+def make_rvv_opdna1_signatures(get_lmul: Callable[[],int]):
+    """
+    Generate signatures for RVV opdna1 operations
+    """
+
+    sigs = []
+    floats = [adt.FP64, adt.FP32, adt.FP16, adt.FP8E4M3, adt.FP8E5M2]
+    ints = [adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8,
+            adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8]
+
+    # VINDEX -> vidxreg, it
+    # STRUCT -> nstructs
+    # GSTRIDE -> streg
+
+
+    index_type_map = {
+        8 : ait.INT64,
+        4 : ait.INT32,
+        2 : ait.INT16,
+        1 : ait.INT8
+    }
+    vidx_type_map = {
+        8 : adt.SINT64,
+        4 : adt.SINT32,
+        2 : adt.SINT16,
+        1 : adt.SINT8
+    }
+
+    for dt in floats+ints:
+        # normal load/store
+        sigs.append(sig(
+            modifiers=set(),
+            structural_params={},
+            operands={
+                'adreg': osh(ot.REGISTER, rt.VEC, dt),
+                'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
+                }
+        ))
+
+        # STRUCT
+
+        sc=struct_constraint
+        # vlseg1e32 would be equivalent to vle32, but maybe some
+        # selection logic could be simplified if we support it
+        # explicitly
+        for nstructs in range(1,9):
+            operands = {
+                'agreg' : osh(ot.REGISTER, rt.GP, adt.UINT64),
+                'adreg' : osh(ot.REGISTER, rt.VEC, dt)}
+            operands.update({
+                mop(i)+'dreg': osh(ot.REGISTER, rt.VEC, dt,
+                                   value_constraints=[
+                                       sc(other=mop(i-1)+'dreg',
+                                          offset=get_lmul())
+                                       ])
+                for i in range(1,nstructs)
+                })
+            sigs.append(sig(
+                modifiers={mod.STRUCT},
+                structural_params={
+                    'nstructs': nstructs
+                    },
+                operands=operands
+                ))
+
+        # VINDEX
+        sigs.append(sig(
+            modifiers={mod.VINDEX},
+            structural_params={
+                'it': index_type_map[adt_size(dt)]
+                },
+            operands={
+                'adreg': osh(ot.REGISTER, rt.VEC, dt),
+                'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
+                'vidxreg': osh(ot.REGISTER, rt.VEC,
+                               vidx_type_map[adt_size(dt)])
+                }
+            ))
+        # GSTRIDE
+        sigs.append(sig(
+            modifiers={mod.GSTRIDE},
+            structural_params={
+                },
+            operands={
+                'adreg': osh(ot.REGISTER, rt.VEC, dt),
+                'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
+                'streg': osh(ot.REGISTER, rt.GP, adt.UINT64)
+                }
+            ))
+
+        # TODO:
+        # - STRUCT+VINDEX
+        # - STRUCT+GSTRIDE
+
+        # TODO (also in the opdna1 implementation)
+        # - everything + MASK
+
+
+    return sigs

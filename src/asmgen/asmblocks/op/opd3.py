@@ -3,12 +3,15 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
-
+"""
+Operation on 3 data operands and related structures
+"""
 from abc import abstractmethod
 from enum import Enum,auto
 
 from . import operation
 from . import operation_modifier
+from . import operation_signature
 
 from ...registers import asm_data_type as adt, data_reg
 
@@ -26,7 +29,10 @@ class opd3_modifier(operation_modifier):
     """
     Possible modifiers for an opd3 instruction/operation
     """
-    NP = auto()
+    NP = auto()  # FMA negate product c=-(a*b)+c
+    NA = auto()  # FMA negate addend c=(a*b)-c
+    NX = auto()  # FMA negate everything c=-(a*b)-c
+    MULC = auto() # FMA C is a multiplicand, B is an addend c=(a*c)+b
     IDX = auto()
     REGIDX = auto()
     PART = auto()
@@ -56,33 +62,10 @@ class opd3(operation):
     """
     NIE_MESSAGE="Method not implemented"
 
-    @property
-    @abstractmethod
-    def widening_method(self) -> widening_method:
-        """
-        Return the method used to deal with widening instructions
-        
-        :return : widening method
-        :rtype : class:`asmgen.asmblocks.operations.widening_method`
-        """
-        raise NotImplementedError(self.NIE_MESSAGE)
-
-    @abstractmethod
-    def check_modifiers(self, modifiers : set[opd3_modifier]):
-        """
-        Checks whether the operations supports the specified modifiers
-
-
-        :param modifiers: set containing the modifiers to check
-        :type modifiers: set[class:`asmgen.asmblocks.operations.opd3_modifier`]
-        :raises ValueError: If an unsupported modifier is in the specified set
-        """
-        raise NotImplementedError(self.NIE_MESSAGE)
-
     def __call__(self, *,
                  adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                  a_dt : adt, b_dt : adt, c_dt : adt,
-                 modifiers : set[opd3_modifier] = set(),
+                 modifiers : set[opd3_modifier] = None,
                  **kwargs) -> str:
         """
         Return the ASM/IR instruction
@@ -103,6 +86,9 @@ class opd3(operation):
         :rtype : str
         """
 
+        if modifiers is None:
+            modifiers = set()
+
         return self.execute(
             dregs=[adreg,bdreg,cdreg],
             gregs=[],
@@ -111,28 +97,26 @@ class opd3(operation):
             **kwargs
         )
 
+    @abstractmethod
+    # pylint: disable-next=arguments-differ
+    def implementation(self, *,
+                       adreg : data_reg,
+                       bdreg : data_reg, cdreg : data_reg,
+                       a_dt : adt, b_dt : adt, c_dt : adt,
+                       modifiers : set[opd3_modifier] = None,
+                       **kwargs) -> str:
+        """
+        opd3 implementation/call interface
+        """
+
 
 class dummy_opd3(opd3):
     """
     Dummy opd3 operation; ISAs assign this by default to operations they do not support
     """
 
-    @property
-    def widening_method(self) -> widening_method:
+    def get_signatures(self) -> list[operation_signature]:
         raise NotImplementedError(self.NIE_MESSAGE)
-
-    def supported_dts(self) -> list[dict[str,adt]]:
-        raise NotImplementedError(self.NIE_MESSAGE)
-
-    def check_modifiers(self, modifiers : set[opd3_modifier]):
-        raise NotImplementedError(self.NIE_MESSAGE)
-
-    def get_required_params(self, modifiers : set[opd3_modifier]) -> list[set[str]]:
-        raise NotImplementedError(self.NIE_MESSAGE)
-
-    def get_operand_constraints(self, op : str) -> set[operand_constraint]:
-        raise NotImplementedError(self.NIE_MESSAGE)
-
 
     def implementation(self, *,
                        adreg : data_reg, bdreg : data_reg, cdreg : data_reg,

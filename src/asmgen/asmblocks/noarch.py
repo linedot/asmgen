@@ -16,7 +16,7 @@ from enum import Enum,auto
 from abc import ABC, abstractmethod
 from typing import TypeAlias,Union,TYPE_CHECKING
 
-from .operations import dummy_opd3
+from .op import dummy_opd3
 from ..registers import (
     reg_tracker,
     asm_data_type,

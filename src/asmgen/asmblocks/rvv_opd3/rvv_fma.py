@@ -9,7 +9,7 @@ RVV 1.0 and 0.7.1 fused-multiply-accumulate
 
 from typing import Callable
 
-from ..operations import opd3_modifier as mod
+from ..op.opd3 import opd3_modifier as mod
 
 from .rvv_opd3_base import rvv_opd3_base
 
@@ -17,6 +17,8 @@ class rvv_fma(rvv_opd3_base):
     """
     RVV 1.0 and 0.7.1 implementation of fma
     """
+
+    supports_np = True
 
     def __init__(self,
                  asmwrap : Callable[[str],str]):
