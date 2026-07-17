@@ -7,10 +7,10 @@
 Base AArch64 load instructions
 """
 
-from ..operations import opdna1_action as action
-from .aarch64_opdna1_base import aarch64_opdna1
-
 from typing import Callable
+
+from ..op import opdna1_action as action
+from .aarch64_opdna1_base import aarch64_opdna1
 
 class aarch64_load(aarch64_opdna1):
     """

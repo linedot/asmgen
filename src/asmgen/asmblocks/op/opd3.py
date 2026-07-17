@@ -9,9 +9,9 @@ Operation on 3 data operands and related structures
 from abc import abstractmethod
 from enum import Enum,auto
 
-from . import operation
-from . import operation_modifier
-from . import operation_signature
+from .operation import operation
+from .modifier import operation_modifier
+from .signature import operation_signature
 
 from ...registers import asm_data_type as adt, data_reg
 

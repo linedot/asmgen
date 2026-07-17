@@ -8,6 +8,9 @@ Helpers for dealing with operands
 """
 
 def make_ord_prefix(i : int) -> 'str':
+    """
+    Maps 0-25 onto a-z
+    """
     if i > 25 or i < 0:
         raise ValueError("index outside of allowed range [0,25]")
 

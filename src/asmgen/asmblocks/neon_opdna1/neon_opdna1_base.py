@@ -3,20 +3,23 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
+"""
+NEON/ASIMD operations with n data operand and 1 address operand (load/store)
+"""
+
+from typing import Callable,Any
+
 from ..aarch64_opdna1.aarch64_opdna1_base import aarch64_opdna1
-from ..types.neon_types import neon_vreg
 from ..types.aarch64_types import aarch64_greg,aarch64_freg
-from ..operations import (
+from ..op import (
     opdna1,
     opdna1_modifier as mod,
     opdna1_action,
-    operand_restriction
+    operation_signature
 )
 from ...registers import asm_data_type as adt, adt_size
 
-from ..operand.neon.constraints import neon_otherplusnmod_constraint, neon_vreg_noerror_constraint
-
-from typing import Callable
+from .signatures import make_neon_opdna1_signatures
 
 class neon_opdna1(opdna1):
     """
@@ -24,131 +27,122 @@ class neon_opdna1(opdna1):
     Inherits from aarch64_opdna1 to automatically handle scalar routing.
     """
 
+    bcast_supported = False
+
     def __init__(self, action: opdna1_action,
                  asmwrap : Callable[[str],str]):
         self.action = action
         self.asmwrap = asmwrap
 
-
-        self.constraints = {
-            s : [neon_vreg_noerror_constraint()] for s in ['adreg','bdreg','cdreg','ddreg']
-        }
-
-        self.constraints['bdreg'].append(
-                neon_otherplusnmod_constraint(other='adreg',offset=1,modval=32))
-        self.constraints['cdreg'].append(
-                neon_otherplusnmod_constraint(other='bdreg',offset=1,modval=32))
-        self.constraints['ddreg'].append(
-                neon_otherplusnmod_constraint(other='cdreg',offset=1,modval=32))
-
         self.scalar_opdna1 = aarch64_opdna1(action=action, asmwrap=asmwrap)
 
-        self.constraints.update(self.scalar_opdna1.constraints)
+        self.signatures = make_neon_opdna1_signatures(
+                bcast_supported=self.bcast_supported)
+        self.signatures.extend(self.scalar_opdna1.get_signatures())
+
+    def get_signatures(self) -> list[operation_signature]:
+        return self.signatures
 
     @property
     def inst_base(self):
+        """
+        Get base root of instruction
+        """
         if self.action == opdna1_action.LOAD:
             return "ld"
-        elif self.action == opdna1_action.STORE:
+        if self.action == opdna1_action.STORE:
             return "st"
-        else:
-            raise ValueError(f"Invalid action: {self.action}")
+        raise ValueError(f"Invalid action: {self.action}")
 
-    def supported_dts(self) -> list[dict[str,adt]]:
-        return [
-            {'adreg': adt.FP64, 'bdreg': adt.FP64, 'cdreg': adt.FP64, 'ddreg': adt.FP64},
-            {'adreg': adt.FP32, 'bdreg': adt.FP32, 'cdreg': adt.FP32, 'ddreg': adt.FP32},
-            {'adreg': adt.FP16, 'bdreg': adt.FP16, 'cdreg': adt.FP16, 'ddreg': adt.FP16},
-            {'adreg': adt.FP8E4M3, 'bdreg': adt.FP8E4M3, 'cdreg': adt.FP8E4M3, 'ddreg': adt.FP8E4M3},
-            {'adreg': adt.FP8E5M2, 'bdreg': adt.FP8E5M2, 'cdreg': adt.FP8E5M2, 'ddreg': adt.FP8E5M2},
-            {'adreg': adt.SINT64, 'bdreg': adt.SINT64, 'cdreg': adt.SINT64, 'ddreg': adt.SINT64},
-            {'adreg': adt.SINT32, 'bdreg': adt.SINT32, 'cdreg': adt.SINT32, 'ddreg': adt.SINT32},
-            {'adreg': adt.SINT16, 'bdreg': adt.SINT16, 'cdreg': adt.SINT16, 'ddreg': adt.SINT16},
-            {'adreg': adt.SINT8, 'bdreg': adt.SINT8, 'cdreg': adt.SINT8, 'ddreg': adt.SINT8},
-            {'adreg': adt.UINT64, 'bdreg': adt.UINT64, 'cdreg': adt.UINT64, 'ddreg': adt.UINT64},
-            {'adreg': adt.UINT32, 'bdreg': adt.UINT32, 'cdreg': adt.UINT32, 'ddreg': adt.UINT32},
-            {'adreg': adt.UINT16, 'bdreg': adt.UINT16, 'cdreg': adt.UINT16, 'ddreg': adt.UINT16},
-            {'adreg': adt.UINT8, 'bdreg': adt.UINT8, 'cdreg': adt.UINT8, 'ddreg': adt.UINT8}
-        ]
 
-    def check_modifiers(self, modifiers: set[mod]):
+    def diagnose_failure(self, modifiers : set[mod],
+                         kwargs : dict[str,Any],
+                         dts : dict[str,adt]):
 
-        if mod.TINDEX in modifiers:
-            raise ValueError(
-                    "NEON has no ld/st with 2D tile offset indices")
-        if mod.VINDEX in modifiers:
-            raise ValueError(
-                    "NEON has no ld/st with 1D vector offset indices")
-        if mod.GLANE in modifiers:
-            raise ValueError("NEON has no GP-reg lane ld/st")
-        if mod.TOFFSET in modifiers:
-            raise ValueError("NEON has no ld/st with 2D tile offsets")
-        if mod.ISTRIDE in modifiers:
-            raise ValueError(
-                    "NEON has no ld/st with immediate strides")
-        if mod.GSTRIDE in modifiers:
-            raise ValueError("NEON has no ld/st with GP-reg strides")
-        if mod.MASK in modifiers:
-            raise ValueError("NEON has no masked ld/st")
-        if mod.ROW in modifiers:
-            raise ValueError("NEON has no row selection ld/st")
-        if mod.COL in modifiers:
-            raise ValueError("NEON has no column selection ld/st")
-        if mod.NT in modifiers:
-            raise NotImplementedError("Non-temporals for NEON not yet implemented")
-                
-        # Modifier/Kwarg Compatibility Checks
-        if mod.VOFFSET in modifiers or mod.IOFFSET in modifiers:
-            if any(m in modifiers for m in [mod.STRUCT, mod.ILANE, mod.BCAST]):
+        unsupported_mods = {
+            mod.TINDEX:  (ValueError, "NEON has no ld/st with 2D tile offset indices"),
+            mod.VINDEX:  (ValueError, "NEON has no ld/st with 1D vector offset indices"),
+            mod.GLANE:   (ValueError, "NEON has no GP-reg lane ld/st"),
+            mod.TOFFSET: (ValueError, "NEON has no ld/st with 2D tile offsets"),
+            mod.ISTRIDE: (ValueError, "NEON has no ld/st with immediate strides"),
+            mod.GSTRIDE: (ValueError, "NEON has no ld/st with GP-reg strides"),
+            mod.MASK:    (ValueError, "NEON has no masked ld/st"),
+            mod.ROW:     (ValueError, "NEON has no row selection ld/st"),
+            mod.COL:     (ValueError, "NEON has no column selection ld/st"),
+            mod.NT:      (NotImplementedError, "Non-temporals for NEON not yet implemented"),
+        }
+
+        for m, (exc_type, msg) in unsupported_mods.items():
+            if m in modifiers:
+                raise exc_type(msg)
+
+
+        if {mod.VOFFSET, mod.IOFFSET} & modifiers:
+            if {mod.STRUCT, mod.ILANE, mod.BCAST} & modifiers:
                 raise ValueError("VOFFSET/IOFFSET cannot be combined with STRUCT, ILANE, or BCAST")
-        
+
         if mod.BCAST in modifiers:
             if self.action != opdna1_action.LOAD:
                 raise ValueError("BCAST modifier is only valid for LOAD operations")
             if mod.ILANE in modifiers:
                 raise ValueError("BCAST cannot be combined with ILANE")
 
-    def get_required_params(self, modifiers: set[mod]) -> list[str]:
-
-        required_extra_params = []
-
-        if mod.IOFFSET in modifiers:
-            required_extra_params.append({"ioffset"})
-
-        if mod.ILANE in modifiers:
-            required_extra_params.append({"lane"})
-
-        if mod.GOFFSET in modifiers:
-            required_extra_params.append({"offreg"})
-
-        if mod.STRUCT in modifiers:
-            required_extra_params.append({"nstructs"})
-
         if mod.POSTINC in modifiers:
-            required_extra_params.append({"iinc","increg"})
+            has_iinc = "iinc" in kwargs
+            has_increg = "increg" in kwargs
 
-        return required_extra_params
+            if has_iinc and has_increg:
+                raise ValueError("iinc, increg are mutually exclusive")
+            if not has_iinc and not has_increg:
+                raise ValueError("Missing one of these parameters: iinc, increg")
+
+        if mod.STRUCT in modifiers and "nstructs" not in kwargs:
+            raise ValueError("STRUCT modifier requires 'nstructs' parameter")
+
+        if mod.ILANE in modifiers and "lane" not in kwargs:
+            raise ValueError("ILANE modifier requires 'lane' parameter")
 
 
     def get_arrangement(self, dt: adt) -> str:
+        """
+        NEON suffixes for full simd registers
+        """
         size = adt_size(dt)
-        if size == 1: return ".16b"
-        if size == 2: return ".8h"
-        if size == 4: return ".4s"
-        if size == 8: return ".2d"
+        if size == 1:
+            return ".16b"
+        if size == 2:
+            return ".8h"
+        if size == 4:
+            return ".4s"
+        if size == 8:
+            return ".2d"
         raise ValueError(f"Unsupported NEON vector size: {size}")
 
     def get_element_suffix(self, dt: adt) -> str:
+        """
+        NEON suffixes for lanes
+        """
         size = adt_size(dt)
-        if size == 1: return ".b"
-        if size == 2: return ".h"
-        if size == 4: return ".s"
-        if size == 8: return ".d"
+        if size == 1:
+            return ".b"
+        if size == 2:
+            return ".h"
+        if size == 4:
+            return ".s"
+        if size == 8:
+            return ".d"
         raise ValueError(f"Unsupported NEON lane size: {size}")
 
-    def get_addressing(self, areg: aarch64_greg, modifiers: set[mod], **kwargs) -> str:
-        if not isinstance(areg, aarch64_greg):
-            raise ValueError(f"{areg} is not an aarch64_greg")
+    def get_addressing(self, areg: aarch64_greg,
+                       modifiers: set[mod], **kwargs) -> str:
+        """
+        Constructs the addressing string
+
+        :param areg: address register
+        :param modifiers: operation modifiers
+        
+        :return: string containing the addressing
+        """
 
         base_addr = f"[{areg}]"
 
@@ -174,7 +168,7 @@ class neon_opdna1(opdna1):
     def implementation(self, *,
                        dregs: list, agreg: aarch64_greg, a_dt: adt,
                        modifiers: set[mod], **kwargs) -> str:
-                 
+
         if not dregs:
             raise ValueError("No dregs provided")
 
@@ -183,36 +177,20 @@ class neon_opdna1(opdna1):
             return self.scalar_opdna1(dregs=dregs, areg=agreg, dt=a_dt,
                                       modifiers=modifiers, **kwargs)
 
-        # Vector Logic Enforced Here
-        if not all(isinstance(reg, neon_vreg) for reg in dregs):
-            raise ValueError("Mixed or invalid register types for NEON vector operation")
-
         addressing = self.get_addressing(agreg, modifiers, **kwargs)
 
-        # Case 1: LDR / STR for IOFFSET / VOFFSET
         if mod.VOFFSET in modifiers or mod.IOFFSET in modifiers:
             inst = "ldr" if self.action == opdna1_action.LOAD else "str"
             return self.asmwrap(f"{inst} q{dregs[0].idx}, {addressing}")
 
-        # Segmented registers contiguity check
-        for i in range(1, len(dregs)):
-            if dregs[i].idx != (dregs[i-1].idx + 1) % 32:
-                raise ValueError("NEON segmented registers must be contiguous.")
-
         nstructs = kwargs.get("nstructs",1)
-        # Checks not covered by standard parameter tests
-        if mod.STRUCT not in modifiers and len(dregs) != 1:
-            raise ValueError(
-                    "Multiple registers provided but STRUCT modifier is missing")
-        if mod.STRUCT in modifiers and len(dregs) != nstructs:
-            raise ValueError(
-                    f"Number of dregs differs from nstructs ({len(dregs)} != {nstructs})")
 
-        inst = f"{self.inst_base}{nstructs}r" if mod.BCAST in modifiers else f"{self.inst_base}{nstructs}"
-        
+
+        inst = f"{self.inst_base}{nstructs}r" if mod.BCAST in modifiers \
+                else f"{self.inst_base}{nstructs}"
+
         if mod.ILANE in modifiers:
             lane = kwargs.get("lane")
-            if lane is None: raise ValueError("ILANE requires 'lane' parameter")
             arrangement = self.get_element_suffix(a_dt)
             reg_list_str = ", ".join([f"{r}{arrangement}" for r in dregs])
             dreg_str = f"{{{reg_list_str}}}[{lane}]"

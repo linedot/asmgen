@@ -3,105 +3,109 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
-""" Tests NEON/ASIMD fma instruction code generation
 """
-import unittest
+Tests NEON/ASIMD fma instruction code generation
+"""
 
-from asmgen.asmblocks.neon import neon
 from asmgen.registers import asm_data_type as adt
-from asmgen.asmblocks.operations import opd3_modifier as mod
+from asmgen.asmblocks.op import opd3_modifier as mod
 
-from .test_neon_opd3 import test_neon_opd3
+from asmgen.asmblocks.op.opd3 import widening_method as wm
 
-class test_neon_fmla(test_neon_opd3):
+from .test_neon_opd3 import test_neon_opd3_base
+
+class test_neon_fmla(test_neon_opd3_base):
     """
-    Tests NEON/ASIMD opd3 operations
+    Testsuite for NEON/ASIMD fma
     """
 
-    def test_fmla(self):
-        """
-        Tests that the NEON/ASIMD generator generates correct FMA instructions
-        """
+    def test_standard_fmla(self):
+        """Test valid standard FMLA operations across data types"""
+        cases = [
+            (adt.FP64, "fmla v0.2d,v1.2d,v2.2d\n"),
+            (adt.FP32, "fmla v0.4s,v1.4s,v2.4s\n"),
+            (adt.FP16, "fmla v0.8h,v1.8h,v2.8h\n"),
+            (adt.SINT16, "mla v0.8h,v1.8h,v2.8h\n")
+        ]
+        for dt, expected in cases:
+            with self.subTest(dt=dt.name):
+                res = self.gen.fma(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
+                                   a_dt=dt, b_dt=dt, c_dt=dt)
+                self.assertEqual(res, expected)
 
-        self.assertEqual(
-            "fmla v0.2d,v1.2d,v2.2d\n",
-            self.gen.fma(adreg=self.gen.vreg(1),
-                         bdreg=self.gen.vreg(2),
-                         cdreg=self.gen.vreg(0),
-                    a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64))
+    def test_widening_and_np(self):
+        """Test widening (PART) and negate-product (NP) combinations"""
+        cases = [
+            # 2x Widening
+            (adt.FP16, adt.FP32, 0, set(), "fmlalb v0.4s,v1.8h,v2.8h\n"),
+            (adt.FP16, adt.FP32, 1, set(), "fmlalt v0.4s,v1.8h,v2.8h\n"),
+            # 4x Widening + Negate Product
+            (adt.FP8E5M2, adt.FP32, 0, {mod.NP}, "fmlsllbb v0.4s,v1.16b,v2.16b\n"),
+            (adt.FP8E5M2, adt.FP32, 3, {mod.NP}, "fmlslltt v0.4s,v1.16b,v2.16b\n"),
+        ]
+        for narrow_dt, wide_dt, part, mods, expected in cases:
+            modifiers = mods | {mod.PART}
+            with self.subTest(narrow=narrow_dt.name, wide=wide_dt.name, part=part, mods=mods):
+                res = self.gen.fma(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
+                                   a_dt=narrow_dt, b_dt=narrow_dt, c_dt=wide_dt,
+                                   modifiers=modifiers,
+                                   widening_method=wm.SPLIT_INSTRUCTIONS,
+                                   part=part)
+                self.assertEqual(res, expected)
 
-        self.assertEqual(
-            "fmla v0.4s,v1.4s,v2.4s\n",
-            self.gen.fma(adreg=self.gen.vreg(1),
-                         bdreg=self.gen.vreg(2),
-                         cdreg=self.gen.vreg(0),
-                    a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32))
+    def test_indexed_fma(self):
+        """Test indexed FMA operations (IDX)"""
+        # Note: lane indexing depends on dt size. FP32 has 4 lanes (0-3).
+        res = self.gen.fma(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
+                           a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32,
+                           modifiers={mod.IDX}, idx=2)
+        self.assertEqual(res, "fmla v0.4s,v1.4s,v2.s[2]\n")
 
-        self.assertEqual(
-            "fmla v0.8h,v1.8h,v2.8h\n",
-            self.gen.fma(adreg=self.gen.vreg(1),
-                         bdreg=self.gen.vreg(2),
-                         cdreg=self.gen.vreg(0),
-                    a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16))
+    def test_constraint_boundaries(self):
+        """Test that out-of-bound immediates and registers are caught by constraints"""
 
-        self.assertEqual(
-            "fmlalb v0.4s,v1.8h,v2.8h\n",
-            self.gen.fma(adreg=self.gen.vreg(1),
-                         bdreg=self.gen.vreg(2),
-                         cdreg=self.gen.vreg(0),
-                    a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32,
-                    modifiers={mod.PART}, part=0))
+        # 1. IDX out of bounds (FP32 max index is 3)
+        with self.subTest(error="idx bounds"):
+            with self.assertRaisesRegex(ValueError, "value of idx must be <= 3"):
+                self.gen.fma(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
+                             a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32,
+                             modifiers={mod.IDX}, idx=4)
 
-        self.assertEqual(
-            "fmlalt v0.4s,v1.8h,v2.8h\n",
-            self.gen.fma(adreg=self.gen.vreg(1),
-                         bdreg=self.gen.vreg(2),
-                         cdreg=self.gen.vreg(0),
-                    a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32,
-                    modifiers={mod.PART}, part=1))
+        # 2. PART out of bounds (FP16 -> FP32 max part is 1)
+        with self.subTest(error="part bounds"):
+            with self.assertRaisesRegex(ValueError, "value of part must be <= 1"):
+                self.gen.fma(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
+                             a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32,
+                             modifiers={mod.PART},
+                             widening_method=wm.SPLIT_INSTRUCTIONS,
+                             part=2)
 
-        self.assertEqual(
-            "fmlsllbb v0.4s,v1.16b,v2.16b\n",
-            self.gen.fma(adreg=self.gen.vreg(1),
-                         bdreg=self.gen.vreg(2),
-                         cdreg=self.gen.vreg(0),
-                    a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32,
-                    modifiers={mod.PART, mod.NP}, part=0))
+        # 3. BDREG too high for 16-bit indexing (max v15)
+        with self.subTest(error="bdreg 16-bit index bounds"):
+            with self.assertRaisesRegex(ValueError, "index of bdreg must be <= 15"):
+                self.gen.fma(adreg=self.v1, bdreg=self.v16, cdreg=self.v0,  # v16 is invalid here!
+                             a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16,
+                             modifiers={mod.IDX}, idx=1)
 
-        self.assertEqual(
-            "fmlsllbt v0.4s,v1.16b,v2.16b\n",
-            self.gen.fma(adreg=self.gen.vreg(1),
-                         bdreg=self.gen.vreg(2),
-                         cdreg=self.gen.vreg(0),
-                    a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32,
-                    modifiers={mod.PART, mod.NP}, part=1))
+    def test_invalid_configurations(self):
+        """Test mismatched types, missing kwargs, and unsupported forms"""
+        # 1. Wrong register type (Scalar instead of Vector)
+        with self.subTest(error="scalar register"):
+            with self.assertRaisesRegex(ValueError, "Invalid configuration for neon_fma"):
+                self.gen.fma(adreg=self.v1, bdreg=self.v2, cdreg=self.f0,
+                             a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64)
 
-        self.assertEqual(
-            "fmlslltb v0.4s,v1.16b,v2.16b\n",
-            self.gen.fma(adreg=self.gen.vreg(1),
-                         bdreg=self.gen.vreg(2),
-                         cdreg=self.gen.vreg(0),
-                    a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32,
-                    modifiers={mod.PART, mod.NP}, part=2))
+        # 2. Missing 'part' kwarg when mod.PART is active
+        with self.subTest(error="missing part kwarg"):
+            with self.assertRaisesRegex(ValueError, "Operand missing: part"):
+                self.gen.fma(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
+                             a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32,
+                             widening_method=wm.SPLIT_INSTRUCTIONS,
+                             modifiers={mod.PART}) # part=... is missing
 
-        self.assertEqual(
-            "fmlslltt v0.4s,v1.16b,v2.16b\n",
-            self.gen.fma(adreg=self.gen.vreg(1),
-                         bdreg=self.gen.vreg(2),
-                         cdreg=self.gen.vreg(0),
-                    a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32,
-                    modifiers={mod.PART, mod.NP}, part=3))
-
-    def test_wrong_registers(self):
-        """
-        Tests that the correct error is raised if wrong registers are passed
-        to the operation
-        """
-        with self.assertRaisesRegex(
-                ValueError,
-                "All dregs of a NEON opd3 must be neon_vreg"):
-            self.gen.fma(
-                adreg=self.gen.vreg(1),
-                bdreg=self.gen.vreg(2),
-                cdreg=self.gen.freg(0,dt=adt.FP64),
-                a_dt=adt.FP64,b_dt=adt.FP64,c_dt=adt.FP64)
+        # 3. MASK is unsupported in NEON
+        with self.subTest(error="unsupported mask"):
+            with self.assertRaisesRegex(ValueError, "NEON mul has no masked form"):
+                self.gen.fma(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
+                             a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32,
+                             modifiers={mod.MASK})

@@ -8,7 +8,7 @@ NEON store instructions
 """
 from typing import Callable
 
-from ..operations import opdna1_action as action
+from ..op import opdna1_action as action
 from .neon_opdna1_base import neon_opdna1
 
 class neon_store(neon_opdna1):

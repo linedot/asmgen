@@ -1,29 +1,44 @@
+# ------------------------------------------------------------------------------
+# SPDX-License-Identifier: MIT OR GPL-3.0-or-later
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
+# ------------------------------------------------------------------------------
+"""
+Tests AArch64 loads/stores
+"""
 import unittest
 
-# Assuming the existence of aarch64_store based on your description
 from asmgen.asmblocks.aarch64_opdna1 import aarch64_load, aarch64_store
 from asmgen.asmblocks.types.aarch64_types import aarch64_greg, aarch64_freg
 from asmgen.asmblocks.types.neon_types import neon_vreg
-from asmgen.asmblocks.operations import opdna1_modifier as mod
+from asmgen.asmblocks.op import opdna1_modifier as mod
 from asmgen.registers import asm_data_type as adt
 
 def asmwrap(s: str) -> str:
+    """
+    Dummy asmwrap to reduce complexity
+    """
     lines = s.split("\n")
     return "".join(f"{line}\n" for line in lines)
 
+# It's fine for this test
+# pylint: disable-next=too-many-instance-attributes
 class test_aarch64_opdna1(unittest.TestCase):
+    """
+    Testsuite for AArch64 loads and stores
+    """
 
     def setUp(self):
         # General purpose registers
         self.x0 = aarch64_greg(0)
         self.x1 = aarch64_greg(1)
         self.x2 = aarch64_greg(2)
-        
+
         # Floating point registers (various sizes)
         self.f0_32 = aarch64_freg(0, adt.FP32)
         self.f1_64 = aarch64_freg(1, adt.FP64)
         self.f2_16 = aarch64_freg(2, adt.FP16)
-        
+
         # Vector register (for testing failures)
         self.v0 = neon_vreg(0)
 
@@ -36,42 +51,42 @@ class test_aarch64_opdna1(unittest.TestCase):
         """ Test scalar zero-offset loads across data types and sizes """
         # FP64 -> ldr
         self.assertEqual(
-            self.load(dregs=[self.f1_64], areg=self.x0, dt=adt.FP64, modifiers={}),
+            self.load(dregs=[self.f1_64], areg=self.x0, dt=adt.FP64, modifiers=set()),
             "ldr d1, [x0]\n"
         )
         # FP32 -> ldr
         self.assertEqual(
-            self.load(dregs=[self.f0_32], areg=self.x0, dt=adt.FP32, modifiers={}),
+            self.load(dregs=[self.f0_32], areg=self.x0, dt=adt.FP32, modifiers=set()),
             "ldr s0, [x0]\n"
         )
         # UINT8 (1 byte) -> ldrb
         self.assertEqual(
-            self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT8, modifiers={}),
+            self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT8, modifiers=set()),
             "ldrb w1, [x0]\n"
         )
         # UINT16 (2 bytes) -> ldrh
         self.assertEqual(
-            self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT16, modifiers={}),
+            self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT16, modifiers=set()),
             "ldrh w1, [x0]\n"
         )
         # UINT64 (8 bytes) -> ldr
         self.assertEqual(
-            self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, modifiers={}),
+            self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, modifiers=set()),
             "ldr x1, [x0]\n"
         )
 
     def test_basic_stores(self):
         """ Test scalar zero-offset stores across data types and sizes """
         self.assertEqual(
-            self.store(dregs=[self.f1_64], areg=self.x0, dt=adt.FP64, modifiers={}),
+            self.store(dregs=[self.f1_64], areg=self.x0, dt=adt.FP64, modifiers=set()),
             "str d1, [x0]\n"
         )
         self.assertEqual(
-            self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT8, modifiers={}),
+            self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT8, modifiers=set()),
             "strb w1, [x0]\n"
         )
         self.assertEqual(
-            self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT16, modifiers={}),
+            self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT16, modifiers=set()),
             "strh w1, [x0]\n"
         )
 
@@ -80,13 +95,13 @@ class test_aarch64_opdna1(unittest.TestCase):
     def test_immediate_offset(self):
         """ Test loading/storing with an immediate offset """
         self.assertEqual(
-            self.load(dregs=[self.f0_32], areg=self.x0, dt=adt.FP32, 
+            self.load(dregs=[self.f0_32], areg=self.x0, dt=adt.FP32,
                       modifiers={mod.IOFFSET}, ioffset=16),
             "ldr s0, [x0, #16]\n"
         )
         # Test zero offset optimization
         self.assertEqual(
-            self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, 
+            self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT64,
                        modifiers={mod.IOFFSET}, ioffset=0),
             "str x1, [x0]\n"
         )
@@ -103,13 +118,13 @@ class test_aarch64_opdna1(unittest.TestCase):
         """ Test post-index addressing [Xn], #imm and [Xn], Xm """
         # Immediate post-inc
         self.assertEqual(
-            self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, 
+            self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64,
                       modifiers={mod.POSTINC}, iinc=8),
             "ldr x1, [x0], #8\n"
         )
         # Register post-inc
         self.assertEqual(
-            self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, 
+            self.store(dregs=[self.x1], areg=self.x0, dt=adt.UINT64,
                        modifiers={mod.POSTINC}, increg=self.x2),
             "str x1, [x0], x2\n"
         )
@@ -118,21 +133,23 @@ class test_aarch64_opdna1(unittest.TestCase):
 
     def test_invalid_modifiers(self):
         """ Test that invalid modifiers raise ValueError """
-        invalid_mods = [mod.TINDEX, mod.VINDEX, mod.GLANE, mod.ILANE, 
-                        mod.TOFFSET, mod.VOFFSET, mod.ISTRIDE, mod.GSTRIDE, 
+        invalid_mods = [mod.TINDEX, mod.VINDEX, mod.GLANE, mod.ILANE,
+                        mod.TOFFSET, mod.VOFFSET, mod.ISTRIDE, mod.GSTRIDE,
                         mod.STRUCT, mod.BCAST]
-        
+
         for invalid_mod in invalid_mods:
             with self.subTest(modifier=invalid_mod):
                 with self.assertRaisesRegex(ValueError, "Base AArch64 has no"):
                     self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, modifiers={invalid_mod})
 
     def test_missing_required_parameters(self):
-        """ Test that omitting required kwargs for modifiers raises ValueError """
-        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: ioffset"):
+        """
+        Test that omitting required kwargs for modifiers raises ValueError """
+        with self.assertRaisesRegex(ValueError,
+                                    "Missing operand: ioffset"):
             self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, modifiers={mod.IOFFSET})
 
-        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: offreg"):
+        with self.assertRaisesRegex(ValueError, "Missing operand: offreg"):
             self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, modifiers={mod.GOFFSET})
 
         with self.assertRaisesRegex(ValueError, "Missing one of these parameters: iinc, increg"):
@@ -141,32 +158,32 @@ class test_aarch64_opdna1(unittest.TestCase):
     def test_mutually_exclusive_parameters(self):
         """ Test that providing both post-inc parameters raises ValueError """
         with self.assertRaisesRegex(ValueError, "iinc, increg are mutually exclusive"):
-            self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, 
+            self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64,
                       modifiers={mod.POSTINC}, iinc=8, increg=self.x2)
 
     def test_invalid_register_types(self):
         """ Test that passing a vreg (vector) or non-greg address raises errors """
         # Bad DREG
-        with self.assertRaisesRegex(ValueError, "requires scalar registers"):
-            self.load(dregs=[self.v0], areg=self.x0, dt=adt.UINT64, modifiers={})
-            
+        with self.assertRaisesRegex(ValueError,
+                                    "Invalid configuration for aarch64_load"):
+            self.load(dregs=[self.v0], areg=self.x0, dt=adt.UINT64, modifiers=set())
+
         # Bad AREG
-        with self.assertRaisesRegex(ValueError, "not an aarch64_greg"):
-            self.load(dregs=[self.x1], areg=self.f0_32, dt=adt.UINT64, modifiers={})
+        with self.assertRaisesRegex(ValueError,
+                                    "Invalid configuration for aarch64_load"):
+            self.load(dregs=[self.x1], areg=self.f0_32, dt=adt.UINT64, modifiers=set())
 
     def test_invalid_register_count(self):
         """ Test that providing too many or too few dregs raises an error """
-        with self.assertRaisesRegex(ValueError,
-                                    # This doesn't get hit anymore, fails at dt check already
-                                    # "uses exactly one register"
-                                    "Invalid data type combination"
-                                    ):
-            self.load(dregs=[self.x1, self.x2], areg=self.x0, dt=adt.UINT64, modifiers={})
-            
-        with self.assertRaisesRegex(ValueError,
-                                    "No dregs passed to opdna1 operation"
-                                    ):
-            self.load(dregs=[], areg=self.x0, dt=adt.UINT64, modifiers={})
+        with self.assertRaisesRegex(
+                ValueError,
+                "AArch64 scalar load/store uses exactly one register."):
+            self.load(dregs=[self.x1, self.x2], areg=self.x0, dt=adt.UINT64, modifiers=set())
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "AArch64 scalar load/store uses exactly one register."):
+            self.load(dregs=[], areg=self.x0, dt=adt.UINT64, modifiers=set())
 
 if __name__ == '__main__':
     unittest.main()

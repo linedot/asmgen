@@ -11,9 +11,9 @@ from enum import Enum,auto
 
 from abc import abstractmethod
 
-from . import operation
-from . import operation_signature
-from . import operation_modifier
+from .operation import operation
+from .signature import operation_signature
+from .modifier import operation_modifier
 from .misc import make_ord_prefix
 
 from ...registers import (

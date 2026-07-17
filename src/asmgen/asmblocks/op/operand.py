@@ -25,11 +25,17 @@ from ...registers import (
 from .constraint import operand_constraint
 
 class operand_type(Enum):
+    """
+    Valid types for operands, currently only registers and immediates
+    """
     REGISTER = auto()
     IMMEDIATE = auto()
 
 
 class register_type(Enum):
+    """
+    Valid register types
+    """
     GP = auto()
     FP = auto()
     VEC = auto()
@@ -38,10 +44,13 @@ class register_type(Enum):
 
 
 def is_register_type(val : Any, rt : register_type) -> bool:
+    """
+    Tests if val is of the specified register type
+    """
     if register_type.GP   == rt and isinstance(val, greg_base):
-        return True       
+        return True
     if register_type.FP   == rt and isinstance(val, freg_base):
-        return True       
+        return True
     if register_type.VEC  == rt and isinstance(val, vreg_base):
         return True
     if register_type.TILE == rt and isinstance(val, treg_base):
@@ -58,7 +67,7 @@ class operand_shape:
     """
 
     otype : operand_type
-    rtype : register_class | None = None
+    rtype : register_type | None = None
     dt    : adt = None
 
     value_constraints: list[operand_constraint] = field(default_factory=list)

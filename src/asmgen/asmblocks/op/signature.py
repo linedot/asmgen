@@ -34,6 +34,8 @@ class operation_signature:
         param_str = "_".join(f"{k}{v}" for k,v in self.structural_params.items())
         return f"{mod_str}_{param_str}".strip("_")
 
+    # It's a validation chain, not a complex control tree, so it's fine
+    # pylint: disable-next=too-many-return-statements
     def match_intent(self,
                      modifiers: set[operation_modifier],
                      kwargs: dict[str, Any],
@@ -55,6 +57,21 @@ class operation_signature:
 
         for name, dt in dts.items():
             if name in self.operands and self.operands[name].dt != dt:
+                return False
+
+        for name in self.operands:
+            if name not in kwargs:
+                return False
+
+        base_kwargs={'dregs','gregs','modifiers','dt',
+                     'adreg','bdreg','cdreg','ddreg',
+                     'agreg',
+                     'a_dt','b_dt','c_dt','d_dt'}
+
+        for key in kwargs:
+            if key not in base_kwargs and \
+                    key not in self.operands and \
+                    key not in self.structural_params:
                 return False
 
         for name, shape in self.operands.items():

@@ -6,69 +6,55 @@
 """
 Tests NEON/ASIMD fmul instruction code generation
 """
-import unittest
 
-from asmgen.asmblocks.neon import neon
 from asmgen.registers import asm_data_type as adt
-from asmgen.asmblocks.operations import opd3_modifier as mod
+from asmgen.asmblocks.op import opd3_modifier as mod
 
-from .test_neon_opd3 import test_neon_opd3
+from .test_neon_opd3 import test_neon_opd3_base
 
-class test_neon_fmul(test_neon_opd3):
+class test_neon_fmul(test_neon_opd3_base):
     """
-    Tests NEON/ASIMD opd3 operations
+    Testsuite for NEON/ASIMD fmul
     """
 
-    def test_fmul(self):
+    def test_standard_fmul(self):
         """
-        Tests that the NEON/ASIMD generator generates correct FMUL instructions
+        Test some known instructions for correctness
         """
+        cases = [
+            (adt.FP64, "fmul v0.2d,v1.2d,v2.2d\n"),
+            (adt.FP32, "fmul v0.4s,v1.4s,v2.4s\n"),
+            (adt.FP16, "fmul v0.8h,v1.8h,v2.8h\n"),
+            (adt.SINT16, "mul v0.8h,v1.8h,v2.8h\n")
+        ]
+        for dt, expected in cases:
+            with self.subTest(dt=dt.name):
+                res = self.gen.fmul(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
+                                    a_dt=dt, b_dt=dt, c_dt=dt)
+                self.assertEqual(res, expected)
 
-        self.assertEqual(
-            "fmul v0.2d,v1.2d,v2.2d\n",
-            self.gen.fmul(adreg=self.gen.vreg(1),
-                          bdreg=self.gen.vreg(2),
-                          cdreg=self.gen.vreg(0),
-                     a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64))
-
-        self.assertEqual(
-            "fmul v0.4s,v1.4s,v2.4s\n",
-            self.gen.fmul(adreg=self.gen.vreg(1),
-                          bdreg=self.gen.vreg(2),
-                          cdreg=self.gen.vreg(0),
-                     a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32))
-
-        self.assertEqual(
-            "fmul v0.8h,v1.8h,v2.8h\n",
-            self.gen.fmul(adreg=self.gen.vreg(1),
-                          bdreg=self.gen.vreg(2),
-                          cdreg=self.gen.vreg(0),
-                     a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16))
-
-        self.assertEqual(
-            "mul v0.8h,v1.8h,v2.8h\n",
-            self.gen.fmul(adreg=self.gen.vreg(1),
-                          bdreg=self.gen.vreg(2),
-                          cdreg=self.gen.vreg(0),
-                     a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT16))
-
-        with self.assertRaises(ValueError):
-            self.gen.fmul(adreg=self.gen.vreg(1),
-                          bdreg=self.gen.vreg(2),
-                          cdreg=self.gen.vreg(0),
-                     a_dt=adt.FP8E5M2, b_dt=adt.FP8E5M2, c_dt=adt.FP32,
-                     modifiers={mod.PART}, part=0)
-
-    def test_wrong_registers(self):
+    def test_invalid_configurations(self):
         """
-        Tests that the correct error is raised if wrong registers are passed
-        to the operation
+        Test that invalid configurations raise the correct Error
         """
-        with self.assertRaisesRegex(
-                ValueError,
-                "All dregs of a NEON opd3 must be neon_vreg"):
-            self.gen.fmul(
-                adreg=self.gen.vreg(1),
-                bdreg=self.gen.vreg(2),
-                cdreg=self.gen.freg(0,dt=adt.FP64),
-                a_dt=adt.FP64,b_dt=adt.FP64,c_dt=adt.FP64)
+        # NP is unsupported in fmul
+        with self.subTest(error="unsupported NP"):
+            with self.assertRaisesRegex(ValueError, "NEON mul has no NP-form"):
+                self.gen.fmul(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
+                              a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32,
+                              modifiers={mod.NP})
+
+        # Widening without PART modifier
+        with self.subTest(error="widening missing PART"):
+            with self.assertRaisesRegex(ValueError, "Invalid configuration for neon_fmul"):
+                self.gen.fmul(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
+                              a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32)
+
+        # Non-widening integer MUL
+        with self.subTest(error="unsupported NP"):
+            with self.assertRaisesRegex(
+                    ValueError,
+                    "Only widening unsigned integer MUL supported in NEON"):
+                self.gen.fmul(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
+                              a_dt=adt.UINT32, b_dt=adt.UINT32, c_dt=adt.UINT32,
+                              modifiers=set())
