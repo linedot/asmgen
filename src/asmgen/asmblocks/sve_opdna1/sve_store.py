@@ -7,10 +7,10 @@
 SVE store instructions
 """
 
-from ..operations import opdna1_action as action
-from .sve_opdna1_base import sve_opdna1
-
 from typing import Callable
+
+from ..op import opdna1_action as action
+from .sve_opdna1_base import sve_opdna1
 
 class sve_store(sve_opdna1):
     """

@@ -29,11 +29,13 @@ class opd3_modifier(operation_modifier):
     """
     Possible modifiers for an opd3 instruction/operation
     """
-    NP = auto()  # FMA negate product c=-(a*b)+c
-    NA = auto()  # FMA negate addend c=(a*b)-c
-    NX = auto()  # FMA negate everything c=-(a*b)-c
-    MULC = auto() # FMA C is a multiplicand, B is an addend c=(a*c)+b
-    IDX = auto()
+    NP = auto()       # FMA negate product c=-(a*b)+c
+    NA = auto()       # FMA negate addend c=(a*b)-c
+    NX = auto()       # FMA negate everything c=-(a*b)-c
+    MULC = auto()     # FMA C is a multiplicand, B is an addend c=(a*c)+b
+    IDX = auto()      # lane-fma
+    BLOCKIDX = auto() # block-lane-fma (i.e SVE FMA selects a lane for
+                      # each 128-bit block of elements)
     REGIDX = auto()
     PART = auto()
     VF = auto()

@@ -12,13 +12,11 @@ from typing import Callable,Any
 from ...registers import (
     asm_data_type as adt,
     adt_size,
-    adt_is_float,adt_is_int,
     adt_is_unsigned,
     data_reg
 )
 from ..op import (
     opd3,
-    widening_method,
     opd3_modifier as mod,
     operation_signature
 )
@@ -126,6 +124,7 @@ class aarch64_simd_opd3_base(opd3):
 
         return suf
 
+
     def implementation(self, *,
                        adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                        a_dt : adt, b_dt : adt, c_dt : adt,
@@ -135,17 +134,8 @@ class aarch64_simd_opd3_base(opd3):
         if modifiers is None:
             modifiers = set()
 
-        part = kwargs.get('part',0)
-        idx = kwargs.get('idx',0)
-
         # This allows the SVE version to use the same codepath
-        amreg = kwargs.get('amreg',None)
-        predicate = "" if amreg is None else f"{amreg}/m"
-
-        # Leave commented out as info until SVE signatures are implemented
-        # in such a way that partial insts enforce not having a predicate
-        #if ('sve_preg' in kwargs) and (mod.PART not in modifiers):
-        #    sve_preg=kwargs['sve_preg'] + ','
+        predicate = f"{kwargs['amreg']}/m," if 'amreg' in kwargs else ""
 
         # Add a/s suffix if instruction supports it
         suf = ""
@@ -156,19 +146,18 @@ class aarch64_simd_opd3_base(opd3):
                self.inst_base + suf
 
         if mod.PART in modifiers:
-            ways = adt_size(c_dt)//adt_size(a_dt)
-            inst += self.partial_inst_suffix(ways=ways, part=part)
+            inst += self.partial_inst_suffix(
+                    ways=adt_size(c_dt)//adt_size(a_dt),
+                    part=kwargs['part'])
 
-        narrow_suf = self.dt_suffixes[a_dt]
-        wide_suf = self.dt_suffixes[c_dt]
-
-        inst_str = f"{inst} {cdreg}.{wide_suf},{predicate}{adreg}.{narrow_suf},"
-
-        if mod.IDX in modifiers:
-            b_suf = self.dt_idxsuffixes[b_dt]
-            inst_str += f"{bdreg}.{b_suf}[{idx}]"
+        if {mod.IDX, mod.BLOCKIDX} & modifiers:
+            b = f"{bdreg}.{self.dt_idxsuffixes[b_dt]}[{kwargs.get('idx', 0)}]"
         else:
-            b_suf = narrow_suf
-            inst_str += f"{bdreg}.{b_suf}"
+            b = f"{bdreg}.{self.dt_suffixes[b_dt]}"
 
-        return self.asmwrap(inst_str)
+        return self.asmwrap(
+            f"{inst} "
+            f"{cdreg}.{self.dt_suffixes[c_dt]},"
+            f"{predicate}"
+            f"{adreg}.{self.dt_suffixes[a_dt]},"
+            f"{b}")

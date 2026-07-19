@@ -75,7 +75,7 @@ class sve(aarch64):
         return supported
 
     def isaquirks(self, *, rt : reg_tracker, dt : adt) -> str:
-        asmblock = self.ptrue(self.preg(0), dt)
+        asmblock = self.ptrue(self.mreg(0), dt)
         return asmblock
 
     def isaendquirks(self, *, rt : reg_tracker, dt : adt) -> str:
@@ -235,8 +235,7 @@ class sve(aarch64):
                      vreg : vreg_base, dt : adt) -> str:
         return self.store_vector_voff(areg=areg, voffset=0, vreg=vreg, dt=dt)
 
-    # SVE-specific
-    def preg(self, idx : int, is_pn : bool = False) -> sve_preg:
+    def mreg(self, idx : int, is_pn : bool = False) -> sve_preg:
         """
         returns an SVE predicate register with the specified index
 

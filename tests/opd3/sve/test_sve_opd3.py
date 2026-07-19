@@ -10,14 +10,26 @@ import unittest
 
 from asmgen.asmblocks.sve import sve
 
-class test_sve_opd3(unittest.TestCase):
+# It's fine for the testing
+# pylint: disable-next=too-many-instance-attributes
+class test_sve_opd3_base(unittest.TestCase):
     """
-    Tests SVE opd3 operations
+    Base setup for SVE opd3 tests
     """
-
     def setUp(self):
-        """
-        Sets up the generators for all tests
-        """
         self.gen = sve()
-        self.gen.set_output_inline(yesno=False)
+        self.gen.set_output_inline(False)
+
+        # Standard vector registers
+        self.v0 = self.gen.vreg(0)
+        self.v1 = self.gen.vreg(1)
+        self.v2 = self.gen.vreg(2)
+
+        # Upper registers (crucial for testing SVE indexing constraints)
+        self.v7 = self.gen.vreg(7)
+        self.v8 = self.gen.vreg(8)
+        self.v15 = self.gen.vreg(15)
+        self.v16 = self.gen.vreg(16)
+
+        # Predicate register
+        self.p0 = self.gen.mreg(0)

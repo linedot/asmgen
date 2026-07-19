@@ -6,34 +6,24 @@
 """
 SVE fmul instruction
 """
-from ...registers import data_reg,asm_data_type as adt
-from ..neon_opd3.neon_fmul import neon_fmul
-from ..operations import opd3_modifier as mod
 
-from ..types.sve_types import sve_vreg
+from typing import Any
 
-class sve_fmul(neon_fmul):
+from ...registers import asm_data_type as adt
+from ..op import opd3_modifier as mod
+
+from .sve_opd3_base import sve_opd3_base
+
+class sve_fmul(sve_opd3_base):
     """
     SVE implementation of fmul
     """
-    # modifier set is only read, therefore a mutable default is ok
-    # pylint: disable-next=dangerous-default-value,too-many-locals,too-many-branches
 
-    def check_valid_registers(self, dregs : list[data_reg]) -> bool:
-        if not all(isinstance(d, sve_vreg) for d in dregs):
-            raise ValueError("All dregs of a SVE opd3 must be sve_vreg")
+    inst_base = "mul"
 
-    def implementation(self, *,
-                       adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
-                       a_dt : adt, b_dt : adt, c_dt : adt,
-                       modifiers : set[mod] = set(),
-                       **kwargs) -> str:
-        sve_preg = 'p0/m'
-        if mod.MASK in modifiers:
-            if 'mreg' not in kwargs:
-                raise ValueError("MASK modifier, but no mreg parameter passed")
-            sve_preg=kwargs['mreg']+"/m"
-        return super().implementation(
-                adreg=adreg, bdreg=bdreg, cdreg=cdreg,
-                a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,
-                modifiers=modifiers,sve_preg=sve_preg,**kwargs)
+    def diagnose_failure(self, modifiers : set[mod],
+                         kwargs : dict[str,Any],
+                         dts : dict[str,adt]):
+        super().diagnose_failure(modifiers, kwargs, dts)
+        if mod.NP in modifiers:
+            raise ValueError("SVE mul has no NP-form")

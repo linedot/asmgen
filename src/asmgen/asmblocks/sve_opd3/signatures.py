@@ -4,7 +4,7 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 """
-Valid signatures for NEON opd3 operations
+Valid signatures for SVE opd3 operations
 """
 from ..op import (
     operation_signature as sig,
@@ -17,15 +17,16 @@ from ..op import (
 from ..op.constraint import minmax_constraint
 from ..op.opd3 import widening_method as wm
 from ...registers import asm_data_type as adt, adt_size
-from ..types.neon_types import neon_vreg
+from ..types.sve_types import sve_vreg
 
-_FLOATS = [adt.FP64, adt.FP32, adt.FP16, adt.FP8E4M3, adt.FP8E5M2]
+_FLOATS = [adt.FP64, adt.FP32, adt.FP16, adt.BF16, adt.FP8E4M3, adt.FP8E5M2]
 _SIGNED_INTS = [adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8]
 _UNSIGNED_INTS = [adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8]
 
 _WIDENING_2X_MAP = {
     adt.FP8E4M3: adt.FP16,   adt.FP8E5M2: adt.FP16,
     adt.FP16: adt.FP32,
+    adt.BF16: adt.FP32,
     adt.UINT8: adt.UINT16,   adt.SINT8: adt.SINT16,
     adt.UINT16: adt.UINT32,  adt.SINT16: adt.SINT32,
 }
@@ -41,15 +42,16 @@ _MIXED_INTS = [
 
 # Readable enough, no need for subfunctions
 # pylint: disable-next=too-many-branches
-def make_neon_opd3_signatures(supports_np: bool) -> list[sig]:
+def make_sve_opd3_signatures(supports_np: bool) -> list[sig]:
     """
     Generate signatures for NEON opd3 operations
     """
     sigs = []
 
-    base_mods = [set(), {mod.IDX}]
+    base_mods = [set(), {mod.BLOCKIDX}]
     if supports_np:
-        base_mods.extend([{mod.NP}, {mod.NP, mod.IDX}])
+        base_mods.extend([{mod.NP}, {mod.NP, mod.BLOCKIDX}])
+
 
     def add_sig(a_dt, b_dt, c_dt, *, mods, is_widening=False):
         struct_params = {'widening_method': wm.SPLIT_INSTRUCTIONS} if is_widening else {}
@@ -60,22 +62,35 @@ def make_neon_opd3_signatures(supports_np: bool) -> list[sig]:
             'cdreg': osh(ot.REGISTER, rt.VEC, c_dt)
         }
 
-        if mod.IDX in mods:
-            max_idx = (16 // adt_size(b_dt)) - 1
+        if mod.MASK in mods:
+            ops['amreg'] = osh(ot.REGISTER, rt.MASK, c_dt)
+
+        if mod.BLOCKIDX in mods:
+            # SVE works on 128 bit chunks and the lane is selected in operand b
+            blocksize = 16//adt_size(b_dt)
+            struct_params['blocksize'] = blocksize
             ops['idx'] = osh(
                 ot.IMMEDIATE, None, None,
-                value_constraints=[minmax_constraint(minval=0, maxval=max_idx)]
+                value_constraints=[minmax_constraint(minval=0, maxval=blocksize-1)]
             )
-            # with 16bit indexed fma, b has to be v0-v15
-            if adt_size(b_dt) <= 2:
-                ops['bdreg'].value_constraints.append(
-                        minmax_constraint(
-                            what='index',
-                            getint=lambda reg : reg.idx,
-                            makeval=lambda idx : neon_vreg(reg_idx=idx),
-                            minval=0, maxval=15
-                        )
-                )
+            # from ddi0602:
+            # <Zm>
+            # For the "Half-precision" and "Single-precision" variants: is the name
+            # of the second source scalable vector register Z0-Z7, encoded in the "Zm" field.
+	        # For the "Double-precision" variant: is the name of the second source
+            # scalable vector register Z0-Z15, encoded in the "Zm" field.
+            max_reg_idx = 15
+            if adt_size(b_dt) <= 4:
+                max_reg_idx = 7
+            ops['bdreg'].value_constraints.append(
+                    minmax_constraint(
+                        what='index',
+                        getint=lambda reg : reg.idx,
+                        makeval=lambda idx : sve_vreg(reg_idx=idx),
+                        minval=0, maxval=max_reg_idx
+                    )
+            )
+
         if mod.PART in mods:
             max_part = (adt_size(c_dt) // adt_size(a_dt)) - 1
             ops['part'] = osh(
@@ -91,7 +106,10 @@ def make_neon_opd3_signatures(supports_np: bool) -> list[sig]:
 
     for dt in _FLOATS:
         for m in base_mods:
-            add_sig(dt, dt, dt, mods=m)
+            if mod.BLOCKIDX in m:
+                add_sig(dt, dt, dt, mods=m)
+            else:
+                add_sig(dt, dt, dt, mods=m | {mod.MASK})
             if dt in _WIDENING_2X_MAP:
                 add_sig(dt, dt, _WIDENING_2X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
             if dt in _WIDENING_4X_MAP:
@@ -99,7 +117,10 @@ def make_neon_opd3_signatures(supports_np: bool) -> list[sig]:
 
     for dt in _SIGNED_INTS:
         for m in base_mods:
-            add_sig(dt, dt, dt, mods=m)
+            if mod.BLOCKIDX in m:
+                add_sig(dt, dt, dt, mods=m)
+            else:
+                add_sig(dt, dt, dt, mods=m | {mod.MASK})
             if dt in _WIDENING_2X_MAP:
                 add_sig(dt, dt, _WIDENING_2X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
             if dt in _WIDENING_4X_MAP:
@@ -112,9 +133,5 @@ def make_neon_opd3_signatures(supports_np: bool) -> list[sig]:
                 add_sig(dt, dt, _WIDENING_2X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
             if dt in _WIDENING_4X_MAP:
                 add_sig(dt, dt, _WIDENING_4X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
-
-    for a_dt, b_dt, c_dt in _MIXED_INTS:
-        for m in [set(), {mod.IDX}]:
-            add_sig(a_dt, b_dt, c_dt, mods=m | {mod.PART}, is_widening=True)
 
     return sigs
