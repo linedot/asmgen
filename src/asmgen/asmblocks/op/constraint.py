@@ -7,7 +7,7 @@
 Classes for operand restrictions/constraints
 """
 
-from typing import Callable
+from typing import Callable,Type
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -51,6 +51,9 @@ class operand_constraint(ABC):
     Constraint on operand values, like register indices or immediate values
     """
     params: dict[str, ValueType] = field(default_factory=dict, init=False)
+
+    def __post_init__(self):
+        pass
 
     def specialize_params(self,
                           name : str,
@@ -145,6 +148,24 @@ class intval_constraint(operand_constraint):
     makeval : Callable[[int], ValueType] = lambda d : d
 
 @dataclass(kw_only=True)
+class regidx_constraint(intval_constraint):
+    """
+    Constraint on a register index
+
+    :param reg_class: register type/class, must be constructible
+                      with reg_class(reg_idx : int)
+    """
+    reg_class : Type[greg_base|data_reg|mreg_base]
+    what : str = "index"
+    getint : Callable[[greg_base|data_reg|mreg_base],int] = lambda reg : reg.idx
+    makeval : Callable[[int], greg_base|data_reg|mreg_base] = field(init=False)
+
+    def __post_init__(self):
+        self.makeval = lambda idx : self.reg_class(reg_idx=idx)
+
+        super().__post_init__()
+
+@dataclass(kw_only=True)
 class minmax_constraint(intval_constraint):
     """
     Constraint limiting an integer value to a range between two
@@ -158,6 +179,8 @@ class minmax_constraint(intval_constraint):
     def __post_init__(self):
         self.params['minval'] = self.minval
         self.params['maxval'] = self.maxval
+
+        super().__post_init__()
 
     def validate(self, name : str,
                  val : ValueType,
@@ -184,6 +207,8 @@ class oneof_constraint(intval_constraint):
     def __post_init__(self):
         self.params['valset'] = self.valset
 
+        super().__post_init__()
+
     def validate(self, name : str,
                  val : ValueType,
                  context : dict[str,ValueType],
@@ -206,6 +231,8 @@ class multiple_constraint(intval_constraint):
     multiple: int
     def __post_init__(self):
         self.params['multiple'] = self.multiple
+
+        super().__post_init__()
 
     def validate(self, name : str, val : ValueType,
                  context : dict[str,ValueType],
@@ -231,6 +258,8 @@ class otherplusn_constraint(intval_constraint):
     def __post_init__(self):
         self.params['other'] = self.other
         self.params['offset'] = self.offset
+
+        super().__post_init__()
 
     def validate(self, name : str,
                  val : ValueType,
@@ -264,6 +293,8 @@ class otherplusnmod_constraint(intval_constraint):
         self.params['other'] = self.other
         self.params['offset'] = self.offset
         self.params['modval'] = self.modval
+
+        super().__post_init__()
 
     def validate(self, name : str,
                  val : ValueType,

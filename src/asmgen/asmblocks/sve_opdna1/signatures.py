@@ -8,7 +8,7 @@ Valid signatures for SVE opdna1 operations
 """
 
 from dataclasses import dataclass
-from typing import Callable
+from typing import Type
 
 from ..op import (
     operation_signature as sig,
@@ -20,6 +20,7 @@ from ..op import (
 
 from ..op.constraint import (
     otherplusnmod_constraint,
+    regidx_constraint
 )
 from ..op.misc import make_ord_prefix as mop
 
@@ -45,13 +46,11 @@ INDEX_AIT_SIZE_MAP = {
 }
 
 @dataclass(kw_only=True)
-class sve_struct_constraint(otherplusnmod_constraint):
+class sve_struct_constraint(regidx_constraint,otherplusnmod_constraint):
     """
     Constraint ensuring structured loads/stores use consecutive registers
     """
-    what : str = 'index'
-    getint : Callable[[sve_vreg],int] = lambda reg : reg.idx
-    makeval : Callable[[int],sve_vreg] = lambda idx : sve_vreg(reg_idx=idx)
+    reg_class : Type[sve_vreg] = sve_vreg
     offset : int = 1
     modval : int = 32
 

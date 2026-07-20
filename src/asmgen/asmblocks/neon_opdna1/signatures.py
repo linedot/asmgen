@@ -8,7 +8,7 @@ Valid signatures for NEON opdna1 operations
 """
 
 from dataclasses import dataclass
-from typing import Callable
+from typing import Type
 
 from ..op import (
     operation_signature as sig,
@@ -20,7 +20,8 @@ from ..op import (
 
 from ..op.constraint import (
     otherplusnmod_constraint,
-    minmax_constraint
+    minmax_constraint,
+    regidx_constraint
 )
 from ..op.misc import make_ord_prefix as mop
 
@@ -36,13 +37,11 @@ _INTS = [adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8,
          adt.UINT64, adt.UINT32, adt.UINT16, adt.UINT8]
 
 @dataclass(kw_only=True)
-class neon_struct_constraint(otherplusnmod_constraint):
+class neon_struct_constraint(regidx_constraint,otherplusnmod_constraint):
     """
     Constraint ensuring structured loads/stores use consecutive registers
     """
-    what : str = 'index'
-    getint : Callable[[neon_vreg],int] = lambda reg : reg.idx
-    makeval : Callable[[int],neon_vreg] = lambda idx : neon_vreg(reg_idx=idx)
+    reg_class : Type[neon_vreg] = neon_vreg
     offset : int = 1
     modval : int = 32
 
