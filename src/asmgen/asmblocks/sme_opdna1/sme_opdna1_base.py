@@ -93,7 +93,7 @@ class sme_opdna1(opdna1):
             mod.STRUCT : ['nstructs'],
             mod.IOFFSET : ['ioffset'],
             mod.VOFFSET : ['voffset'],
-            mod.GOFFSET : ['goffset'],
+            mod.GOFFSET : ['offreg'],
         }
         for m, plist in required_params.items():
             for p in plist:

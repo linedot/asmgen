@@ -24,7 +24,7 @@ from .signatures import make_neon_opdna1_signatures
 class neon_opdna1(opdna1):
     """
     NEON (ASIMD) instruction with n data operands and 1 address operand.
-    Inherits from aarch64_opdna1 to automatically handle scalar routing.
+    Uses aarch64_opdna1 to automatically handle scalar routing.
     """
 
     bcast_supported = False
