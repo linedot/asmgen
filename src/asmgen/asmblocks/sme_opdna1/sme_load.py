@@ -7,10 +7,10 @@
 SME load instructions
 """
 
-from ..operations import opdna1_action as action
-from .sme_opdna1_base import sme_opdna1
-
 from typing import Callable
+
+from ..op import opdna1_action as action
+from .sme_opdna1_base import sme_opdna1
 
 class sme_load(sme_opdna1):
     """

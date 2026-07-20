@@ -142,6 +142,9 @@ class sve_opdna1(opdna1):
                        modifiers: set[mod], dt: adt, **kwargs) -> str:
         """
         Generate addressing string
+        :param areg: GP reg containing base address
+        :param modifiers: operation modifiers
+        :param dt: data type to use
         """
         if not isinstance(areg, aarch64_greg):
             raise ValueError(f"{areg} is not an aarch64_greg")

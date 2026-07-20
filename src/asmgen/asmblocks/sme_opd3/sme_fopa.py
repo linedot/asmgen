@@ -7,26 +7,19 @@
 SME fopa implementation
 """
 
-from typing import Callable
+from typing import Callable, Any
 
 from ...registers import (
     asm_data_type as adt,
-    adt_size,
-    adt_triple,
-    adt_is_float,
-    adt_is_int,
-    adt_is_signed,
-    adt_is_unsigned,
     data_reg
 )
-from ..operations import (
+from ..op import (
     opd3,
-    widening_method,
     opd3_modifier as mod,
-    operand_restriction
+    operation_signature
 )
-from ..types.sme_types import sme_treg
-from ..types.sve_types import sve_vreg
+
+from .signatures import make_sme_opd3_signatures
 
 class sme_fopa(opd3):
     """
@@ -41,14 +34,15 @@ class sme_fopa(opd3):
         self.asmwrap = asmwrap
         self.dt_suffixes = dt_suffixes
 
-        self.constraints = {
-                'adreg' : [sve_vreg_noerror_constraint()],
-                'bdreg' : [sve_vreg_noerror_constraint()],
-                'cdreg' : [sme_treg_noerror_constraint()],
-                }
+        self.signatures = make_sme_opd3_signatures(supports_np=True)
 
-    def check_modifiers(self, modifiers : set[mod]):
-        
+    def get_signatures(self) -> list[operation_signature]:
+        return self.signatures
+
+    def diagnose_failure(self, modifiers : set[mod],
+                         kwargs : dict[str,Any],
+                         dts : dict[str,adt]):
+
         if mod.IDX in modifiers:
             raise ValueError("SME has no idx form")
         if mod.REGIDX in modifiers:
@@ -56,54 +50,8 @@ class sme_fopa(opd3):
         if mod.VF in modifiers:
             raise ValueError("SME has no vf form")
         if mod.PART in modifiers:
-            raise ValueError("SME has no partial instructions (widening instructions 'dot' neighbours)")
-        if mod.MASK in modifiers:
-            raise NotImplementedError("SME masked opd3 not implemented yet")
-
-    @property
-    def widening_method(self) -> widening_method:
-        return widening_method.DOT_NEIGHBOURS
-
-    def supported_dts(self) -> list[dict[str,adt]]:
-        return [
-            {'adreg':adt.FP64, 'bdreg':adt.FP64, 'cdreg':adt.FP64},
-            {'adreg':adt.FP32, 'bdreg':adt.FP32, 'cdreg':adt.FP32},
-            {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP16},
-
-            {'adreg':adt.FP16, 'bdreg':adt.FP16, 'cdreg':adt.FP32},
-
-            {'adreg':adt.FP8E5M2, 'bdreg':adt.FP8E5M2, 'cdreg':adt.FP32},
-            {'adreg':adt.FP8E5M2, 'bdreg':adt.FP8E5M2, 'cdreg':adt.FP16},
-            {'adreg':adt.FP8E4M3, 'bdreg':adt.FP8E4M3, 'cdreg':adt.FP32},
-            {'adreg':adt.FP8E4M3, 'bdreg':adt.FP8E4M3, 'cdreg':adt.FP16},
-
-            {'adreg':adt.FP8E5M2, 'bdreg':adt.FP8E5M2, 'cdreg':adt.FP32},
-            {'adreg':adt.FP8E5M2, 'bdreg':adt.FP8E5M2, 'cdreg':adt.FP16},
-            {'adreg':adt.FP8E4M3, 'bdreg':adt.FP8E4M3, 'cdreg':adt.FP32},
-            {'adreg':adt.FP8E4M3, 'bdreg':adt.FP8E4M3, 'cdreg':adt.FP16},
-
-            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT64},
-            {'adreg':adt.SINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
-            {'adreg':adt.SINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT32},
-
-            {'adreg':adt.UINT16, 'bdreg':adt.UINT16, 'cdreg':adt.UINT64},
-            {'adreg':adt.UINT16, 'bdreg':adt.UINT16, 'cdreg':adt.UINT32},
-            {'adreg':adt.UINT8, 'bdreg':adt.UINT8, 'cdreg':adt.UINT32},
-
-            {'adreg':adt.SINT16, 'bdreg':adt.UINT16, 'cdreg':adt.SINT64},
-            {'adreg':adt.SINT16, 'bdreg':adt.UINT16, 'cdreg':adt.SINT32},
-            {'adreg':adt.SINT8, 'bdreg':adt.UINT8, 'cdreg':adt.SINT32},
-
-            {'adreg':adt.UINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT64},
-            {'adreg':adt.UINT16, 'bdreg':adt.SINT16, 'cdreg':adt.SINT32},
-            {'adreg':adt.UINT8, 'bdreg':adt.SINT8, 'cdreg':adt.SINT32},
-        ]
-
-    def get_required_params(self, modifiers: set[mod]) -> list[set[str]]:
-
-        required_extra_params = []
-
-        return required_extra_params
+            raise ValueError(("SME has no partial instructions "
+                              "(widening instructions 'dot' neighbours)"))
 
     def mopx_inst_str(self, a_dt : adt, b_dt : adt, suf : str) -> str:
         """
@@ -133,25 +81,21 @@ class sme_fopa(opd3):
 
         raise ValueError("Unsupported datatypes a={a_dt},b={b_dt}")
 
-    # modfier set is only read, therefore a mutable default is ok
-    # pylint: disable-next=dangerous-default-value
     def implementation(self, *,
                        adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                        a_dt : adt, b_dt : adt, c_dt : adt,
-                       modifiers : set[mod] = set(),
+                       modifiers : set[mod] = None,
                        **kwargs) -> str:
 
-        if not isinstance(cdreg, sme_treg):
-            raise ValueError(f"{cdreg} is not an sme_treg")
-        if not isinstance(adreg, sve_vreg):
-            raise ValueError(f"{adreg} is not an sve_vreg")
-        if not isinstance(bdreg, sve_vreg):
-            raise ValueError(f"{bdreg} is not an sve_vreg")
-
+        if modifiers is None:
+            modifiers = set()
 
         suf = "s" if mod.NP in modifiers else "a"
         inst = self.mopx_inst_str(a_dt=a_dt, b_dt=b_dt, suf=suf)
         narrow_suf = self.dt_suffixes[a_dt]
         wide_suf = self.dt_suffixes[c_dt]
         return self.asmwrap(
-            f"{inst} {cdreg}.{wide_suf},p0/m,p0/m,{adreg}.{narrow_suf},{bdreg}.{narrow_suf}")
+            (f"{inst} {cdreg}.{wide_suf},"
+             f"{kwargs['amreg']}/m,{kwargs['bmreg']}/m,"
+             f"{adreg}.{narrow_suf},"
+             f"{bdreg}.{narrow_suf}"))
