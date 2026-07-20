@@ -7,7 +7,7 @@
 AVX fma instruction
 """
 
-from ..operations import opd3_modifier as mod
+from ..op import opd3_modifier as mod
 
 from .avx_opd3_base import avx_opd3_base
 

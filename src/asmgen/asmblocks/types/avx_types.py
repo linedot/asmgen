@@ -8,7 +8,7 @@ X86/AVX register types
 """
 from typing import Callable
 
-from ...registers import vreg_base, greg_base, freg_base, data_reg
+from ...registers import vreg_base, greg_base, freg_base, data_reg, mreg_base
 
 #pylint: disable=too-few-public-methods
 class x86_greg(greg_base):
@@ -117,7 +117,7 @@ class zmm_vreg(avx_vreg):
     def __str__(self) -> str:
         return f"zmm{self.idx}"
 
-class avx512_mreg:
+class avx512_mreg(mreg_base):
     """
     AVX512 mask register (k0-k7)
     """

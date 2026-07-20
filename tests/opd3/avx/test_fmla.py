@@ -91,7 +91,7 @@ class test_avx_fma(test_avx_opd3):
         """
         with self.assertRaisesRegex(
                 ValueError,
-                "All dregs of an AVX opd3 must be avx_vreg"):
+                "Invalid configuration for avx_fma"):
             self.gen128.fma(
                     adreg=self.gen128.vreg(1),
                     bdreg=self.gen128.vreg(2),

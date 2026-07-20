@@ -7,12 +7,38 @@
 AVX/FMA/AVX2/AVX512 store instructions
 """
 
-from typing import Callable
+from typing import Callable,Any
 
-from ..operations import opdna1_action as action
-from .avx_opdna1_base import avx128_opdna1,avx256_opdna1,avx512_opdna1
+from ...registers import asm_data_type as adt
+from ..op import opdna1_action as action
+from ..op.opdna1 import opdna1_modifier as mod
+from .avx_opdna1_base import avx_opdna1,avx128_opdna1,avx256_opdna1,avx512_opdna1
 
-class avx128_store(avx128_opdna1):
+class no_bcast(avx_opdna1):
+    """
+    Helper class for diagnosing lack of BCAST support
+    """
+    def diagnose_failure(self, modifiers : set[mod],
+                         kwargs : dict[str,Any],
+                         dts : dict[str, adt]):
+        super().diagnose_failure(modifiers,kwargs,dts)
+
+        if mod.BCAST in modifiers:
+            raise ValueError("BCAST modifier can't be used with stores")
+
+class no_vindex(avx_opdna1):
+    """
+    Helper class for diagnosing lack of VINDEX support
+    """
+    def diagnose_failure(self, modifiers : set[mod],
+                         kwargs : dict[str,Any],
+                         dts : dict[str, adt]):
+        super().diagnose_failure(modifiers,kwargs,dts)
+
+        if mod.VINDEX in modifiers:
+            raise ValueError("VINDEX modifier can't be used with avx2 128/256 bit stores")
+
+class avx128_store(avx128_opdna1,no_bcast,no_vindex):
     """
     NEON freg and greg stores
     """
@@ -22,7 +48,10 @@ class avx128_store(avx128_opdna1):
                  rpref : Callable[[str],str]):
         super().__init__(action=action.STORE, asmwrap=asmwrap, rpref=rpref)
 
-class avx256_store(avx256_opdna1):
+
+# it's fine
+# pylint: disable-next=too-many-ancestors
+class avx256_store(avx256_opdna1,no_bcast,no_vindex):
     """
     NEON freg and greg stores
     """
@@ -32,7 +61,7 @@ class avx256_store(avx256_opdna1):
                  rpref : Callable[[str],str]):
         super().__init__(action=action.STORE, asmwrap=asmwrap, rpref=rpref)
 
-class avx512_store(avx512_opdna1):
+class avx512_store(avx512_opdna1,no_bcast):
     """
     NEON freg and greg stores
     """

@@ -8,7 +8,7 @@ Operation signatures
 """
 from typing import Any
 
-from dataclasses import dataclass
+from dataclasses import dataclass,field
 
 from .modifier import operation_modifier
 from .operand import operand_shape,is_register_type,operand_type
@@ -23,6 +23,7 @@ class operation_signature:
     modifiers : set[operation_modifier]
     structural_params : dict[str, Any]
     operands: dict[str, operand_shape]
+    clobber_list: list[str] = field(default_factory=list)
 
 
     def get_tag(self) -> str:

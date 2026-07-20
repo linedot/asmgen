@@ -92,7 +92,7 @@ class test_avx_fmul(test_avx_opd3):
         """
         with self.assertRaisesRegex(
                 ValueError,
-                "All dregs of an AVX opd3 must be avx_vreg"):
+                "Invalid configuration for avx_fmul."):
             self.gen128.fmul(
                     adreg=self.gen128.vreg(1),
                     bdreg=self.gen128.vreg(2),

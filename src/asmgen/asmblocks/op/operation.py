@@ -141,11 +141,14 @@ class operation(ABC):
 
             dtstr = ", ".join(f"{name}:{dt.name}" for name,dt in dts.items())
 
+
+            itaddition = f"\n  it: {kwargs['it'].name}" if 'it' in kwargs else ""
+
             raise ValueError(
                 f"Invalid configuration for {type(self).__name__}.\n"
                 f"  Modifiers: {modifiers}\n"
                 f"  dts: {dtstr}\n"
-                f"  reg types: {regtypestr}"
+                f"  reg types: {regtypestr}{itaddition}"
             )
 
 
