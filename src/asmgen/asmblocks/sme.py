@@ -56,7 +56,7 @@ class sme(sve):
         # set p0 to true (default sve preg)
         asmblock += super().isaquirks(rt=rt,dt=dt)
         # set pn8 to true (default sme preg)
-        asmblock += self.ptrue(self.preg(8,True), dt)
+        asmblock += self.ptrue(self.mreg(8,True), dt)
         return asmblock
 
     def isaendquirks(self, *, rt : reg_tracker, dt : adt) -> str:

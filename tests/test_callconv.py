@@ -1,3 +1,8 @@
+# ------------------------------------------------------------------------------
+# SPDX-License-Identifier: MIT OR GPL-3.0-or-later
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
+# ------------------------------------------------------------------------------
 """
 Test the Calling convention abstraction
 """
@@ -6,10 +11,7 @@ import unittest
 
 
 from parameterized import parameterized_class
-from mako.template import Template
-
-from asmgen.callconv.callconv import callconv
-from asmgen.registers import asm_data_type as adt
+from asmgen.asmblocks.noarch import asmgen
 from asmgen.asmblocks.avx_fma import fma128,fma256,avx512
 from asmgen.asmblocks.neon import neon
 from asmgen.asmblocks.rvv import rvv
@@ -21,6 +23,13 @@ from asmgen.asmblocks.riscv64 import riscv64
 from asmgen.asmblocks.aarch64 import aarch64
 from asmgen.asmblocks.avx_fma import avxbase
 
+class callconv_testsuite_type_hinter:
+    """
+    Type hinting helper for callconv test cases
+    """
+    gen : asmgen
+    name : str
+
 @parameterized_class([
     {"name": "fma128", "gen": fma128()},
     {"name": "fma256", "gen": fma256()},
@@ -30,7 +39,10 @@ from asmgen.asmblocks.avx_fma import avxbase
     {"name": "rvv", "gen": rvv()},
     {"name": "rvv071", "gen": rvv071()},
 ])
-class test_callconv_gemmukr(unittest.TestCase):
+class test_callconv_gemmukr(unittest.TestCase,callconv_testsuite_type_hinter):
+    """
+    Testsuite for calling conventions
+    """
 
     def setUp(self):
         self.cc = self.gen.create_callconv()
@@ -54,6 +66,7 @@ class test_callconv_gemmukr(unittest.TestCase):
         self.fregs_used = []
 
         for name,(tag,idx,in_stack,dt) in self.cc.get_params().items():
+            del name, dt, location
 
             location = ''
             if not in_stack:
@@ -132,6 +145,9 @@ class test_callconv_gemmukr(unittest.TestCase):
     ]
 
     def test_save_restore(self):
+        """
+        Test that save and restore blocks are correct
+        """
 
         expected_save_block = "UNKNOWN"
         for base,block in self.expected_save_blocks:
@@ -161,5 +177,3 @@ class test_callconv_gemmukr(unittest.TestCase):
 
         self.assertEqual(expected_save_block, save_block)
         self.assertEqual(expected_restore_block, restore_block)
-
-

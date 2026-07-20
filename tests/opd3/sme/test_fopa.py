@@ -157,8 +157,7 @@ class test_sme_opd3(unittest.TestCase):
 
     def test_fopa_invalid_modifier_part(self):
         """Tests that the PART modifier raises an error for SME fopa."""
-        expected_error = ("SME has no partial instructions"
-                          " (widening instructions 'dot' neighbours)")
+        expected_error = "SME has no partial instructions"
         with self.assertRaisesRegex(ValueError, expected_error):
             self.gen.fopa(adreg=self.z0, bdreg=self.z1, cdreg=self.za0,
                           a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,

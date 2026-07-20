@@ -775,8 +775,7 @@ class fma128(avxbase):
 
         if 'sd' == suf:
             return self.asmwrap(f"vmovddup {ps}, {pv}")
-        else:
-            return self.asmwrap(f"vbroadcast{suf} {ps}, {pv}")
+        return self.asmwrap(f"vbroadcast{suf} {ps}, {pv}")
 
     def load_vector_bcast1(self, *, areg : greg_base,
                           vreg : vreg_base, dt : adt):
@@ -931,9 +930,8 @@ class avx512(avxbase):
         pa = self.rpref(areg)
         pv = self.rpref(vreg)
         pov = self.rpref(offvreg)
-        address = f"({pa},{pov},1)" # TODO: Explore using scale param
+        address = f"({pa},{pov},1)"
         isuf = self.it_suffixes[it]
-        # TODO: properly implement mask register handling
         maskreg = '%k2'
         if self.output_inline:
             maskreg = '%%k2'
@@ -950,9 +948,8 @@ class avx512(avxbase):
         pa = self.rpref(areg)
         pv = self.rpref(vreg)
         pov = self.rpref(offvreg)
-        address = f"({pa},{pov},1)" # TODO: Explore using scale param
+        address = f"({pa},{pov},1)"
         isuf = self.it_suffixes[it]
-        # TODO: properly implement mask register handling
         maskreg = '%k2'
         if self.output_inline:
             maskreg = '%%k2'

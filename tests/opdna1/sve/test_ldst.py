@@ -1,6 +1,14 @@
+# ------------------------------------------------------------------------------
+# SPDX-License-Identifier: MIT OR GPL-3.0-or-later
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
+# ------------------------------------------------------------------------------
+"""
+Tests SVE loads/stores
+"""
 import unittest
 
-from asmgen.asmblocks.op import opdna1_action, opdna1_modifier as mod
+from asmgen.asmblocks.op import opdna1_modifier as mod
 from asmgen.registers import asm_data_type as adt, asm_index_type as ait
 from asmgen.asmblocks.types.aarch64_types import aarch64_greg, aarch64_freg
 from asmgen.asmblocks.types.sve_types import sve_vreg, sve_preg
@@ -12,6 +20,8 @@ def asmwrap(s: str) -> str:
     """
     return f"{s}\n"
 
+# It's fine
+# pylint: disable-next=too-many-instance-attributes
 class test_sve_opdna1(unittest.TestCase):
     """
     Testsuite for SVE opdna1 instructions
@@ -112,7 +122,8 @@ class test_sve_opdna1(unittest.TestCase):
         """Test the explicit diagnostic errors in the base class"""
         # 1. Mutually Exclusive Modifiers (Not generated in signatures, so it falls through)
         with self.subTest(error="VINDEX + VOFFSET"):
-            with self.assertRaisesRegex(ValueError, "VINDEX cannot be combined with IOFFSET/VOFFSET"):
+            with self.assertRaisesRegex(ValueError,
+                                        "VINDEX cannot be combined with IOFFSET/VOFFSET"):
                 self.load(dregs=[self.z0], areg=self.x0, amreg=self.p1, dt=adt.FP32,
                           modifiers={mod.MASK, mod.VINDEX, mod.VOFFSET},
                           vidxreg=self.z1, it=ait.INT32, voffset=4)

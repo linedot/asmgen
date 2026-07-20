@@ -1,10 +1,20 @@
-import logging
+# ------------------------------------------------------------------------------
+# SPDX-License-Identifier: MIT OR GPL-3.0-or-later
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
+# ------------------------------------------------------------------------------
+"""
+Utilities for generating C-callable functions in ASM
+"""
 
 from .callconv import callconv
 from ..asmblocks.noarch import asmgen
 from ..registers import reg_tracker
 
 class fngen:
+    """
+    Class for generating calling-convention-compliant functions in ASM
+    """
 
     def __init__(self, gen : asmgen, rt : reg_tracker):
         self.gen = gen
@@ -14,11 +24,23 @@ class fngen:
 
         self.debug_block : str = ""
 
-        self.debug = logging.getLogger("FNGEN").debug
-
     def init_cc(self, cc : callconv,
-                reverse_alias_map : dict[str,str] = dict(),
-                unused_parameters : set[str] = set()):
+                reverse_alias_map : dict[str,str] = None,
+                unused_parameters : set[str] = None):
+        """
+        Initialize the function wrapper according to calling convention
+
+        :param cc: calling convention
+        :param reverse_alias_map: maps aliases onto the actual parameters
+        :param unused_parameters: parameters that aren't used in the function
+                                  therefore don't need register allocation
+        """
+
+        if reverse_alias_map is None:
+            reverse_alias_map = dict()
+
+        if unused_parameters is None:
+            unused_parameters = set()
 
         params = cc.get_params()
         for name,(tag,idx,in_stack,dt) in params.items():
@@ -40,7 +62,7 @@ class fngen:
                 name = reverse_alias_map[name]
             if name in unused_parameters:
                 continue
-            
+
             kwargs = {
                 'reg_idx' : self.rt.aliased_regs[tag][name]
             }
@@ -48,11 +70,22 @@ class fngen:
                 kwargs['dt'] = dt
             reg = getattr(self.gen, tag)(**kwargs)
             self.debug_block += self.gen.asmwrap(f"# {reg} = {name}")
-            self.debug(f"Allocated {reg} for {name}")
 
     def get_boilerplate(self,
                         cc : callconv,
-                        unused_parameters : set[str] = set()):
+                        unused_parameters : set[str] = None) -> tuple[str,str,str]:
+        """
+        Get function boilerplate (instruction block for saving registers, instruction block for
+        loading parameters and an instruction block for restoring previously saved registers)
+
+        :param cc: calling convention
+        :param unused_parameters: parameters that aren't used in the function
+                                  therefore don't need register allocation
+        :return: Tuple consisting of a saveblock,loadblock and restoreblock
+        """
+        if unused_parameters is None:
+            unused_parameters = set()
+
         used_gregs = self.rt.get_clobbered_regs('greg')
         used_fregs = self.rt.get_clobbered_regs('freg')
 
@@ -62,7 +95,7 @@ class fngen:
 
         sr_count = len(set(used_gregs).intersection(cc.callee_save_lists['greg']))
         sr_count += len(set(used_fregs).intersection(cc.callee_save_lists['freg']))
-        saveblock = cc.save_in_call(self.gen, 
+        saveblock = cc.save_in_call(self.gen,
                                     regs={'greg':used_gregs,
                                           'freg':used_fregs})
 

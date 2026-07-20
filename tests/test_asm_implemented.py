@@ -165,6 +165,9 @@ allowed_not_implemented = {
 
 rts = dict()
 def get_rt(gen : asmgen, name: str) -> reg_tracker:
+    """
+    get register tracker for a generator (or build it if it doesn't exist)
+    """
     if name not in rts:
         rts[name] = reg_tracker(
                 reg_type_init_list=[

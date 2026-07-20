@@ -6,14 +6,15 @@
 """
 RISCV64 +D/F opdna1 operations
 """
+
+from typing import Callable
+
 from ...registers import (
     asm_data_type as adt,
     adt_size,
     data_reg,
     greg_base
 )
-
-from typing import Callable
 
 from ..op import opdna1,opdna1_modifier as mod, opdna1_action
 from ..op import operation_signature
@@ -39,21 +40,36 @@ class riscv64_opdna1(opdna1):
 
     @property
     def inst_base(self):
+        """
+        Instruction mnemonic base string
+        """
         if self.action  == opdna1_action.LOAD:
             return "l"
-        elif self.action == opdna1_action.STORE:
+        if self.action == opdna1_action.STORE:
             return "s"
-        else:
-            raise ValueError(f"Invalid action: {self.action}")
+        raise ValueError(f"Invalid action: {self.action}")
 
     def get_dt_suffix(self, dt : adt):
+        """
+        Instruction suffix based on data type
+
+        :param dt: element data type
+        """
         size_map = {1: "b", 2: "h", 4: "w", 8: "d", 16: "q"}
         return size_map[adt_size(dt)]
 
     def get_addressing(self, areg: riscv64_greg, modifiers: set[mod], **kwargs) -> str:
+        """
+        Constructs the addressing string
+
+        :param areg: address register
+        :param modifiers: operation modifiers
+        
+        :return: string containing the addressing
+        """
         if not isinstance(areg, riscv64_greg):
             raise ValueError(f"{areg} is not a riscv64_greg")
-            
+
         offset = kwargs.get("ioffset", 0) if mod.IOFFSET in modifiers else 0
         return f"{offset}({areg})"
 
@@ -75,5 +91,3 @@ class riscv64_opdna1(opdna1):
         addressing = self.get_addressing(agreg, modifiers, **kwargs)
 
         return self.asmwrap(f"{inst} {dreg}, {addressing}")
-
-

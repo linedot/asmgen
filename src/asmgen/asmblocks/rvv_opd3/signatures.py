@@ -88,7 +88,7 @@ def make_rvv_opd3_signatures(supports_np: bool) -> list[sig]:
 
                 if dt in _WIDENING_MAP:
                     if mod.NP in mods:
-                        continue 
+                        continue
                     add_sig(dt, dt, _WIDENING_MAP[dt], b_rt=b_rt, mods=mods, is_widening=True)
 
     for a_dt, b_dt, c_dt in _MIXED_INTS:

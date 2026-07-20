@@ -7,6 +7,7 @@
 Generator for tests of SIMD/vector ASM
 """
 
+from asmgen.asmblocks.op import opd3_modifier as mod_d3
 from asmgen.asmblocks.noarch import asm_data_type as dt, reg_tracker
 from asmgen.cppgen.checkers import always_true, vec_fp64_close, vec_fp32_close
 from asmgen.cppgen.expressions import identity
@@ -149,8 +150,14 @@ class vec_test_generator:
         careg = testcase.gen.greg(careg_idx)
         asmblock += testcase.gen.mov_param_to_greg(param=cvec, dst=careg)
         asmblock += testcase.gen.load_vector(areg=careg, vreg=cvreg, dt=dt.SINGLE)
-        asmblock += testcase.gen.fma(adreg=avreg, bdreg=bvreg, cdreg=cvreg,
-                                     a_dt=dt.SINGLE, b_dt=dt.SINGLE, c_dt=dt.SINGLE)
+        try:
+            asmblock += testcase.gen.fma(adreg=avreg, bdreg=bvreg, cdreg=cvreg,
+                                         a_dt=dt.SINGLE, b_dt=dt.SINGLE, c_dt=dt.SINGLE)
+        except:
+            asmblock += testcase.gen.fma(adreg=avreg, bdreg=bvreg, cdreg=cvreg,
+                                         amreg=testcase.gen.mreg(0),
+                                         modifiers={mod_d3.MASK},
+                                         a_dt=dt.SINGLE, b_dt=dt.SINGLE, c_dt=dt.SINGLE)
         asmblock += testcase.gen.store_vector(areg=careg, vreg=cvreg, dt=dt.SINGLE)
         rt.unuse_reg(type_tag="greg", idx=careg_idx)
 
@@ -225,8 +232,14 @@ class vec_test_generator:
         careg = testcase.gen.greg(careg_idx)
         asmblock += testcase.gen.mov_param_to_greg(param=cvec, dst=careg)
         asmblock += testcase.gen.load_vector(areg=careg, vreg=cvreg, dt=dt.DOUBLE)
-        asmblock += testcase.gen.fma(adreg=avreg, bdreg=bvreg, cdreg=cvreg,
-                                     a_dt=dt.DOUBLE, b_dt=dt.DOUBLE, c_dt=dt.DOUBLE)
+        try:
+            asmblock += testcase.gen.fma(adreg=avreg, bdreg=bvreg, cdreg=cvreg,
+                                         a_dt=dt.DOUBLE, b_dt=dt.DOUBLE, c_dt=dt.DOUBLE)
+        except:
+            asmblock += testcase.gen.fma(adreg=avreg, bdreg=bvreg, cdreg=cvreg,
+                                         amreg=testcase.gen.mreg(0),
+                                         modifiers={mod_d3.MASK},
+                                         a_dt=dt.DOUBLE, b_dt=dt.DOUBLE, c_dt=dt.DOUBLE)
         asmblock += testcase.gen.store_vector(areg=careg, vreg=cvreg, dt=dt.DOUBLE)
         rt.unuse_reg(type_tag="greg", idx=careg_idx)
 
@@ -286,8 +299,14 @@ class vec_test_generator:
         asmblock += testcase.gen.mov_param_to_greg(param=bvec, dst=bareg)
         asmblock += testcase.gen.load_vector(areg=bareg, vreg=bvreg, dt=dt.SINGLE)
         rt.unuse_reg(type_tag="greg", idx=bareg_idx)
-        asmblock += testcase.gen.fmul(adreg=avreg, bdreg=bvreg, cdreg=avreg,
-                                     a_dt=dt.SINGLE, b_dt=dt.SINGLE, c_dt=dt.SINGLE)
+        try:
+            asmblock += testcase.gen.fmul(adreg=avreg, bdreg=bvreg, cdreg=avreg,
+                                         a_dt=dt.SINGLE, b_dt=dt.SINGLE, c_dt=dt.SINGLE)
+        except:
+            asmblock += testcase.gen.fmul(adreg=avreg, bdreg=bvreg, cdreg=avreg,
+                                          amreg=testcase.gen.mreg(0),
+                                          modifiers={mod_d3.MASK},
+                                          a_dt=dt.SINGLE, b_dt=dt.SINGLE, c_dt=dt.SINGLE)
         asmblock += testcase.gen.store_vector(areg=aareg, vreg=avreg, dt=dt.SINGLE)
         rt.unuse_reg(type_tag="greg", idx=aareg_idx)
 
@@ -347,8 +366,14 @@ class vec_test_generator:
         asmblock += testcase.gen.load_vector(areg=bareg, vreg=bvreg, dt=dt.DOUBLE)
         rt.unuse_reg(type_tag="greg", idx=bareg_idx)
 
-        asmblock += testcase.gen.fmul(adreg=avreg, bdreg=bvreg, cdreg=avreg,
-                                     a_dt=dt.DOUBLE, b_dt=dt.DOUBLE, c_dt=dt.DOUBLE)
+        try:
+            asmblock += testcase.gen.fmul(adreg=avreg, bdreg=bvreg, cdreg=avreg,
+                                         a_dt=dt.DOUBLE, b_dt=dt.DOUBLE, c_dt=dt.DOUBLE)
+        except:
+            asmblock += testcase.gen.fmul(adreg=avreg, bdreg=bvreg, cdreg=avreg,
+                                          amreg=testcase.gen.mreg(0),
+                                          modifiers={mod_d3.MASK},
+                                          a_dt=dt.DOUBLE, b_dt=dt.DOUBLE, c_dt=dt.DOUBLE)
         asmblock += testcase.gen.store_vector(areg=aareg, vreg=avreg, dt=dt.DOUBLE)
         rt.unuse_reg(type_tag="greg", idx=aareg_idx)
 

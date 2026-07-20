@@ -32,6 +32,12 @@ class aarch64_greg(greg_base):
         return f"w{self.idx}"
 
     def retype(self, dt : adt) -> str:
+        """
+        Get string representation of a register with the same index, but
+        different data type
+
+        :param dt: data type to recast the register to
+        """
         if adt_size(dt) < 8:
             return self.get_wreg()
         return self
@@ -60,6 +66,12 @@ class aarch64_freg(freg_base):
         return self.reg_idx
 
     def retype(self, dt : adt):
+        """
+        Get string representation of a register with the same index, but
+        different data type
+
+        :param dt: data type to recast the register to
+        """
         return aarch64_freg(reg_idx=self.idx, dt=dt)
 
     def __str__(self) -> str:
