@@ -18,6 +18,8 @@ from .sve import sve
 from .types.sme_types import sme_treg
 from .sme_opd3 import sme_fopa
 
+from .sme_opdna1.sme_load import sme_load
+from .sme_opdna1.sme_store import sme_store
 
 
 class sme(sve):
@@ -30,6 +32,9 @@ class sme(sve):
         self.valid_rcregs = [str(self.greg(i)) for i in range(12,16)]
         self.fopa = sme_fopa(asmwrap=self.asmwrap,
                              dt_suffixes=self.dt_suffixes)
+
+        self.load = sme_load(asmwrap = self.asmwrap)
+        self.store = sme_store(asmwrap = self.asmwrap)
 
     @property
     def c_simd_size_function(self):
@@ -66,6 +71,10 @@ class sme(sve):
 
     def max_tregs(self, dt : adt) -> int:
         return adt_size(dt)
+
+    @property
+    def max_mregs(self):
+        return 16
 
     def treg(self, reg_idx : int, dt : adt) -> treg_base:
         return sme_treg(reg_idx, dt)

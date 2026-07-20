@@ -40,7 +40,7 @@ class no_vindex(avx_opdna1):
 
 class avx128_store(avx128_opdna1,no_bcast,no_vindex):
     """
-    NEON freg and greg stores
+    AVX2 128bit stores
     """
 
     def __init__(self,
@@ -53,7 +53,7 @@ class avx128_store(avx128_opdna1,no_bcast,no_vindex):
 # pylint: disable-next=too-many-ancestors
 class avx256_store(avx256_opdna1,no_bcast,no_vindex):
     """
-    NEON freg and greg stores
+    AVX2 256bit stores
     """
 
     def __init__(self,
@@ -63,7 +63,7 @@ class avx256_store(avx256_opdna1,no_bcast,no_vindex):
 
 class avx512_store(avx512_opdna1,no_bcast):
     """
-    NEON freg and greg stores
+    AVX512 stores
     """
 
     def __init__(self,

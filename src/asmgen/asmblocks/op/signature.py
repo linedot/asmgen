@@ -67,6 +67,7 @@ class operation_signature:
         base_kwargs={'dregs','gregs','modifiers','dt',
                      'adreg','bdreg','cdreg','ddreg',
                      'agreg',
+                     'amreg','bmreg',
                      'a_dt','b_dt','c_dt','d_dt'}
 
         for key in kwargs:

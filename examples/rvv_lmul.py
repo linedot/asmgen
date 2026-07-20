@@ -3,7 +3,9 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
-
+"""
+Example showing how the LMUL parameter of the rvv generator works
+"""
 # Output should be:
 #
 # vsetvli t4, zero, e64, m1, ta, ma
@@ -18,7 +20,7 @@
 # add t1,t1,t4
 # add t2,t2,t4
 # add t3,t3,8
-# 
+#
 # vsetvli t4, zero, e64, m2, ta, ma
 # slli t4,t4,3
 # vle64.v v0, (t0)
@@ -31,7 +33,7 @@
 # add t1,t1,t4
 # add t2,t2,t4
 # add t3,t3,8
-# 
+#
 # vsetvli t4, zero, e64, m4, ta, ma
 # slli t4,t4,3
 # vle64.v v0, (t0)
@@ -44,7 +46,7 @@
 # add t1,t1,t4
 # add t2,t2,t4
 # add t3,t3,8
-# 
+#
 # vsetvli t4, zero, e64, m8, ta, ma
 # slli t4,t4,3
 # vle64.v v0, (t0)
@@ -64,7 +66,7 @@ from asmgen.registers import (
         asm_data_type as adt,
         reg_tracker
 )
-from asmgen.asmblocks.operations import opd3_modifier as mod
+from asmgen.asmblocks.op import opd3_modifier as mod
 
 
 def main():

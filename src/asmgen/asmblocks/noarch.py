@@ -460,6 +460,17 @@ class asmgen(ABC):
 
     @property
     @abstractmethod
+    def max_mregs(self) -> int:
+        """
+        Returns the number of available mask registers
+
+        :return: Number of available mask registers
+        :rtype: int
+        """
+        raise NotImplementedError(NIE_MESSAGE)
+
+    @property
+    @abstractmethod
     def min_prefetch_offset(self) -> int:
         """
         Returns the minimum immediate prefetch offset in bytes (can be negative)

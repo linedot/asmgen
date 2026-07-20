@@ -14,7 +14,7 @@ from .avx_opdna1_base import avx128_opdna1,avx256_opdna1,avx512_opdna1
 
 class avx128_load(avx128_opdna1):
     """
-    NEON freg and greg loads
+    AVX2 128bit loads
     """
 
     def __init__(self,
@@ -24,7 +24,7 @@ class avx128_load(avx128_opdna1):
 
 class avx256_load(avx256_opdna1):
     """
-    NEON freg and greg loads
+    AVX2 256bit loads
     """
 
     def __init__(self,
@@ -34,7 +34,7 @@ class avx256_load(avx256_opdna1):
 
 class avx512_load(avx512_opdna1):
     """
-    NEON freg and greg loads
+    AVX512 loads
     """
 
     def __init__(self,

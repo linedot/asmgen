@@ -27,6 +27,10 @@ from .types.avx_types import x86_greg,avx_freg,xmm_vreg,ymm_vreg,zmm_vreg,reg_pr
 
 from .avx_opd3 import avx_fma,avx_fmul,avx_fadd
 
+
+from .avx_opdna1.avx_load import avx128_load,avx256_load,avx512_load
+from .avx_opdna1.avx_store import avx128_store,avx256_store,avx512_store
+
 class avxbase(asmgen):
     """
     Base X86_64/AVX/FMA asmgem implementation
@@ -291,6 +295,10 @@ class avxbase(asmgen):
     @property
     def max_gregs(self):
         return 16
+
+    @property
+    def max_mregs(self):
+        return 0
 
     @property
     def c_simd_size_function(self):
@@ -745,6 +753,9 @@ class fma128(avxbase):
                      has_fp16=False
                      )
 
+        self.load = avx128_load(asmwrap=self.asmwrap, rpref=self.rpref)
+        self.store = avx128_store(asmwrap=self.asmwrap, rpref=self.rpref)
+
     def get_req_flags(self):
         return ['fma', 'avx']
 
@@ -820,6 +831,9 @@ class fma256(avxbase):
                      has_fp16=False
                      )
 
+        self.load = avx256_load(asmwrap=self.asmwrap, rpref=self.rpref)
+        self.store = avx256_store(asmwrap=self.asmwrap, rpref=self.rpref)
+
     def get_req_flags(self):
         return ['fma', 'avx']
 
@@ -885,6 +899,9 @@ class avx512(avxbase):
                      has_fp16=True
                      )
 
+        self.load = avx512_load(asmwrap=self.asmwrap, rpref=self.rpref)
+        self.store = avx512_store(asmwrap=self.asmwrap, rpref=self.rpref)
+
     def get_req_flags(self) -> list[str]:
         return ['avx512f']
 
@@ -895,6 +912,10 @@ class avx512(avxbase):
     @property
     def max_vregs(self):
         return 32
+
+    @property
+    def max_mregs(self):
+        return 8
 
     @property
     def simd_size(self):

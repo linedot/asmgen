@@ -66,9 +66,8 @@ class test_callconv_gemmukr(unittest.TestCase,callconv_testsuite_type_hinter):
         self.fregs_used = []
 
         for name,(tag,idx,in_stack,dt) in self.cc.get_params().items():
-            del name, dt, location
+            del name, dt
 
-            location = ''
             if not in_stack:
                 if 'greg' == tag:
                     self.gregs_used.append(idx)

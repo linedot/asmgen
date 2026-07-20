@@ -143,6 +143,10 @@ class aarch64(asmgen):
         return 32
 
     @property
+    def max_mregs(self):
+        return 0
+
+    @property
     def max_fregs(self):
         return 32
 

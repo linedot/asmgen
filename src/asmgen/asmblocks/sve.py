@@ -20,6 +20,8 @@ from ..registers import (
 
 from .types.sve_types import sve_vreg,sve_preg
 from .sve_opd3 import sve_fma,sve_fmul,sve_fadd
+from .sve_opdna1.sve_load import sve_load
+from .sve_opdna1.sve_store import sve_store
 
 from .neon import neon
 
@@ -58,6 +60,9 @@ class sve(aarch64):
         self.fadd = sve_fadd(asmwrap=self.asmwrap,
                              dt_suffixes=self.dt_suffixes,
                              dt_idxsuffixes=self.dt_suffixes)
+
+        self.load = sve_load(asmwrap = self.asmwrap)
+        self.store = sve_store(asmwrap = self.asmwrap)
 
     def get_req_flags(self) -> list[str]:
         """
@@ -99,6 +104,10 @@ class sve(aarch64):
     @property
     def max_vregs(self) -> int:
         return 32
+
+    @property
+    def max_mregs(self):
+        return 8
 
     @property
     def simd_size(self) -> int:
