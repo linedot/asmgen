@@ -10,7 +10,10 @@ import unittest
 
 from asmgen.asmblocks.sme import sme
 from asmgen.registers import asm_data_type as adt
-from asmgen.asmblocks.op import opd3_modifier as mod
+from asmgen.asmblocks.op import (
+    opd3_modifier as mod,
+    operand_modifier as opd_mod
+)
 
 from asmgen.asmblocks.op.opd3 import widening_method as wm
 
@@ -148,12 +151,13 @@ class test_sme_opd3(unittest.TestCase):
     # Exceptions and Error Handling
     # ---------------------------------------------------------
 
-    def test_fopa_invalid_modifier_idx(self):
-        """Tests that the IDX modifier raises an error for SME fopa."""
-        with self.assertRaisesRegex(ValueError, r"SME has no idx form"):
+    def test_fopa_invalid_modifier_ilane(self):
+        """Tests that the ILANE modifier raises an error for SME fopa."""
+        with self.assertRaisesRegex(ValueError, r"SME has no immediate lane opd3"):
             self.gen.fopa(adreg=self.z0, bdreg=self.z1, cdreg=self.za0,
                           a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
-                          modifiers={mod.IDX})
+                          operand_modifiers={'adreg':{opd_mod.ILANE}},
+                          adreg_lane=0)
 
     def test_fopa_invalid_modifier_part(self):
         """Tests that the PART modifier raises an error for SME fopa."""
@@ -165,10 +169,10 @@ class test_sme_opd3(unittest.TestCase):
 
     def test_fopa_invalid_modifier_vf(self):
         """Tests that the VF modifier raises an error for SME fopa."""
-        with self.assertRaisesRegex(ValueError, r"SME has no vf form"):
+        with self.assertRaisesRegex(ValueError, r"SME has no VF opd3"):
             self.gen.fopa(adreg=self.z0, bdreg=self.z1, cdreg=self.za0,
                           a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
-                          modifiers={mod.VF})
+                          operand_modifiers={'adreg':{opd_mod.VF}})
 
     def test_fopa_invalid_registers(self):
         """Tests that passing the wrong register types (e.g. vreg for ZA) raises errors"""

@@ -13,7 +13,8 @@ from ..op import (
     opdna1,
     opdna1_modifier as mod,
     opdna1_action,
-    operation_signature
+    operation_signature,
+    operand_modifier as opd_mod,
 )
 from ..op.constraint import ValueType
 from ...registers import asm_data_type as adt, adt_size
@@ -51,7 +52,9 @@ class aarch64_opdna1(opdna1):
 
     # I explicitly want it this way
     # pylint: disable-next=too-many-branches
-    def diagnose_failure(self, modifiers: set[mod],
+    def diagnose_failure(self,
+                         modifiers: set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
                          kwargs : dict[str,ValueType],
                          dts : dict[str,adt]):
 
@@ -61,10 +64,10 @@ class aarch64_opdna1(opdna1):
         if mod.VINDEX in modifiers:
             raise ValueError(
                     "Base AArch64 has no ld/st with 1D vector offset indices")
-        if mod.GLANE in modifiers:
-            raise ValueError("Base AArch64 has no GP-reg lane ld/st")
-        if mod.ILANE in modifiers:
-            raise ValueError("Base AArch64 has no immediate lane ld/st")
+        #if mod.GLANE in modifiers:
+        #    raise ValueError("Base AArch64 has no GP-reg lane ld/st")
+        #if mod.ILANE in modifiers:
+        #    raise ValueError("Base AArch64 has no immediate lane ld/st")
         if mod.TOFFSET in modifiers:
             raise ValueError("Base AArch64 has no ld/st with 2D tile offsets")
         if mod.VOFFSET in modifiers:
@@ -76,14 +79,14 @@ class aarch64_opdna1(opdna1):
             raise ValueError("Base AArch64 has no ld/st with GP-reg strides")
         if mod.STRUCT in modifiers:
             raise ValueError("Base AArch64 has no structured ld/st")
-        if mod.BCAST in modifiers:
-            raise ValueError("Base AArch64 has no broadcasting ld/st")
+        #if mod.BCAST in modifiers:
+        #    raise ValueError("Base AArch64 has no broadcasting ld/st")
         if mod.MASK in modifiers:
             raise ValueError("Base AArch64 has no masked ld/st")
-        if mod.ROW in modifiers:
-            raise ValueError("Base AArch64 has no row selection ld/st")
-        if mod.COL in modifiers:
-            raise ValueError("Base AArch64 has no column selection ld/st")
+        #if mod.ROW in modifiers:
+        #    raise ValueError("Base AArch64 has no row selection ld/st")
+        #if mod.COL in modifiers:
+        #    raise ValueError("Base AArch64 has no column selection ld/st")
         if mod.NT in modifiers:
             raise NotImplementedError("Non-temporals for Base AArch64 not yet implemented")
 

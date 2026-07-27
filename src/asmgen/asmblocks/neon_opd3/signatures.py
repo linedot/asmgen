@@ -11,7 +11,8 @@ from ..op import (
     operand_shape as osh,
     operand_type as ot,
     register_type as rt,
-    opd3_modifier as mod
+    opd3_modifier as mod,
+    operand_modifier as opd_mod
 )
 
 from ..op.constraint import minmax_constraint
@@ -47,37 +48,47 @@ def make_neon_opd3_signatures(supports_np: bool) -> list[sig]:
     """
     sigs = []
 
-    base_mods = [set(), {mod.IDX}]
+    base_mods = [set()]
     if supports_np:
-        base_mods.extend([{mod.NP}, {mod.NP, mod.IDX}])
+        base_mods.extend([{mod.NP}])
 
-    def add_sig(a_dt, b_dt, c_dt, *, mods, is_widening=False):
+    # Leave out c for now (Need to read up how exactly FDOTA works with C lanes)
+    opd_mods_list = [{}, {'bdreg':{opd_mod.ILANE}}]
+
+    def add_sig (*, dts, mods, opd_mods, is_widening=False):
         struct_params = {'widening_method': wm.SPLIT_INSTRUCTIONS} if is_widening else {}
 
         ops = {
-            'adreg': osh(ot.REGISTER, rt.VEC, a_dt),
-            'bdreg': osh(ot.REGISTER, rt.VEC, b_dt),
-            'cdreg': osh(ot.REGISTER, rt.VEC, c_dt)
+            'adreg': osh(ot.REGISTER, rt.VEC, dts['adreg']),
+            'bdreg': osh(ot.REGISTER, rt.VEC, dts['bdreg']),
+            'cdreg': osh(ot.REGISTER, rt.VEC, dts['cdreg'])
         }
 
-        if mod.IDX in mods:
-            max_idx = (16 // adt_size(b_dt)) - 1
-            ops['idx'] = osh(
-                ot.IMMEDIATE, None, None,
-                value_constraints=[minmax_constraint(minval=0, maxval=max_idx)]
-            )
-            # with 16bit indexed fma, b has to be v0-v15
-            if adt_size(b_dt) <= 2:
-                ops['bdreg'].value_constraints.append(
-                        minmax_constraint(
-                            what='index',
-                            getint=lambda reg : reg.idx,
-                            makeval=lambda idx : neon_vreg(reg_idx=idx),
-                            minval=0, maxval=15
+        for opd, omods in opd_mods.items():
+            ops[opd].modifiers = omods
+            if {opd_mod.ILANE,opd_mod.BLOCKLANE}.intersection(omods):
+                max_lane = (16 // adt_size(dts[opd]))-1
+                ops[f"{opd}_lane"] = osh(
+                        ot.IMMEDIATE, None, None,
+                        value_constraints=[
+                            minmax_constraint(minval=0,maxval=max_lane)]
                         )
-                )
+                if opd_mod.BLOCKLANE in omods:
+                    struct_params[f"{opd}_blocksize"] = max_lane+1
+
+                # with 16bit indexed fma, b has to be v0-v15
+                if 'bdreg' == opd and adt_size(dts[opd]) <= 2:
+                    ops[opd].value_constraints.append(
+                            minmax_constraint(
+                                what='index',
+                                getint=lambda reg : reg.idx,
+                                makeval=lambda idx : neon_vreg(reg_idx=idx),
+                                minval=0, maxval=15
+                            )
+                    )
+
         if mod.PART in mods:
-            max_part = (adt_size(c_dt) // adt_size(a_dt)) - 1
+            max_part = (adt_size(dts['cdreg']) // adt_size(dts['adreg'])) - 1
             ops['part'] = osh(
                 ot.IMMEDIATE, None, None,
                 value_constraints=[minmax_constraint(minval=0, maxval=max_part)]
@@ -89,32 +100,65 @@ def make_neon_opd3_signatures(supports_np: bool) -> list[sig]:
             operands=ops
         ))
 
+    def make_dt_dict(dt: adt, widening_map : dict|None = None) -> dict[str,adt]:
+        dts = {
+            'adreg' : dt,
+            'bdreg' : dt,
+        }
+        if widening_map is not None:
+            dts['cdreg'] = widening_map[dt]
+        else:
+            dts['cdreg'] = dt
+
+        return dts
+
+
     for dt in _FLOATS:
         for m in base_mods:
-            add_sig(dt, dt, dt, mods=m)
-            if dt in _WIDENING_2X_MAP:
-                add_sig(dt, dt, _WIDENING_2X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
-            if dt in _WIDENING_4X_MAP:
-                add_sig(dt, dt, _WIDENING_4X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
+            for om in opd_mods_list:
+                add_sig(dts=make_dt_dict(dt), mods=m, opd_mods=om)
+                if dt in _WIDENING_2X_MAP:
+                    add_sig(dts=make_dt_dict(dt, _WIDENING_2X_MAP),
+                            mods=m | {mod.PART}, opd_mods=om,
+                            is_widening=True)
+                if dt in _WIDENING_4X_MAP:
+                    add_sig(dts=make_dt_dict(dt, _WIDENING_4X_MAP),
+                            mods=m | {mod.PART}, opd_mods=om,
+                            is_widening=True)
 
     for dt in _SIGNED_INTS:
         for m in base_mods:
-            add_sig(dt, dt, dt, mods=m)
-            if dt in _WIDENING_2X_MAP:
-                add_sig(dt, dt, _WIDENING_2X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
-            if dt in _WIDENING_4X_MAP:
-                add_sig(dt, dt, _WIDENING_4X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
+            for om in opd_mods_list:
+                add_sig(dts=make_dt_dict(dt), mods=m, opd_mods=om)
+                if dt in _WIDENING_2X_MAP:
+                    add_sig(dts=make_dt_dict(dt, _WIDENING_2X_MAP),
+                            mods=m | {mod.PART}, opd_mods=om,
+                            is_widening=True)
+                if dt in _WIDENING_4X_MAP:
+                    add_sig(dts=make_dt_dict(dt, _WIDENING_4X_MAP),
+                            mods=m | {mod.PART}, opd_mods=om,
+                            is_widening=True)
 
     for dt in _UNSIGNED_INTS:
         for m in base_mods:
-            # Widening only for unsigned ints
-            if dt in _WIDENING_2X_MAP:
-                add_sig(dt, dt, _WIDENING_2X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
-            if dt in _WIDENING_4X_MAP:
-                add_sig(dt, dt, _WIDENING_4X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
+            for om in opd_mods_list:
+                # Widening only for unsigned ints
+                if dt in _WIDENING_2X_MAP:
+                    add_sig(dts=make_dt_dict(dt, _WIDENING_2X_MAP),
+                            mods=m | {mod.PART},
+                            opd_mods=om,
+                            is_widening=True)
+                if dt in _WIDENING_4X_MAP:
+                    add_sig(dts=make_dt_dict(dt, _WIDENING_4X_MAP),
+                            mods=m | {mod.PART},
+                            opd_mods=om,
+                            is_widening=True)
 
     for a_dt, b_dt, c_dt in _MIXED_INTS:
-        for m in [set(), {mod.IDX}]:
-            add_sig(a_dt, b_dt, c_dt, mods=m | {mod.PART}, is_widening=True)
+        for om in opd_mods_list:
+            add_sig(dts={'adreg':a_dt,'bdreg':b_dt,'cdreg':c_dt},
+                    mods={mod.PART},
+                    opd_mods=om,
+                    is_widening=True)
 
     return sigs

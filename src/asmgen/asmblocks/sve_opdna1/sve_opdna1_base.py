@@ -16,7 +16,8 @@ from ..op import (
     opdna1,
     opdna1_modifier as mod,
     opdna1_action,
-    operation_signature
+    operation_signature,
+    operand_modifier as opd_mod
 )
 
 from ...registers import (
@@ -55,19 +56,16 @@ class sve_opdna1(opdna1):
         return "ld" if self.action == opdna1_action.LOAD else "st"
 
 
-    def diagnose_failure(self, modifiers : set[mod],
-                         kwargs : dict[str,Any],
-                         dts : dict[str, adt]) -> list[operation_signature]:
+    def diagnose_mods(self, modifiers: set[mod]):
+        """
+        Diagnose if any modifiers are not supported at all
+        """
 
         unsupported_mods = {
             mod.TINDEX:  (ValueError, "SVE has no ld/st with 2D tile offset indices"),
-            mod.GLANE:   (ValueError, "SVE has no GP-reg lane ld/st"),
             mod.TOFFSET: (ValueError, "SVE has no ld/st with 2D tile offsets"),
-            mod.ILANE:   (ValueError, "SVE has no immediate lane ld/st"),
             mod.ISTRIDE: (ValueError, "SVE has no ld/st with immediate strides"),
             mod.GSTRIDE: (ValueError, "SVE has no ld/st with GP-reg strides"),
-            mod.ROW:     (ValueError, "SVE has no row selection ld/st"),
-            mod.COL:     (ValueError, "SVE has no column selection ld/st"),
             mod.NT:      (NotImplementedError, "Non-temporals for SVE not yet implemented"),
         }
 
@@ -75,25 +73,50 @@ class sve_opdna1(opdna1):
             if m in modifiers:
                 raise exc_type(msg)
 
-        if mod.BCAST in modifiers and self.action != opdna1_action.LOAD:
+    def diagnose_opd_mods(self, opd_mods: dict[str,set[opd_mod]]):
+        """
+        Diagnose if any modifiers are not supported at all
+        """
+
+        unsupported_opd_mods = {
+            opd_mod.ILANE : (ValueError, "SVE has no immediate lane ld/st"),
+            opd_mod.ROW   : (ValueError, "SVE has no row selection ld/st"),
+            opd_mod.COL   : (ValueError, "SVE has no column selection ld/st"),
+            opd_mod.GLANE : (ValueError, "SVE has no GP-reg lane selection ld/st"),
+        }
+        for umod, (exc_type, msg) in unsupported_opd_mods.items():
+            for _, mods in opd_mods.items():
+                if umod in mods:
+                    raise exc_type(msg)
+
+    def diagnose_failure(self, modifiers : set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
+                         kwargs : dict[str,Any],
+                         dts : dict[str, adt]) -> list[operation_signature]:
+
+        self.diagnose_mods(modifiers)
+        self.diagnose_opd_mods(opd_mods=operand_modifiers)
+
+        has_bcast = any(opd_mod.BCAST in mods
+                        for _,mods in operand_modifiers.items())
+        if has_bcast and self.action != opdna1_action.LOAD:
             raise ValueError("BCAST modifier is only valid for LOAD operations")
 
         if mod.VINDEX in modifiers and \
           (mod.VOFFSET in modifiers or mod.IOFFSET in modifiers):
             raise ValueError("VINDEX cannot be combined with IOFFSET/VOFFSET")
 
-        if mod.STRUCT in modifiers and "nstructs" not in kwargs:
-            raise ValueError("STRUCT modifier requires 'nstructs' parameter")
-        if mod.IOFFSET in modifiers and "ioffset" not in kwargs:
-            raise ValueError("IOFFSET modifier requires 'ioffset' parameter")
-        if mod.VOFFSET in modifiers and "voffset" not in kwargs:
-            raise ValueError("VOFFSET modifier requires 'voffset' parameter")
-        if mod.GOFFSET in modifiers and "offreg" not in kwargs:
-            raise ValueError("GOFFSET modifier requires 'offreg' parameter")
-        if mod.VINDEX in modifiers and "it" not in kwargs:
-            raise ValueError("VINDEX modifier requires 'it' parameter")
-        if mod.VINDEX in modifiers and "vidxreg" not in kwargs:
-            raise ValueError("VINDEX modifier requires 'vidxreg' parameter")
+        required_params = {
+            mod.STRUCT : ['nstructs'],
+            mod.IOFFSET : ['ioffset'],
+            mod.VOFFSET : ['voffset'],
+            mod.GOFFSET : ['offreg'],
+            mod.VINDEX : ['it','vidxreg'],
+        }
+        for m, plist in required_params.items():
+            for p in plist:
+                if m in modifiers and p not in kwargs:
+                    raise ValueError(f"{m.name} modifier requires '{p}' parameter")
 
 
 
@@ -176,8 +199,12 @@ class sve_opdna1(opdna1):
 
         return f"[{areg}]"
 
+    # Wrong
+    # pylint: disable-next=too-many-locals
     def implementation(self, *, dregs: list, agreg: aarch64_greg, a_dt: adt,
-                       modifiers: set[mod], **kwargs) -> str:
+                       modifiers: set[mod],
+                       operand_modifiers : dict[str,set[opd_mod]],
+                       **kwargs) -> str:
 
         if not dregs:
             raise ValueError("No dregs provided")
@@ -185,7 +212,9 @@ class sve_opdna1(opdna1):
         # Forward scalars to AArch64 base
         if isinstance(dregs[0], (aarch64_greg, aarch64_freg)):
             return self.scalar_opdna1(dregs=dregs, areg=agreg,
-                                      dt=a_dt, modifiers=modifiers, **kwargs)
+                                      dt=a_dt, modifiers=modifiers,
+                                      operand_modifiers=operand_modifiers,
+                                      **kwargs)
 
         # 1. Resolve Suffixes
         msuf = self.get_mem_suffix(a_dt)
@@ -193,7 +222,9 @@ class sve_opdna1(opdna1):
 
         # 2. Build Base Instruction (e.g. ld1w, ld2d, ld1rw)
         nstructs = kwargs.get("nstructs", 1)
-        if mod.BCAST in modifiers:
+        has_bcast = any(opd_mod.BCAST in mods
+                        for _,mods in operand_modifiers.items())
+        if has_bcast:
             inst = f"{self.inst_base}{nstructs}r{msuf}"
         else:
             inst = f"{self.inst_base}{nstructs}{msuf}"

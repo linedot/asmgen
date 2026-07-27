@@ -19,6 +19,7 @@ from ...registers import (
 from .signature import operation_signature
 from .misc import make_ord_prefix
 from .modifier import operation_modifier as mod
+from .operand import operand_modifier as opd_mod
 
 class operation(ABC):
     """
@@ -35,7 +36,10 @@ class operation(ABC):
         :return: List of valid signatures
         """
 
-    def diagnose_failure(self, modifiers: set[mod], kwargs: dict, dts: dict[str, adt]):
+    def diagnose_failure(self,
+                         modifiers: set[mod],
+                         operand_modifiers: dict[str,set[opd_mod]],
+                         kwargs: dict, dts: dict[str, adt]):
         """
         Optional hook for inheriting classes to provide domain-specific 
         error messages.
@@ -43,7 +47,10 @@ class operation(ABC):
         :raises ValueError: if a specific bad pattern is found.
         """
 
-    def _auto_diagnose(self, modifiers: set[mod], kwargs: dict, dts: dict[str, adt]):
+    def _auto_diagnose(self,
+                       modifiers: set[mod],
+                       operand_modifiers: dict[str,set[opd_mod]],
+                       kwargs: dict, dts: dict[str, adt]):
         """
         Automatically infers basic errors by looking at the pooled signatures.
         """
@@ -55,6 +62,17 @@ class operation(ABC):
 
         all_supported_mods = set().union(*(sig.modifiers for sig in sigs))
         unsupported_mods = modifiers - all_supported_mods
+        if unsupported_mods:
+            unsup_mod_string = "|".join(m.name for m in unsupported_mods)
+            raise ValueError(
+                    (f"{type(self).__name__} does not support "
+                     f"these modifiers at all: {{{unsup_mod_string}}}"))
+
+        all_supported_operand_mods = set().union(
+                *(op.modifiers for sig in sigs for _,op in sig.operands.items()))
+        print(all_supported_operand_mods)
+        all_operand_mods = set().union(*(mods for _,mods in operand_modifiers.items()))
+        unsupported_mods = all_operand_mods - all_supported_operand_mods
         if unsupported_mods:
             unsup_mod_string = "|".join(m.name for m in unsupported_mods)
             raise ValueError(
@@ -100,11 +118,16 @@ class operation(ABC):
 
         return resolved_operands
 
+
+    # Still ok, but consider pulling out the diagnosis stuff into a separate
+    # function if anything else gets added
+    # pylint: disable-next=too-many-locals
     def execute(self, *,
                 dregs : list[data_reg],
                 gregs : list[greg_base],
                 dts : dict[str,adt],
                 modifiers : set[mod],
+                operand_modifiers : dict[str,set[opd_mod]],
                 **kwargs) -> str:
         """
         Performs checks on all arguments, generates the parameters for the underlying
@@ -127,12 +150,13 @@ class operation(ABC):
         matched_sig = next(
             (s for s in sigs if \
                 s.match_intent(modifiers=modifiers,
+                               operand_modifiers=operand_modifiers,
                                kwargs=resolved_operands,
                                dts=dts)),
             None)
         if not matched_sig:
-            self.diagnose_failure(modifiers, kwargs, dts)
-            self._auto_diagnose(modifiers, kwargs, dts)
+            self.diagnose_failure(modifiers, operand_modifiers, kwargs, dts)
+            self._auto_diagnose(modifiers, operand_modifiers, kwargs, dts)
 
             regtypes = [f"{name}:{type(r).__name__}" for name,r in resolved_operands.items() \
                     if isinstance(r, (data_reg,greg_base,mreg_base))]
@@ -144,9 +168,15 @@ class operation(ABC):
 
             itaddition = f"\n  it: {kwargs['it'].name}" if 'it' in kwargs else ""
 
+            opd_mod_str = ""
+            for name,modset in operand_modifiers.items():
+                modsetstr = ", ".join(f"{m.name}" for m in modset)
+                opd_mod_str += f"    {name}:{modsetstr}\n"
             raise ValueError(
                 f"Invalid configuration for {type(self).__name__}.\n"
                 f"  Modifiers: {modifiers}\n"
+                f"  operand_modifiers:\n"
+                f"{opd_mod_str}"
                 f"  dts: {dtstr}\n"
                 f"  reg types: {regtypestr}{itaddition}"
             )
@@ -155,6 +185,7 @@ class operation(ABC):
         matched_sig.validate_allocation(resolved_operands)
 
         resolved_operands['modifiers'] = modifiers
+        resolved_operands['operand_modifiers'] = operand_modifiers
 
         # opdna1 has a different interface
         resolved_operands['dregs'] = dregs

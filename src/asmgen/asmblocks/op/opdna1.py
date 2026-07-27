@@ -14,6 +14,7 @@ from abc import abstractmethod
 from .operation import operation
 from .signature import operation_signature
 from .modifier import operation_modifier
+from .operand import operand_modifier
 from .misc import make_ord_prefix
 
 from ...registers import (
@@ -26,8 +27,8 @@ class opdna1_modifier(operation_modifier):
     """
     Possible modifiers for an instruction/operation
     """
-    ILANE = auto()   # select lane with an immediate
-    GLANE = auto()   # select lane with a greg
+    #ILANE = auto()   # select lane with an immediate
+    #GLANE = auto()   # select lane with a greg
     TOFFSET = auto() # 2D offset in number of tiles
     VOFFSET = auto() # 1D offset in number of vectors
     IOFFSET = auto() # 1D offset in number of elements
@@ -39,10 +40,10 @@ class opdna1_modifier(operation_modifier):
     POSTINC = auto() # increment address greg after operation
     STRUCT = auto()  # load a structure with multiple components
                      # (i.e [Re,Im], [x,y,z] or [r,g,b,a])
-    BCAST = auto()   # Broadcast one value into all lanes
+    #BCAST = auto()   # Broadcast one value into all lanes
     MASK  = auto()   # Masked operation
-    ROW = auto()     # Row of a treg
-    COL = auto()     # Column of a treg
+    #ROW = auto()     # Row of a treg
+    #COL = auto()     # Column of a treg
     NT  = auto()     # Non-temporal ld/st
 
 class opdna1_action(Enum):
@@ -62,7 +63,9 @@ class opdna1(operation):
 
     def __call__(self, *, dregs : list[data_reg],
                  areg : greg_base, dt : adt,
-                 modifiers : set[opdna1_modifier], **kwargs) -> str:
+                 modifiers : set[opdna1_modifier] = None,
+                 operand_modifiers : dict[str,set[operand_modifier]] = None,
+                 **kwargs) -> str:
         """
         Return the ASM/IR instruction
         
@@ -76,6 +79,11 @@ class opdna1(operation):
         :rtype : str
         """
 
+        if modifiers is None:
+            modifiers = set()
+        if operand_modifiers is None:
+            operand_modifiers = dict()
+
         return self.execute(
             dregs=dregs,
             gregs=[areg],
@@ -83,6 +91,7 @@ class opdna1(operation):
                 make_ord_prefix(i)+'dreg' : dt for i in range(len(dregs))
             },
             modifiers=modifiers,
+            operand_modifiers=operand_modifiers,
             **kwargs
         )
 
@@ -90,7 +99,9 @@ class opdna1(operation):
     # pylint: disable-next=arguments-differ
     def implementation(self, *, dregs : list[data_reg],
                        agreg : greg_base, a_dt : adt,
-                       modifiers : set[opdna1_modifier], **kwargs) -> str:
+                       modifiers : set[opdna1_modifier],
+                       operand_modifiers : dict[str,set[operand_modifier]],
+                       **kwargs) -> str:
         """
         opdna1 implementation/call interface
         """
@@ -108,5 +119,7 @@ class dummy_opdna1(opdna1):
     def implementation(self, *,
                        dregs : list[data_reg], agreg : greg_base,
                        a_dt : adt,
-                       modifiers : set[opdna1_modifier], **kwargs) -> str:
+                       modifiers : set[opdna1_modifier],
+                       operand_modifiers : dict[str,set[operand_modifier]],
+                       **kwargs) -> str:
         raise NotImplementedError(self.NIE_MESSAGE)

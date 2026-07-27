@@ -13,7 +13,8 @@ from ..op import (
     opdna1,
     opdna1_modifier as mod,
     opdna1_action,
-    operation_signature
+    operation_signature,
+    operand_modifier as opd_mod
 )
 
 from ...registers import asm_data_type as adt, adt_size
@@ -50,15 +51,15 @@ class sme_opdna1(opdna1):
         """
         return "ld" if self.action == opdna1_action.LOAD else "st"
 
+    # It's fine, but add subdiagnosis methods if anything more gets added
+    # pylint: disable-next=too-many-locals,too-many-branches
     def diagnose_failure(self, modifiers: set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
                          kwargs : dict[str,Any],
                          dts : dict[str,adt]):
 
         unsupported_mods = {
-            mod.BCAST:   (ValueError, "SME has no broadcasting ld"),
-            mod.GLANE:   (ValueError, "SME has no GP-reg lane ld/st"),
             mod.GSTRIDE: (ValueError, "SME has no ld/st with GP-reg strides"),
-            mod.ILANE:   (ValueError, "SME has no immediate lane ld/st"),
             mod.IOFFSET: (ValueError, "SME has no ld/st with immediate element offsets"),
             mod.ISTRIDE: (ValueError, "SME has no ld/st with immediate strides"),
             mod.POSTINC: (ValueError, "SME has no postinc ld/st"),
@@ -70,14 +71,31 @@ class sme_opdna1(opdna1):
         for m, (exc_type, msg) in unsupported_mods.items():
             if m in modifiers:
                 raise exc_type(msg)
-        if mod.ROW in modifiers and mod.COL in modifiers:
+
+
+        unsupported_opd_mods = {
+            opd_mod.ILANE : (ValueError, "SME has no immediate lane ld/st"),
+            opd_mod.GLANE : (ValueError, "SME has no GP-reg lane ld/st"),
+            opd_mod.BCAST : (ValueError, "SME has no broadcasting ld"),
+        }
+        for umod, (exc_type, msg) in unsupported_opd_mods.items():
+            for opd, mods in operand_modifiers.items():
+                if umod in mods:
+                    raise exc_type(msg)
+
+        has_row = any(opd_mod.ROW in mods
+                      for _,mods in operand_modifiers.items())
+        has_col = any(opd_mod.COL in mods
+                      for _,mods in operand_modifiers.items())
+
+        if has_row and has_col:
             raise ValueError("ROW and COL modifiers are mutually exclusive")
 
-        if mod.NT in modifiers and (mod.ROW in modifiers or mod.COL in modifiers):
+        if mod.NT in modifiers and (has_row or has_col):
             raise ValueError(("Non-temporal strided operations cannot be combined "
                               "with tile slice modifiers (ROW/COL)"))
 
-        if mod.ROW in modifiers or mod.COL in modifiers:
+        if has_row or has_col:
             if mod.VOFFSET in modifiers or mod.IOFFSET in modifiers:
                 raise ValueError(("SME tile slice operations only support scalar+scalar "
                                  "(GOFFSET) memory addressing"))
@@ -88,8 +106,6 @@ class sme_opdna1(opdna1):
 
 
         required_params = {
-            mod.ROW : ['rowreg','immrow'],
-            mod.COL : ['colreg','immcol'],
             mod.STRUCT : ['nstructs'],
             mod.IOFFSET : ['ioffset'],
             mod.VOFFSET : ['voffset'],
@@ -99,6 +115,19 @@ class sme_opdna1(opdna1):
             for p in plist:
                 if m in modifiers and p not in kwargs:
                     raise ValueError(f"{m.name} modifier requires '{p}' parameter")
+
+        opd_mod_required_params = {
+            opd_mod.ROW : ['rowreg','immrow'],
+            opd_mod.COL : ['colreg','immcol'],
+        }
+        for opd, mods in operand_modifiers.items():
+            for m, plist in opd_mod_required_params.items():
+                for p in plist:
+                    opd_p = f"{opd}_{p}"
+                    if m in mods and opd_p not in kwargs:
+                        raise ValueError(
+                                f"{m.name} modifier for {opd} requires '{opd_p}' parameter")
+
 
     def get_mem_suffix(self, dt: adt) -> str:
         """
@@ -157,13 +186,17 @@ class sme_opdna1(opdna1):
     # Inlining any params or breaking the method up IMHO doesn't impove readability
     # pylint: disable-next=too-many-locals
     def implementation(self, *, dregs: list, agreg: aarch64_greg, a_dt: adt,
-                       modifiers: set[mod], **kwargs) -> str:
+                       modifiers: set[mod],
+                       operand_modifiers : dict[str,set[opd_mod]],
+                       **kwargs) -> str:
 
         # --- ROUTING LOGIC ---
         # If it's not a Tile Register AND it's not a Non-Temporal instruction, SVE handles it.
         if not isinstance(dregs[0], sme_treg) and mod.NT not in modifiers:
             return self.sve_opdna1(dregs=dregs, areg=agreg, dt=a_dt,
-                                   modifiers=modifiers, **kwargs)
+                                   modifiers=modifiers,
+                                   operand_modifiers=operand_modifiers,
+                                   **kwargs)
 
         msuf = self.get_mem_suffix(a_dt)
         esuf = self.get_element_suffix(a_dt)
@@ -172,9 +205,15 @@ class sme_opdna1(opdna1):
         # 1. Tile Slice (ZA)
         if isinstance(dregs[0], sme_treg):
 
-            hv = "h" if mod.ROW in modifiers else "v"
-            idx_reg = kwargs["rowreg"] if mod.ROW in modifiers else kwargs["colreg"]
-            slice_imm = kwargs["immrow"] if mod.ROW in modifiers else kwargs["immcol"]
+            has_row = any(opd_mod.ROW in mods
+                          for _,mods in operand_modifiers.items())
+            # Implicitly,through signature, if it's not has_row, it has col
+            #has_col = any(opd_mod.COL in mods
+            #              for _,mods in operand_modifiers.items())
+
+            hv = "h" if has_row else "v"
+            idx_reg = kwargs["adreg_rowreg"] if has_row else kwargs["adreg_colreg"]
+            slice_imm = kwargs["adreg_immrow"] if has_row else kwargs["adreg_immcol"]
 
             # e.g., za0h.d[w12, 0]
             dregs_str = f"{dregs[0]}{hv}{esuf}[{idx_reg.get_wreg()}, {slice_imm}]"

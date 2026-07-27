@@ -8,7 +8,10 @@ Tests SME loads/stores
 """
 import unittest
 
-from asmgen.asmblocks.op import opdna1_modifier as mod
+from asmgen.asmblocks.op import (
+    opdna1_modifier as mod,
+    operand_modifier as opd_mod
+)
 from asmgen.registers import asm_data_type as adt
 from asmgen.asmblocks.types.aarch64_types import aarch64_greg
 from asmgen.asmblocks.types.sve_types import sve_vreg,sve_preg
@@ -65,8 +68,9 @@ class test_sme_opdna1(unittest.TestCase):
             self.load(dregs=[self.za0], areg=self.x0,
                       amreg=self.p0,
                       dt=adt.FP64,
-                      modifiers={mod.ROW, mod.MASK},
-                      rowreg=self.w12, immrow=0),
+                      modifiers={mod.MASK},
+                      operand_modifiers={'adreg':{opd_mod.ROW}},
+                      adreg_rowreg=self.w12, adreg_immrow=0),
             "ld1d {za0h.d[w12, 0]}, p0/z, [x0]\n"
         )
 
@@ -76,40 +80,46 @@ class test_sme_opdna1(unittest.TestCase):
             self.store(dregs=[sme_treg(0,dt=adt.FP32)],
                        areg=self.x0, dt=adt.FP32,
                        amreg=self.p0,
-                       modifiers={mod.COL, mod.GOFFSET, mod.MASK},
-                       colreg=self.w12, offreg=self.x1, immcol=1),
+                       modifiers={mod.GOFFSET, mod.MASK},
+                       operand_modifiers={'adreg':{opd_mod.COL}},
+                       offreg=self.x1,
+                       adreg_colreg=self.w12, adreg_immcol=1),
             "st1w {za0v.s[w12, 1]}, p0, [x0, x1, lsl #2]\n"
         )
 
     def test_sme_tile_missing_kwargs(self):
         """ Ensure missing rowreg/colreg throws an error """
         with self.assertRaisesRegex(ValueError,
-                                    "ROW modifier requires 'rowreg' parameter"):
-            self.load(dregs=[self.za0], areg=self.x0, dt=adt.FP64, modifiers={mod.ROW})
+                                    ("ROW modifier for adreg requires "
+                                     "'adreg_rowreg' parameter")):
+            self.load(dregs=[self.za0], areg=self.x0, dt=adt.FP64,
+                      operand_modifiers={'adreg':{opd_mod.ROW}})
 
     def test_sme_rowreg_index_too_small(self):
         """ Ensure too small rowreg/colreg index throws an error """
         with self.assertRaisesRegex(ValueError,
-                                    "index of rowreg must be >= 12"):
+                                    "index of adreg_rowreg must be >= 12"):
             self.load(dregs=[self.za0],
                       areg=self.x0,
                       amreg=self.p0,
                       dt=adt.FP64,
-                      modifiers={mod.ROW, mod.MASK},
-                      rowreg=self.w5,
-                      immrow=0)
+                      modifiers={mod.MASK},
+                      operand_modifiers={'adreg':{opd_mod.ROW}},
+                      adreg_rowreg=self.w5,
+                      adreg_immrow=0)
 
     def test_sme_rowreg_index_too_big(self):
         """ Ensure too small rowreg/colreg index throws an error """
         with self.assertRaisesRegex(ValueError,
-                                    "index of rowreg must be <= 15"):
+                                    "index of adreg_rowreg must be <= 15"):
             self.load(dregs=[self.za0],
                       areg=self.x0,
                       amreg=self.p0,
                       dt=adt.FP64,
-                      modifiers={mod.ROW, mod.MASK},
-                      rowreg=self.w17,
-                      immrow=0)
+                      modifiers={mod.MASK},
+                      operand_modifiers={'adreg':{opd_mod.ROW}},
+                      adreg_rowreg=self.w17,
+                      adreg_immrow=0)
 
     def test_sme2_nontemporal_strided(self):
         """ Test SME2 LDNT1D with multiple strided registers and MUL VL """
@@ -150,7 +160,9 @@ class test_sme_opdna1(unittest.TestCase):
         with self.subTest(error="Tile slice with PN predicate"):
             with self.assertRaisesRegex(ValueError, "index of amreg must be <= 7"):
                 self.load(dregs=[self.za0], areg=self.x0, amreg=self.pn8, dt=adt.FP64,
-                          modifiers={mod.ROW, mod.MASK}, rowreg=self.w12, immrow=0)
+                          modifiers={mod.MASK},
+                          operand_modifiers={'adreg':{opd_mod.ROW}},
+                          adreg_rowreg=self.w12, adreg_immrow=0)
 
         # 2. NT strided load using a standard P predicate (must be pn8-pn15)
         with self.subTest(error="NT load with P predicate"):
@@ -174,9 +186,11 @@ class test_sme_opdna1(unittest.TestCase):
 
         # 5. Tile slice immediate out of bounds (FP64 max is 1)
         with self.subTest(error="Tile slice immediate bounds"):
-            with self.assertRaisesRegex(ValueError, "value of immrow must be <= 1"):
+            with self.assertRaisesRegex(ValueError, "value of adreg_immrow must be <= 1"):
                 self.load(dregs=[self.za0], areg=self.x0, amreg=self.p0, dt=adt.FP64,
-                          modifiers={mod.ROW, mod.MASK}, rowreg=self.w12, immrow=2)
+                          modifiers={mod.MASK},
+                          operand_modifiers={'adreg':{opd_mod.ROW}},
+                          adreg_rowreg=self.w12, adreg_immrow=2)
 
 if __name__ == '__main__':
     unittest.main()

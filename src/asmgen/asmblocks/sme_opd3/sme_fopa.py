@@ -16,7 +16,8 @@ from ...registers import (
 from ..op import (
     opd3,
     opd3_modifier as mod,
-    operation_signature
+    operation_signature,
+    operand_modifier as opd_mod
 )
 
 from .signatures import make_sme_opd3_signatures
@@ -40,18 +41,26 @@ class sme_fopa(opd3):
         return self.signatures
 
     def diagnose_failure(self, modifiers : set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
                          kwargs : dict[str,Any],
                          dts : dict[str,adt]):
 
-        if mod.IDX in modifiers:
-            raise ValueError("SME has no idx form")
-        if mod.REGIDX in modifiers:
-            raise ValueError("SME has no regidx form")
-        if mod.VF in modifiers:
-            raise ValueError("SME has no vf form")
         if mod.PART in modifiers:
             raise ValueError(("SME has no partial instructions "
                               "(widening instructions 'dot' neighbours)"))
+
+        unsupported_opd_mods = {
+            opd_mod.VF    : (ValueError, "SME has no VF opd3"),
+            opd_mod.ILANE : (ValueError, "SME has no immediate lane opd3"),
+            opd_mod.GLANE : (ValueError, "SME has no GP-reg lane selection opd3"),
+            opd_mod.BCAST : (ValueError, "SME has no BCAST opd3"),
+            opd_mod.ROW   : (ValueError, "SME has no row selection opd3"),
+            opd_mod.COL   : (ValueError, "SME has no column selection opd3"),
+        }
+        for umod, (exc_type, msg) in unsupported_opd_mods.items():
+            for _, mods in operand_modifiers.items():
+                if umod in mods:
+                    raise exc_type(msg)
 
     def mopx_inst_str(self, a_dt : adt, b_dt : adt, suf : str) -> str:
         """
@@ -84,11 +93,9 @@ class sme_fopa(opd3):
     def implementation(self, *,
                        adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                        a_dt : adt, b_dt : adt, c_dt : adt,
-                       modifiers : set[mod] = None,
+                       modifiers : set[mod],
+                       operand_modifiers : dict[str,set[opd_mod]],
                        **kwargs) -> str:
-
-        if modifiers is None:
-            modifiers = set()
 
         suf = "s" if mod.NP in modifiers else "a"
         inst = self.mopx_inst_str(a_dt=a_dt, b_dt=b_dt, suf=suf)

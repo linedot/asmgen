@@ -9,6 +9,7 @@ Tests SVE fmla instruction code generation
 
 from asmgen.registers import asm_data_type as adt
 from asmgen.asmblocks.op import opd3_modifier as mod
+from asmgen.asmblocks.op import operand_modifier as opd_mod
 from asmgen.asmblocks.op.opd3 import widening_method as wm
 
 from .test_sve_opd3 import test_sve_opd3_base
@@ -57,18 +58,20 @@ class test_sve_fmla(test_sve_opd3_base):
 
     def test_indexed_fma(self):
         """
-        Test unpredicated indexed operations (BLOCKIDX)
+        Test unpredicated indexed operations (BLOCKLANE)
         """
         # FP32 allows idx 0-3 and bdreg z0-z7
         res = self.gen.fma(adreg=self.v1, bdreg=self.v7, cdreg=self.v0,
                            a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32,
-                           modifiers={mod.BLOCKIDX}, blocksize=4, idx=3)
+                           operand_modifiers={ 'bdreg' : {opd_mod.BLOCKLANE}},
+                           bdreg_blocksize=4, bdreg_lane=3)
         self.assertEqual(res, "fmla z0.s,z1.s,z7.s[3]\n")
 
         # FP64 allows idx 0-1 and bdreg z0-z15
         res = self.gen.fma(adreg=self.v1, bdreg=self.v15, cdreg=self.v0,
                            a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
-                           modifiers={mod.BLOCKIDX}, blocksize=2, idx=1)
+                           operand_modifiers={ 'bdreg' : {opd_mod.BLOCKLANE}},
+                           bdreg_blocksize=2, bdreg_lane=1)
         self.assertEqual(res, "fmla z0.d,z1.d,z15.d[1]\n")
 
     def test_constraint_boundaries(self):
@@ -76,26 +79,30 @@ class test_sve_fmla(test_sve_opd3_base):
         Test that structural constraints catch architectural violations
         """
 
-        # 1. BLOCKIDX index out of bounds (FP32 blocksize=4, max index=3)
+        # 1. BLOCKLANE index out of bounds (FP32 blocksize=4, max index=3)
         with self.subTest(error="blockidx index bounds"):
-            with self.assertRaisesRegex(ValueError, "value of idx must be <= 3"):
+            with self.assertRaisesRegex(ValueError,
+                                        "value of bdreg_lane must be <= 3"):
                 self.gen.fma(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
                              a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32,
-                             modifiers={mod.BLOCKIDX}, blocksize=4, idx=4)
+                             operand_modifiers={ 'bdreg' : {opd_mod.BLOCKLANE}},
+                             bdreg_blocksize=4, bdreg_lane=4)
 
-        # 2. BLOCKIDX register out of bounds (FP32 restricts Zm to z0-z7)
+        # 2. BLOCKLANE register out of bounds (FP32 restricts Zm to z0-z7)
         with self.subTest(error="blockidx bdreg bounds FP32"):
             with self.assertRaisesRegex(ValueError, "index of bdreg must be <= 7"):
                 self.gen.fma(adreg=self.v1, bdreg=self.v8, cdreg=self.v0,
                              a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32,
-                             modifiers={mod.BLOCKIDX}, blocksize=4, idx=1)
+                             operand_modifiers={ 'bdreg' : {opd_mod.BLOCKLANE}},
+                             bdreg_blocksize=4, bdreg_lane=1)
 
-        # 3. BLOCKIDX register out of bounds (FP64 restricts Zm to z0-z15)
+        # 3. BLOCKLANE register out of bounds (FP64 restricts Zm to z0-z15)
         with self.subTest(error="blockidx bdreg bounds FP64"):
             with self.assertRaisesRegex(ValueError, "index of bdreg must be <= 15"):
                 self.gen.fma(adreg=self.v1, bdreg=self.v16, cdreg=self.v0,
                              a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
-                             modifiers={mod.BLOCKIDX}, blocksize=2, idx=0)
+                             operand_modifiers={ 'bdreg' : {opd_mod.BLOCKLANE}},
+                             bdreg_blocksize=2, bdreg_lane=0)
 
         # 4. PART out of bounds (FP16 -> FP32 max part is 1)
         with self.subTest(error="part bounds"):

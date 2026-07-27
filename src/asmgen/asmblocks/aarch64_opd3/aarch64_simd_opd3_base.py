@@ -18,6 +18,7 @@ from ...registers import (
 from ..op import (
     opd3,
     opd3_modifier as mod,
+    operand_modifier as opd_mod,
     operation_signature
 )
 
@@ -46,15 +47,22 @@ class aarch64_simd_opd3_base(opd3):
 
     def diagnose_failure(self,
                          modifiers : set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
                          kwargs : dict[str,Any],
                          dts : dict[str,adt]):
-        if mod.VF in modifiers:
-            raise ValueError("NEON/SVE has no vf form")
-        if mod.REGIDX in modifiers:
-            raise ValueError("NEON/SVE has no regidx form")
 
-        if mod.IDX in modifiers and 'idx' not in kwargs:
-            raise ValueError("Operand missing: idx")
+        for name, mods in operand_modifiers.items():
+            if opd_mod.ILANE in mods and f"{name}_lane" not in kwargs:
+                raise ValueError(f"Argument missing: {name}_lane")
+            if opd_mod.BLOCKLANE in mods and f"{name}_lane" not in kwargs:
+                raise ValueError(f"Argument missing: {name}_lane")
+            if opd_mod.BLOCKLANE in mods and f"{name}_blocksize" not in kwargs:
+                raise ValueError(f"Argument missing: {name}_blocksize")
+            if opd_mod.GLANE in mods:
+                raise ValueError(f"{self.__class__.__name__} has no glane form")
+            if opd_mod.VF in mods:
+                raise ValueError(f"{self.__class__.__name__} has no VF form")
+
         if mod.PART in modifiers and 'part' not in kwargs:
             raise ValueError("Operand missing: part")
 
@@ -124,15 +132,48 @@ class aarch64_simd_opd3_base(opd3):
 
         return suf
 
+    def build_operands(self, *,
+                       adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
+                       a_dt : adt, b_dt : adt, c_dt : adt,
+                       operand_modifiers : dict[str,set[opd_mod]],
+                       **kwargs) -> tuple[str,str,str]:
+        """
+        Build the strings for the 3 operands
+        """
 
+        # FMA/FMUL
+        bdreg_mods = operand_modifiers.get('bdreg',set())
+        if {opd_mod.ILANE, opd_mod.BLOCKLANE}.intersection(bdreg_mods):
+            b = f"{bdreg}.{self.dt_idxsuffixes[b_dt]}[{kwargs['bdreg_lane']}]"
+        else:
+            b = f"{bdreg}.{self.dt_suffixes[b_dt]}"
+
+        # FDOTA
+        cdreg_mods = operand_modifiers.get('cdreg',set())
+        if {opd_mod.ILANE, opd_mod.BLOCKLANE}.intersection(cdreg_mods):
+            c = f"{cdreg}.{self.dt_idxsuffixes[c_dt]}[{kwargs['cdreg_lane']}]"
+        else:
+            c = f"{cdreg}.{self.dt_suffixes[c_dt]}"
+
+        return (
+            f"{adreg}.{self.dt_suffixes[a_dt]}",
+            b,
+            c)
+
+
+    # ??? It's just 6?
+    # pylint: disable-next=too-many-locals
     def implementation(self, *,
                        adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                        a_dt : adt, b_dt : adt, c_dt : adt,
                        modifiers : set[mod] = None,
+                       operand_modifiers : dict[str,set[opd_mod]] = None,
                        **kwargs) -> str:
 
         if modifiers is None:
             modifiers = set()
+        if operand_modifiers is None:
+            operand_modifiers = dict()
 
         # This allows the SVE version to use the same codepath
         predicate = f"{kwargs['amreg']}/m," if 'amreg' in kwargs else ""
@@ -150,14 +191,15 @@ class aarch64_simd_opd3_base(opd3):
                     ways=adt_size(c_dt)//adt_size(a_dt),
                     part=kwargs['part'])
 
-        if {mod.IDX, mod.BLOCKIDX} & modifiers:
-            b = f"{bdreg}.{self.dt_idxsuffixes[b_dt]}[{kwargs.get('idx', 0)}]"
-        else:
-            b = f"{bdreg}.{self.dt_suffixes[b_dt]}"
+        a,b,c = self.build_operands(adreg=adreg, bdreg=bdreg, cdreg=cdreg,
+                                    a_dt=a_dt, b_dt=b_dt, c_dt=c_dt,
+                                    operand_modifiers=operand_modifiers,
+                                    **kwargs)
+
 
         return self.asmwrap(
             f"{inst} "
-            f"{cdreg}.{self.dt_suffixes[c_dt]},"
+            f"{c},"
             f"{predicate}"
-            f"{adreg}.{self.dt_suffixes[a_dt]},"
+            f"{a},"
             f"{b}")

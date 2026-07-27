@@ -12,7 +12,10 @@ from typing import Any
 from ...registers import (
     asm_data_type as adt,
 )
-from ..op import opd3_modifier as mod
+from ..op import (
+    opd3_modifier as mod,
+    operand_modifier as opd_mod
+)
 from .neon_opd3_base import neon_opd3_base
 
 class neon_fadd(neon_opd3_base):
@@ -23,9 +26,10 @@ class neon_fadd(neon_opd3_base):
     inst_base = "add"
 
     def diagnose_failure(self, modifiers : set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
                          kwargs : dict[str,Any],
                          dts : dict[str,adt]):
-        super().diagnose_failure(modifiers, kwargs, dts)
+        super().diagnose_failure(modifiers, operand_modifiers, kwargs, dts)
         if mod.NP in modifiers:
             raise ValueError("NEON add has no NP-form")
         if mod.MASK in modifiers:

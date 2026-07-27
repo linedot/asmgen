@@ -11,7 +11,8 @@ from ..op import (
     operand_shape as osh,
     operand_type as ot,
     register_type as rt,
-    opd3_modifier as mod
+    opd3_modifier as mod,
+    operand_modifier as opd_mod
 )
 
 from ..op.constraint import minmax_constraint
@@ -48,12 +49,14 @@ def make_sve_opd3_signatures(supports_np: bool) -> list[sig]:
     """
     sigs = []
 
-    base_mods = [set(), {mod.BLOCKIDX}]
+    base_mods = [set()]
     if supports_np:
-        base_mods.extend([{mod.NP}, {mod.NP, mod.BLOCKIDX}])
+        base_mods.extend([{mod.NP}])
+
+    base_opd_mods = [{},{'bdreg' : {opd_mod.BLOCKLANE}}]
 
 
-    def add_sig(a_dt, b_dt, c_dt, *, mods, is_widening=False):
+    def add_sig(a_dt, b_dt, c_dt, *, mods, opd_mods, is_widening=False):
         struct_params = {'widening_method': wm.SPLIT_INSTRUCTIONS} if is_widening else {}
 
         ops = {
@@ -65,11 +68,15 @@ def make_sve_opd3_signatures(supports_np: bool) -> list[sig]:
         if mod.MASK in mods:
             ops['amreg'] = osh(ot.REGISTER, rt.MASK, c_dt)
 
-        if mod.BLOCKIDX in mods:
+        bdreg_mods = opd_mods.get('bdreg',set())
+
+        ops['bdreg'].modifiers = bdreg_mods
+
+        if opd_mod.BLOCKLANE in bdreg_mods:
             # SVE works on 128 bit chunks and the lane is selected in operand b
             blocksize = 16//adt_size(b_dt)
-            struct_params['blocksize'] = blocksize
-            ops['idx'] = osh(
+            struct_params['bdreg_blocksize'] = blocksize
+            ops['bdreg_lane'] = osh(
                 ot.IMMEDIATE, None, None,
                 value_constraints=[minmax_constraint(minval=0, maxval=blocksize-1)]
             )
@@ -106,32 +113,53 @@ def make_sve_opd3_signatures(supports_np: bool) -> list[sig]:
 
     for dt in _FLOATS:
         for m in base_mods:
-            if mod.BLOCKIDX in m:
-                add_sig(dt, dt, dt, mods=m)
-            else:
-                add_sig(dt, dt, dt, mods=m | {mod.MASK})
-            if dt in _WIDENING_2X_MAP:
-                add_sig(dt, dt, _WIDENING_2X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
-            if dt in _WIDENING_4X_MAP:
-                add_sig(dt, dt, _WIDENING_4X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
+            for om in base_opd_mods:
+                if opd_mod.BLOCKLANE in om.get('bdreg',set()):
+                    add_sig(dt, dt, dt, mods=m, opd_mods=om)
+                else:
+                    add_sig(dt, dt, dt, mods=m | {mod.MASK}, opd_mods=om)
+                if dt in _WIDENING_2X_MAP:
+                    add_sig(dt, dt, _WIDENING_2X_MAP[dt],
+                            mods=m | {mod.PART},
+                            opd_mods=om,
+                            is_widening=True)
+                if dt in _WIDENING_4X_MAP:
+                    add_sig(dt, dt, _WIDENING_4X_MAP[dt],
+                            mods=m | {mod.PART},
+                            opd_mods=om,
+                            is_widening=True)
 
     for dt in _SIGNED_INTS:
         for m in base_mods:
-            if mod.BLOCKIDX in m:
-                add_sig(dt, dt, dt, mods=m)
-            else:
-                add_sig(dt, dt, dt, mods=m | {mod.MASK})
-            if dt in _WIDENING_2X_MAP:
-                add_sig(dt, dt, _WIDENING_2X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
-            if dt in _WIDENING_4X_MAP:
-                add_sig(dt, dt, _WIDENING_4X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
+            for om in base_opd_mods:
+                if opd_mod.BLOCKLANE in om.get('bdreg',set()):
+                    add_sig(dt, dt, dt, mods=m, opd_mods=om)
+                else:
+                    add_sig(dt, dt, dt, mods=m | {mod.MASK}, opd_mods=om)
+                if dt in _WIDENING_2X_MAP:
+                    add_sig(dt, dt, _WIDENING_2X_MAP[dt],
+                            mods=m | {mod.PART},
+                            opd_mods=om,
+                            is_widening=True)
+                if dt in _WIDENING_4X_MAP:
+                    add_sig(dt, dt, _WIDENING_4X_MAP[dt],
+                            mods=m | {mod.PART},
+                            opd_mods=om,
+                            is_widening=True)
 
     for dt in _UNSIGNED_INTS:
         for m in base_mods:
-            # Widening only for unsigned ints
-            if dt in _WIDENING_2X_MAP:
-                add_sig(dt, dt, _WIDENING_2X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
-            if dt in _WIDENING_4X_MAP:
-                add_sig(dt, dt, _WIDENING_4X_MAP[dt], mods=m | {mod.PART}, is_widening=True)
+            for om in base_opd_mods:
+                # Widening only for unsigned ints
+                if dt in _WIDENING_2X_MAP:
+                    add_sig(dt, dt, _WIDENING_2X_MAP[dt],
+                            mods=m | {mod.PART},
+                            opd_mods=om,
+                            is_widening=True)
+                if dt in _WIDENING_4X_MAP:
+                    add_sig(dt, dt, _WIDENING_4X_MAP[dt],
+                            mods=m | {mod.PART},
+                            opd_mods=om,
+                            is_widening=True)
 
     return sigs

@@ -14,7 +14,10 @@ from ...registers import (
 )
 from .neon_opd3_base import neon_opd3_base
 
-from ..op import opd3_modifier as mod
+from ..op import (
+    opd3_modifier as mod,
+    operand_modifier as opd_mod
+)
 
 class neon_fma(neon_opd3_base):
     """
@@ -26,8 +29,9 @@ class neon_fma(neon_opd3_base):
     has_acc_suffix = True
 
     def diagnose_failure(self, modifiers : set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
                          kwargs : dict[str,Any],
                          dts : dict[str,adt]):
-        super().diagnose_failure(modifiers, kwargs, dts)
+        super().diagnose_failure(modifiers, operand_modifiers, kwargs, dts)
         if mod.MASK in modifiers:
             raise ValueError("NEON mul has no masked form")

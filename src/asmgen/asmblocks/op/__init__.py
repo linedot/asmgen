@@ -16,7 +16,12 @@ from .operation import (
     operation,
 )
 
-from .operand import operand_shape, operand_type, register_type
+from .operand import (
+    operand_modifier,
+    operand_shape,
+    operand_type,
+    register_type
+)
 
 from .opdna1 import (
     opdna1_modifier,

@@ -42,6 +42,18 @@ class register_type(Enum):
     TILE = auto()
     MASK = auto()
 
+class operand_modifier(Enum):
+    """
+    Modifiers on an operand
+    """
+    ILANE      = auto() # Selects a lane within a vector register with an immediate
+    GLANE      = auto() # Selects a lane within a vector register with a gp reg
+    BLOCKLANE  = auto() # Selects a lane within each block with `blocksize` elements
+    ROW        = auto() # Selects a row within a tile register
+    COL        = auto() # Selects a column within a tile register
+    BCAST      = auto() # Broadcasts a scalar across a vector/tile register
+    VF         = auto() # Vector is replaced by a scalar
+
 
 def is_register_type(val : Any, rt : register_type) -> bool:
     """
@@ -66,8 +78,8 @@ class operand_shape:
     Structural requirement for an operand
     """
 
-    otype : operand_type
-    rtype : register_type | None = None
-    dt    : adt = None
-
+    otype     : operand_type
+    rtype     : register_type | None = None
+    dt        : adt|None = None
+    modifiers : set[operand_modifier] = field(default_factory=set)
     value_constraints: list[operand_constraint] = field(default_factory=list)

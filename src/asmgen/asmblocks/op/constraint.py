@@ -62,17 +62,17 @@ class operand_constraint(ABC):
                           params : dict[str,ValueType]):
         """
         modifies context based on specified modifiers and returns it,
-        leaving original context unchanged. 
+        leaving original context unchanged.
         To be overriden by inheriting class.
 
         :param name: name of the argument for which to specialize params
-        :param modifiers: modifiers to apply to the operation 
+        :param modifiers: modifiers to apply to the operation
                           (like opd3_modifier.* or opdna1_modifier.*)
         :param context: arguments passed to the operation or already
                         assigned arguments when generating valid values
         :param params: constraint-relevant parameters
 
-        :raises ValueError: if the value is invalid or 
+        :raises ValueError: if the value is invalid or
         :raises ConstraintDoesNotApplyError: The constraint does not apply
             (Example: constraint only applies when a dreg is a vreg)
         """
@@ -83,9 +83,9 @@ class operand_constraint(ABC):
                  context: dict[str,ValueType]):
         """
         Use this to validate the value for a given operand
-        
+
         :param name: name of the argument (like 'adreg')
-        :param modifiers: modifiers to apply to the operation 
+        :param modifiers: modifiers to apply to the operation
                           (like opd3_modifier.* or opdna1_modifier.*)
         :param val: value to check for the argument
         :param context: dictionary of already assigned argument values
@@ -123,7 +123,7 @@ class operand_constraint(ABC):
         """
         Checks if a value is valid for an argument and raises an Error if it is not.
         To be implemented by an inheriting class
-        
+
         :param name: name of the argument (like 'adreg')
         :param context: other argument values
         :param params: Constraint parameters
@@ -279,7 +279,7 @@ class otherplusn_constraint(intval_constraint):
 class otherplusnmod_constraint(intval_constraint):
     """
     Constraint limiting an integer value to the integer value
-    of another argument plus an integer offset modulo another 
+    of another argument plus an integer offset modulo another
     integer value
 
     :param other: name of the dependency
@@ -314,3 +314,58 @@ class otherplusnmod_constraint(intval_constraint):
             raise ValueError((f"{self.what} of {name} must be "
                               f"{self.what} of {other} plus {offset} "
                               f"modulo {modval}"))
+
+@dataclass(kw_only=True)
+class sameval_constraint(intval_constraint):
+    """
+    Constraint limiting an integer value to the integer value of another argument
+
+    :param other: name of the dependency
+    """
+    other: str
+    def __post_init__(self):
+        self.params['other'] = self.other
+
+        super().__post_init__()
+
+    def validate(self, name: str,
+                 val : ValueType,
+                 context : dict[str,ValueType],
+                 params : dict[str,ValueType]):
+
+        other = params['other']
+
+        if other not in context:
+            raise ArgumentDependencyError(name=name, deps=[other])
+
+        if self.getint(val) != self.getint(context[other]):
+            raise ValueError((f"{self.what} of {name} must be equal to "
+                              f"{self.what} of {other}"))
+
+@dataclass(kw_only=True)
+class differentval_constraint(intval_constraint):
+    """
+    Constraint limiting an integer value to be different from the
+    integer value of another argument
+
+    :param other: name of the dependency
+    """
+    other: str
+    def __post_init__(self):
+        self.params['other'] = self.other
+
+        super().__post_init__()
+
+    def validate(self, name: str,
+                 val : ValueType,
+                 context : dict[str,ValueType],
+                 params : dict[str,ValueType]):
+
+        other = params['other']
+
+        if other not in context:
+            raise ArgumentDependencyError(name=name, deps=[other])
+
+        if self.getint(val) == self.getint(context[other]):
+            raise ValueError((f"{self.what} of {name} must be different from "
+                              f"{self.what} of {other}"))

@@ -15,7 +15,8 @@ from ..op import (
     operand_shape as osh,
     operand_type as ot,
     register_type as rt,
-    opdna1_modifier as mod
+    opdna1_modifier as mod,
+    operand_modifier as opd_mod
 )
 
 from ..op.constraint import (
@@ -119,11 +120,13 @@ def make_sme_opdna1_signatures():
     """
     sigs = []
 
-    def add_sig(dt, *, mods, nstructs=1):
+    def add_sig(dt, *, mods, opd_mods=None, nstructs=1):
         ops = {
             'agreg': osh(ot.REGISTER, rt.GP, dt.UINT64),
             'amreg': osh(ot.REGISTER, rt.MASK, dt)
         }
+        if opd_mods is None:
+            opd_mods = dict()
 
         struct_params={}
 
@@ -149,18 +152,22 @@ def make_sme_opdna1_signatures():
                     sme_mreg_notpn_constraint()
                     )
 
-        if mod.ROW in mods:
-            ops['rowreg'] = osh(ot.REGISTER, rt.GP, adt.SINT32,
-                                value_constraints=[sme_rowcolreg_constraint()])
-            maxrow = 16//adt_size(dt) - 1
-            ops['immrow'] = osh(ot.IMMEDIATE, None, None,
-                                value_constraints=[minmax_constraint(minval=0,maxval=maxrow)])
+        for name, omods in opd_mods.items():
+            ops[name].modifiers = omods
 
-        if mod.COL in mods:
-            ops['colreg'] = osh(ot.REGISTER, rt.GP, adt.SINT32,
+        if opd_mod.ROW in opd_mods.get('adreg',set()):
+            ops['adreg_rowreg'] = osh(ot.REGISTER, rt.GP, adt.SINT32,
+                                      value_constraints=[sme_rowcolreg_constraint()])
+            maxrow = 16//adt_size(dt) - 1
+            ops['adreg_immrow'] = osh(ot.IMMEDIATE, None, None,
+                                      value_constraints=[
+                                          minmax_constraint(minval=0,maxval=maxrow)])
+
+        if opd_mod.COL in opd_mods.get('adreg',set()):
+            ops['adreg_colreg'] = osh(ot.REGISTER, rt.GP, adt.SINT32,
                                 value_constraints=[sme_rowcolreg_constraint()])
             maxrow = 16//adt_size(dt) - 1
-            ops['immcol'] = osh(ot.IMMEDIATE, None, None,
+            ops['adreg_immcol'] = osh(ot.IMMEDIATE, None, None,
                                 value_constraints=[minmax_constraint(minval=0,maxval=maxrow)])
 
         if mod.GOFFSET in mods:
@@ -176,10 +183,10 @@ def make_sme_opdna1_signatures():
 
     for dt in _FLOATS+_INTS:
         # LD1B/H/W/D { <ZAt><HV>.B/H/S/D[<Ws>, <offs>] }, <Pg>/Z, [<Xn|SP>{, <Xm>, LSL #2}]
-        add_sig(dt, mods={mod.MASK, mod.ROW})
-        add_sig(dt, mods={mod.MASK, mod.COL})
-        add_sig(dt, mods={mod.MASK, mod.GOFFSET, mod.ROW})
-        add_sig(dt, mods={mod.MASK, mod.GOFFSET, mod.COL})
+        add_sig(dt, mods={mod.MASK}, opd_mods={'adreg':{opd_mod.ROW}})
+        add_sig(dt, mods={mod.MASK}, opd_mods={'adreg':{opd_mod.COL}})
+        add_sig(dt, mods={mod.MASK, mod.GOFFSET}, opd_mods={'adreg':{opd_mod.ROW}})
+        add_sig(dt, mods={mod.MASK, mod.GOFFSET}, opd_mods={'adreg':{opd_mod.COL}})
         # LD1NT...
         for nstructs in [2,4]:
             add_sig(dt, mods={mod.MASK, mod.NT, mod.STRUCT}, nstructs=nstructs)

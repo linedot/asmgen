@@ -15,7 +15,8 @@ from ..op import (
     operand_shape as osh,
     operand_type as ot,
     register_type as rt,
-    opdna1_modifier as mod
+    opdna1_modifier as mod,
+    operand_modifier as opd_mod
 )
 
 from ..op.constraint import (
@@ -56,17 +57,23 @@ class sve_struct_constraint(regidx_constraint,otherplusnmod_constraint):
 
 def make_sve_opdna1_signatures(bcast_supported=False):
     """
-    Generate signatures for NEON opdna1 operations
+    Generate signatures for SVE opdna1 operations
 
     :param bcast_supported: whether the instruction supports broadcasts (loads only)
     """
     sigs = []
 
-    def add_sig(dt, *, mods, nstructs=1):
+    def add_sig(dt, *, mods, opd_mods=None, nstructs=1):
+        if opd_mods is None:
+            opd_mods = {}
+
         ops = {
-            'adreg': osh(ot.REGISTER, rt.VEC, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, dt.UINT64),
-            'amreg': osh(ot.REGISTER, rt.MASK, dt)
+            'adreg': osh(ot.REGISTER, rt.VEC, dt,
+                         modifiers=opd_mods.get('adreg', set())),
+            'agreg': osh(ot.REGISTER, rt.GP, dt.UINT64,
+                         modifiers=opd_mods.get('agreg', set())),
+            'amreg': osh(ot.REGISTER, rt.MASK, dt,
+                         modifiers=opd_mods.get('amreg', set()))
         }
 
         struct_params={}
@@ -75,20 +82,31 @@ def make_sve_opdna1_signatures(bcast_supported=False):
         if mod.STRUCT in mods:
             struct_params['nstructs'] = nstructs
             for i in range(1, nstructs):
-                ops[f"{mop(i)}dreg"] = osh(
+                reg_name = f"{mop(i)}dreg" # bdreg, cdreg, ddreg
+                ops[reg_name] = osh(
                     ot.REGISTER, rt.VEC, dt,
+                    modifiers=opd_mods.get(reg_name, set()),
                     value_constraints=[
                         sve_struct_constraint(other=f"{mop(i-1)}dreg")
                     ])
 
         if mod.VINDEX in mods:
-            ops['vidxreg'] = osh(ot.REGISTER, rt.VEC, INDEX_ADT_SIZE_MAP[adt_size(dt)])
-            struct_params['it'] = INDEX_AIT_SIZE_MAP[adt_size(dt)]
+            # SVE gathers/scatters
+            idx_sz = adt_size(dt)
+            # Fallback to 32-bit indices if size < 4 to prevent KeyError
+            # if the >= 4 filter is removed
+            idx_dt = INDEX_ADT_SIZE_MAP.get(idx_sz, adt.SINT32)
+            idx_it = INDEX_AIT_SIZE_MAP.get(idx_sz, ait.INT32)
+
+            ops['vidxreg'] = osh(ot.REGISTER, rt.VEC, idx_dt,
+                                 modifiers=opd_mods.get('vidxreg', set()))
+            struct_params['it'] = idx_it
 
         if mod.IOFFSET in mods:
             ops['ioffset'] = osh(ot.IMMEDIATE, None, None)
         if mod.GOFFSET in mods:
-            ops['offreg'] = osh(ot.REGISTER, rt.GP, adt.SINT64)
+            ops['offreg'] = osh(ot.REGISTER, rt.GP, adt.SINT64,
+                                modifiers=opd_mods.get('offreg', set()))
         if mod.VOFFSET in mods:
             ops['voffset'] = osh(ot.IMMEDIATE, None, None)
 
@@ -99,21 +117,37 @@ def make_sve_opdna1_signatures(bcast_supported=False):
         ))
 
     for dt in _FLOATS+_INTS:
+        # Base predicated load/store
         add_sig(dt, mods={mod.MASK})
+
+        # Gathers/Scatters
         if adt_size(dt) >= 4:
-            # Gathers always use 32 bit or 64 bit indices,
-            # for fp16/bf16/fp8/etc... it means filling the vector with one instruction is
-            # not possible. it also places the 16/8 bit values into the low bits of
-            # 32bit/64bit lanes. Will need to figure out how to handle this.
+            # TODO: Handle size < 4
+            #       (requires unpacking loops/multiple gathers as SVE only
+            # provides 32-bit or 64-bit index elements).
             add_sig(dt, mods={mod.MASK, mod.VINDEX})
             add_sig(dt, mods={mod.MASK, mod.VINDEX, mod.IOFFSET})
+
+        # Address modification
         add_sig(dt, mods={mod.MASK, mod.VOFFSET})
         add_sig(dt, mods={mod.MASK, mod.GOFFSET})
+
         if bcast_supported:
-            add_sig(dt, mods={mod.MASK, mod.BCAST})
+            # ld1r (load scalar and broadcast to all lanes)
+            add_sig(dt, mods={mod.MASK}, opd_mods={'adreg': {opd_mod.BCAST}})
+
         for nstructs in range(2,5):
-            add_sig(dt, mods={mod.MASK, mod.STRUCT},nstructs=nstructs)
+            # ld2/ld3/ld4
+            add_sig(dt, mods={mod.MASK, mod.STRUCT}, nstructs=nstructs)
+
             if bcast_supported:
-                add_sig(dt, mods={mod.MASK, mod.BCAST,mod.STRUCT},nstructs=nstructs)
+                # ld2r/ld3r/ld4r (load structured scalars and broadcast
+                # to respective vectors)
+                bcast_mods = {'adreg': {opd_mod.BCAST}}
+                for i in range(1, nstructs):
+                    bcast_mods[f"{mop(i)}dreg"] = {opd_mod.BCAST}
+
+                add_sig(dt, mods={mod.MASK, mod.STRUCT},
+                        opd_mods=bcast_mods, nstructs=nstructs)
 
     return sigs

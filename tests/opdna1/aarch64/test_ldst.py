@@ -12,6 +12,7 @@ from asmgen.asmblocks.aarch64_opdna1 import aarch64_load, aarch64_store
 from asmgen.asmblocks.types.aarch64_types import aarch64_greg, aarch64_freg
 from asmgen.asmblocks.types.neon_types import neon_vreg
 from asmgen.asmblocks.op import opdna1_modifier as mod
+from asmgen.asmblocks.op import operand_modifier as opd_mod
 from asmgen.registers import asm_data_type as adt
 
 def asmwrap(s: str) -> str:
@@ -133,14 +134,22 @@ class test_aarch64_opdna1(unittest.TestCase):
 
     def test_invalid_modifiers(self):
         """ Test that invalid modifiers raise ValueError """
-        invalid_mods = [mod.TINDEX, mod.VINDEX, mod.GLANE, mod.ILANE,
+        invalid_mods = [mod.TINDEX, mod.VINDEX,
                         mod.TOFFSET, mod.VOFFSET, mod.ISTRIDE, mod.GSTRIDE,
-                        mod.STRUCT, mod.BCAST]
+                        mod.STRUCT]
+
+        invalid_opd_mods = [opd_mod.ILANE,opd_mod.GLANE,
+                            opd_mod.VF,opd_mod.BCAST]
 
         for invalid_mod in invalid_mods:
-            with self.subTest(modifier=invalid_mod):
-                with self.assertRaisesRegex(ValueError, "Base AArch64 has no"):
-                    self.load(dregs=[self.x1], areg=self.x0, dt=adt.UINT64, modifiers={invalid_mod})
+            for invalid_opd_mod in invalid_opd_mods:
+                with self.subTest(modifier=invalid_mod,
+                                  opd_modifier=invalid_opd_mod):
+                    with self.assertRaisesRegex(ValueError, "Base AArch64 has no"):
+                        self.load(dregs=[self.x1], areg=self.x0,
+                                  dt=adt.UINT64,
+                                  modifiers={invalid_mod},
+                                  operand_modifiers={'adreg':invalid_opd_mod})
 
     def test_missing_required_parameters(self):
         """

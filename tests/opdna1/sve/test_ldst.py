@@ -8,7 +8,10 @@ Tests SVE loads/stores
 """
 import unittest
 
-from asmgen.asmblocks.op import opdna1_modifier as mod
+from asmgen.asmblocks.op import (
+    opdna1_modifier as mod,
+    operand_modifier as opd_mod
+)
 from asmgen.registers import asm_data_type as adt, asm_index_type as ait
 from asmgen.asmblocks.types.aarch64_types import aarch64_greg, aarch64_freg
 from asmgen.asmblocks.types.sve_types import sve_vreg, sve_preg
@@ -91,7 +94,8 @@ class test_sve_opdna1(unittest.TestCase):
         """Test BCAST and STRUCT generation"""
         with self.subTest(mode="BCAST"):
             res = self.load(dregs=[self.z0], areg=self.x0, amreg=self.p1, dt=adt.FP32,
-                            modifiers={mod.MASK, mod.BCAST})
+                            modifiers={mod.MASK},
+                            operand_modifiers={'adreg' : {opd_mod.BCAST}})
             self.assertEqual(res, "ld1rw {z0.s}, p1/z, [x0]\n")
 
         with self.subTest(mode="STRUCT"):
@@ -132,13 +136,16 @@ class test_sve_opdna1(unittest.TestCase):
         with self.subTest(error="BCAST on store"):
             with self.assertRaisesRegex(ValueError, "BCAST modifier is only valid for LOAD"):
                 self.store(dregs=[self.z0], areg=self.x0, amreg=self.p1, dt=adt.FP32,
-                           modifiers={mod.MASK, mod.BCAST})
+                           modifiers={mod.MASK},
+                           operand_modifiers={'adreg' : {opd_mod.BCAST}})
 
         # 3. Unsupported ILANE
         with self.subTest(error="Unsupported ILANE"):
             with self.assertRaisesRegex(ValueError, "SVE has no immediate lane ld/st"):
                 self.load(dregs=[self.z0], areg=self.x0, amreg=self.p1, dt=adt.FP32,
-                          modifiers={mod.MASK, mod.ILANE}, lane=1)
+                          modifiers={mod.MASK},
+                          operand_modifiers={'adreg':{opd_mod.ILANE}},
+                          adreg_lane=1)
 
 if __name__ == '__main__':
     unittest.main()

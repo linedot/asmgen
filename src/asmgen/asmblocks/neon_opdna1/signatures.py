@@ -14,6 +14,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_modifier as opd_mod,
     register_type as rt,
     opdna1_modifier as mod
 )
@@ -53,7 +54,7 @@ def make_neon_opdna1_signatures(bcast_supported=False):
     """
     sigs = []
 
-    def add_sig(dt, *, mods, nstructs=1, postinc_reg=False):
+    def add_sig(dt, *, mods, opd_mods, nstructs=1, postinc_reg=False):
         ops = {
             'adreg': osh(ot.REGISTER, rt.VEC, dt),
             'agreg': osh(ot.REGISTER, rt.GP, dt.UINT64),
@@ -75,11 +76,16 @@ def make_neon_opdna1_signatures(bcast_supported=False):
             ops['ioffset'] = osh(ot.IMMEDIATE, None, None)
         if mod.VOFFSET in mods:
             ops['voffset'] = osh(ot.IMMEDIATE, None, None)
-        if mod.ILANE in mods:
-            max_lane = (16 // adt_size(dt))-1
-            ops['lane'] = osh(
-                ot.IMMEDIATE, None, None,
-                value_constraints=[minmax_constraint(minval=0,maxval=max_lane)])
+
+        for opd, omods in opd_mods.items():
+            ops[opd].modifiers = omods
+            if opd_mod.ILANE in omods:
+                max_lane = (16 // adt_size(dt))-1
+                ops[f"{opd}_lane"] = osh(
+                        ot.IMMEDIATE, None, None,
+                        value_constraints=[
+                            minmax_constraint(minval=0,maxval=max_lane)]
+                        )
 
         if mod.POSTINC in mods:
             if postinc_reg:
@@ -94,29 +100,51 @@ def make_neon_opdna1_signatures(bcast_supported=False):
         ))
 
     for dt in _FLOATS+_INTS:
-        add_sig(dt, mods=set())
-        add_sig(dt, mods={mod.IOFFSET})
-        add_sig(dt, mods={mod.VOFFSET})
-        add_sig(dt, mods={mod.ILANE})
-        add_sig(dt, mods={mod.ILANE,mod.VOFFSET})
-        add_sig(dt, mods={mod.POSTINC},postinc_reg=False)
-        add_sig(dt, mods={mod.POSTINC},postinc_reg=True)
+        add_sig(dt, mods=set(), opd_mods=dict())
+        add_sig(dt, mods={mod.IOFFSET}, opd_mods=dict())
+        add_sig(dt, mods={mod.VOFFSET}, opd_mods=dict())
+        add_sig(dt, mods=set(), opd_mods={'adreg': {opd_mod.ILANE}})
+        add_sig(dt, mods={mod.VOFFSET}, opd_mods={'adreg': {opd_mod.ILANE}})
+        add_sig(dt, mods={mod.POSTINC}, opd_mods=dict(), postinc_reg=False)
+        add_sig(dt, mods={mod.POSTINC}, opd_mods=dict(), postinc_reg=True)
         if bcast_supported:
-            add_sig(dt, mods={mod.BCAST})
+            add_sig(dt, mods=set(), opd_mods={'adreg': {opd_mod.BCAST}})
             # No BCAST with offsets, but POSTINC is allowed
-            add_sig(dt, mods={mod.BCAST,mod.POSTINC},postinc_reg=False)
-            add_sig(dt, mods={mod.BCAST,mod.POSTINC},postinc_reg=True)
+            add_sig(dt, mods={mod.POSTINC},
+                    opd_mods={'adreg': {opd_mod.BCAST}}, postinc_reg=False)
+            add_sig(dt, mods={mod.POSTINC},
+                    opd_mods={'adreg': {opd_mod.BCAST}}, postinc_reg=True)
         for nstructs in range(2,5):
-            add_sig(dt, mods={mod.STRUCT},nstructs=nstructs)
+            opd_bcast_mods = {
+                    f"{mop(i)}dreg": {opd_mod.BCAST} for i in range(nstructs)}
+            opd_ilane_mods = {
+                    f"{mop(i)}dreg": {opd_mod.ILANE} for i in range(nstructs)}
+
+            add_sig(dt, mods={mod.STRUCT}, opd_mods=dict(), nstructs=nstructs)
+            add_sig(dt, mods={mod.STRUCT},
+                    opd_mods=opd_ilane_mods,
+                    nstructs=nstructs)
+            # There is also a STRUCT+ILANE+IOFFSET, but I don't get what the
+            # constraints on the immediate offset are, it seems like
+            # just one value for each data type?
             add_sig(dt, mods={mod.STRUCT,mod.POSTINC},
+                    opd_mods=dict(),
                     nstructs=nstructs, postinc_reg=False)
             add_sig(dt, mods={mod.STRUCT,mod.POSTINC},
+                    opd_mods=dict(),
+                    nstructs=nstructs, postinc_reg=True)
+            add_sig(dt, mods={mod.STRUCT,mod.POSTINC},
+                    opd_mods=opd_ilane_mods,
                     nstructs=nstructs, postinc_reg=True)
             if bcast_supported:
-                add_sig(dt, mods={mod.BCAST,mod.STRUCT},nstructs=nstructs)
-                add_sig(dt, mods={mod.BCAST,mod.STRUCT,mod.POSTINC},
+                add_sig(dt, mods={mod.STRUCT},
+                        opd_mods = opd_bcast_mods,
+                        nstructs=nstructs)
+                add_sig(dt, mods={mod.STRUCT,mod.POSTINC},
+                        opd_mods = opd_bcast_mods,
                         nstructs=nstructs, postinc_reg=False)
-                add_sig(dt, mods={mod.BCAST,mod.STRUCT,mod.POSTINC},
+                add_sig(dt, mods={mod.STRUCT,mod.POSTINC},
+                        opd_mods = opd_bcast_mods,
                         nstructs=nstructs, postinc_reg=True)
 
     return sigs

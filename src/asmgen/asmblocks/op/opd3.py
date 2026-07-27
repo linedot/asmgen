@@ -11,6 +11,7 @@ from enum import Enum,auto
 
 from .operation import operation
 from .modifier import operation_modifier
+from .operand import operand_modifier
 from .signature import operation_signature
 
 from ...registers import asm_data_type as adt, data_reg
@@ -33,12 +34,12 @@ class opd3_modifier(operation_modifier):
     NA = auto()       # FMA negate addend c=(a*b)-c
     NX = auto()       # FMA negate everything c=-(a*b)-c
     MULC = auto()     # FMA C is a multiplicand, B is an addend c=(a*c)+b
-    IDX = auto()      # lane-fma
-    BLOCKIDX = auto() # block-lane-fma (i.e SVE FMA selects a lane for
-                      # each 128-bit block of elements)
-    REGIDX = auto()
+    #IDX = auto()      # lane-fma
+    #BLOCKIDX = auto() # block-lane-fma (i.e SVE FMA selects a lane for
+    #                  # each 128-bit block of elements)
+    #REGIDX = auto()
     PART = auto()
-    VF = auto()
+    #VF = auto()
     MASK = auto()
 
 
@@ -68,6 +69,7 @@ class opd3(operation):
                  adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                  a_dt : adt, b_dt : adt, c_dt : adt,
                  modifiers : set[opd3_modifier] = None,
+                 operand_modifiers : dict[str,set[operand_modifier]] = None,
                  **kwargs) -> str:
         """
         Return the ASM/IR instruction
@@ -90,12 +92,15 @@ class opd3(operation):
 
         if modifiers is None:
             modifiers = set()
+        if operand_modifiers is None:
+            operand_modifiers = dict()
 
         return self.execute(
             dregs=[adreg,bdreg,cdreg],
             gregs=[],
             dts={'adreg':a_dt,'bdreg':b_dt,'cdreg':c_dt},
             modifiers=modifiers,
+            operand_modifiers=operand_modifiers,
             **kwargs
         )
 
@@ -106,6 +111,7 @@ class opd3(operation):
                        bdreg : data_reg, cdreg : data_reg,
                        a_dt : adt, b_dt : adt, c_dt : adt,
                        modifiers : set[opd3_modifier] = None,
+                       operand_modifiers : dict[str,set[operand_modifier]] = None,
                        **kwargs) -> str:
         """
         opd3 implementation/call interface
@@ -123,5 +129,7 @@ class dummy_opd3(opd3):
     def implementation(self, *,
                        adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                        a_dt : adt, b_dt : adt, c_dt : adt,
-                       modifiers : set[opd3_modifier], **kwargs) -> str:
+                       modifiers : set[opd3_modifier],
+                       operand_modifiers : dict[str,set[operand_modifier]] = None,
+                       **kwargs) -> str:
         raise NotImplementedError(self.NIE_MESSAGE)

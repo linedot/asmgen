@@ -11,7 +11,12 @@ from typing import Any
 from dataclasses import dataclass,field
 
 from .modifier import operation_modifier
-from .operand import operand_shape,is_register_type,operand_type
+from .operand import (
+    operand_shape,
+    operand_modifier,
+    is_register_type,
+    operand_type
+)
 
 
 @dataclass(kw_only=True)
@@ -36,9 +41,10 @@ class operation_signature:
         return f"{mod_str}_{param_str}".strip("_")
 
     # It's a validation chain, not a complex control tree, so it's fine
-    # pylint: disable-next=too-many-return-statements
+    # pylint: disable-next=too-many-return-statements,too-many-branches
     def match_intent(self,
                      modifiers: set[operation_modifier],
+                     operand_modifiers: dict[str,set[operand_modifier]],
                      kwargs: dict[str, Any],
                      dts: dict[str, 'adt']) -> bool:
         """
@@ -64,7 +70,9 @@ class operation_signature:
             if name not in kwargs:
                 return False
 
-        base_kwargs={'dregs','gregs','modifiers','dt',
+        base_kwargs={'dregs','gregs','modifiers',
+                     'operand_modifiers',
+                     'dt',
                      'adreg','bdreg','cdreg','ddreg',
                      'agreg',
                      'amreg','bmreg',
@@ -76,12 +84,26 @@ class operation_signature:
                     key not in self.structural_params:
                 return False
 
+        # register type verification
         for name, shape in self.operands.items():
             if name in kwargs:
                 val = kwargs[name]
                 if shape.otype == operand_type.REGISTER and \
                         not is_register_type(val, shape.rtype):
                     return False
+
+        # operand modifier verification
+        for name, shape in self.operands.items():
+            provided_mods = operand_modifiers.get(name, set())
+            expected_mods = shape.modifiers if shape.modifiers else set()
+
+            if expected_mods != provided_mods:
+                return False
+
+        # operand mod exists for unknown operand
+        for name in operand_modifiers:
+            if name not in self.operands:
+                return False
 
         return True
 

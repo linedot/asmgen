@@ -8,7 +8,10 @@ Tests NEON/ASIMD fma instruction code generation
 """
 
 from asmgen.registers import asm_data_type as adt
-from asmgen.asmblocks.op import opd3_modifier as mod
+from asmgen.asmblocks.op import (
+    opd3_modifier as mod,
+    operand_modifier as opd_mod
+)
 
 from asmgen.asmblocks.op.opd3 import widening_method as wm
 
@@ -58,18 +61,20 @@ class test_neon_fmla(test_neon_opd3_base):
         # Note: lane indexing depends on dt size. FP32 has 4 lanes (0-3).
         res = self.gen.fma(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
                            a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32,
-                           modifiers={mod.IDX}, idx=2)
+                           operand_modifiers={'bdreg':{opd_mod.ILANE}}, bdreg_lane=2)
         self.assertEqual(res, "fmla v0.4s,v1.4s,v2.s[2]\n")
 
     def test_constraint_boundaries(self):
         """Test that out-of-bound immediates and registers are caught by constraints"""
 
         # 1. IDX out of bounds (FP32 max index is 3)
-        with self.subTest(error="idx bounds"):
-            with self.assertRaisesRegex(ValueError, "value of idx must be <= 3"):
+        with self.subTest(error="lane bounds"):
+            with self.assertRaisesRegex(ValueError,
+                                        "value of bdreg_lane must be <= 3"):
                 self.gen.fma(adreg=self.v1, bdreg=self.v2, cdreg=self.v0,
                              a_dt=adt.FP32, b_dt=adt.FP32, c_dt=adt.FP32,
-                             modifiers={mod.IDX}, idx=4)
+                             operand_modifiers={'bdreg':{opd_mod.ILANE}},
+                             bdreg_lane=4)
 
         # 2. PART out of bounds (FP16 -> FP32 max part is 1)
         with self.subTest(error="part bounds"):
@@ -85,7 +90,8 @@ class test_neon_fmla(test_neon_opd3_base):
             with self.assertRaisesRegex(ValueError, "index of bdreg must be <= 15"):
                 self.gen.fma(adreg=self.v1, bdreg=self.v16, cdreg=self.v0,  # v16 is invalid here!
                              a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP16,
-                             modifiers={mod.IDX}, idx=1)
+                             operand_modifiers={'bdreg':{opd_mod.ILANE}},
+                             bdreg_lane=1)
 
     def test_invalid_configurations(self):
         """Test mismatched types, missing kwargs, and unsupported forms"""
