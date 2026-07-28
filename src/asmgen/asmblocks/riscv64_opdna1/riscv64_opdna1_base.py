@@ -7,7 +7,7 @@
 RISCV64 +D/F opdna1 operations
 """
 
-from typing import Callable
+from typing import Callable,Any
 
 from ...registers import (
     asm_data_type as adt,
@@ -18,6 +18,7 @@ from ...registers import (
 
 from ..op import opdna1,opdna1_modifier as mod, opdna1_action
 from ..op import operation_signature
+from ..op import operand_modifier as opd_mod
 from ..types.riscv64_types import riscv64_greg,riscv64_freg
 
 
@@ -37,6 +38,55 @@ class riscv64_opdna1(opdna1):
         self.asmwrap = asmwrap
 
         self.signatures = make_riscv64_opdna1_signatures()
+
+    def diagnose_unsupported_mods(self, modifiers: set[mod]):
+        """
+        Check if any modifier is unsupported at all
+        """
+
+        unsupported_mods = {
+            mod.TINDEX:  (ValueError, "RISCV64 +D/F has no ld/st with 2D tile offset indices"),
+            mod.VINDEX:  (ValueError, "RISCV64 +D/F has no ld/st with 1D vector offset indices"),
+            mod.VOFFSET: (ValueError, "RISCV64 +D/F has no ld/st with 2D tile offsets"),
+            mod.TOFFSET: (ValueError, "RISCV64 +D/F has no ld/st with 2D tile offsets"),
+            mod.ISTRIDE: (ValueError, "RISCV64 +D/F has no ld/st with immediate strides"),
+            mod.GSTRIDE: (ValueError, "RISCV64 +D/F has no ld/st with GP-reg strides"),
+            mod.MASK:    (ValueError, "RISCV64 +D/F has no masked ld/st"),
+            mod.STRUCT:  (ValueError, "RISCV64 +D/F has no structured ld/st"),
+            mod.POSTINC: (ValueError, "RISCV64 +D/F has no postinc ld/st"),
+            mod.NT:      (ValueError, "RISCV64 +D/F has no non-temporals ld/st"),
+        }
+
+        for m, (exc_type, msg) in unsupported_mods.items():
+            if m in modifiers:
+                raise exc_type(msg)
+
+    def diagnose_unsupported_opd_mods(self, opd_mods : dict[str,set[opd_mod]]):
+        """
+        Check if any operand modifier is unsupported at all
+        """
+
+        unsupported_opd_mods = {
+            opd_mod.VF:        (ValueError, "VF mod makes no sense for ld/st"),
+            opd_mod.BLOCKLANE: (ValueError, "BLOCKLANE makes no sense for ld/st"),
+            opd_mod.BCAST:     (ValueError, "RISCV64 +D/F has no broadcasting ld/st"),
+            opd_mod.ROW:       (ValueError, "RISCV64 +D/F has no row selection ld/st"),
+            opd_mod.COL:       (ValueError, "RISCV64 +D/F has no column selection ld/st"),
+            opd_mod.ILANE:     (ValueError, "RISCV64 +D/F has no immediate lane selection ld/st"),
+            opd_mod.GLANE:     (ValueError, "RISCV64 +D/F has no GP-reg lane selection ld/st"),
+        }
+        for umod, (exc_type, msg) in unsupported_opd_mods.items():
+            for _, mods in opd_mods.items():
+                if umod in mods:
+                    raise exc_type(msg)
+
+    def diagnose_failure(self, modifiers: set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
+                         kwargs : dict[str,Any],
+                         dts : dict[str,adt]):
+
+        self.diagnose_unsupported_mods(modifiers)
+        self.diagnose_unsupported_opd_mods(operand_modifiers)
 
     @property
     def inst_base(self):
@@ -77,7 +127,9 @@ class riscv64_opdna1(opdna1):
         return self.signatures
 
     def implementation(self, *, dregs : list[data_reg], agreg : greg_base, a_dt : adt,
-                       modifiers : set[mod], **kwargs) -> str:
+                       modifiers : set[mod],
+                       operand_modifiers : dict[str,set[opd_mod]],
+                       **kwargs) -> str:
 
 
         dreg = dregs[0]

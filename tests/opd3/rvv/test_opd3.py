@@ -12,6 +12,7 @@ from asmgen.asmblocks.rvv import rvv
 from asmgen.registers import asm_data_type as adt
 
 from asmgen.asmblocks.op import opd3_modifier as mod
+from asmgen.asmblocks.op import operand_modifier as opd_mod
 
 from asmgen.asmblocks.op.opd3 import widening_method as wm
 
@@ -59,7 +60,7 @@ class test_rvv_opd3(unittest.TestCase):
                              bdreg=self.gen.freg(2, dt=adt.FP64),
                              cdreg=self.gen.vreg(0),
                              a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
-                             modifiers={mod.VF}))
+                             operand_modifiers={'bdreg':{opd_mod.VF}}))
 
     def test_fmul_vf_fp64(self):
         """
@@ -72,7 +73,7 @@ class test_rvv_opd3(unittest.TestCase):
                              bdreg=self.gen.freg(2, dt=adt.FP64),
                              cdreg=self.gen.vreg(0),
                              a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
-                             modifiers={mod.VF}))
+                             operand_modifiers={'bdreg':{opd_mod.VF}}))
 
 
     def test_fmul_vf_fp64_a_is_freg(self):
@@ -85,10 +86,10 @@ class test_rvv_opd3(unittest.TestCase):
         with self.assertRaisesRegex(
                 ValueError, err_msg):
             self.gen.fmul(adreg=self.gen.freg(1, dt=adt.FP64),
-                         bdreg=self.gen.vreg(2),
-                         cdreg=self.gen.vreg(0),
-                         a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
-                         modifiers={mod.VF})
+                          bdreg=self.gen.vreg(2),
+                          cdreg=self.gen.vreg(0),
+                          a_dt=adt.FP64, b_dt=adt.FP64, c_dt=adt.FP64,
+                          operand_modifiers={'bdreg':{opd_mod.VF}})
 
     def test_fma_fp32(self):
         """
@@ -176,7 +177,8 @@ class test_rvv_opd3(unittest.TestCase):
                              bdreg=self.gen.freg(0, adt.FP16),
                              cdreg=self.gen.vreg(0),
                              a_dt=adt.FP16, b_dt=adt.FP16, c_dt=adt.FP32,
-                             modifiers={mod.NP,mod.VF},
+                             modifiers={mod.NP},
+                             operand_modifiers={'bdreg':{opd_mod.VF}},
                              widening_method=wm.VEC_GROUP))
 
     def test_fma_vf_int32_np(self):
@@ -189,7 +191,8 @@ class test_rvv_opd3(unittest.TestCase):
                              bdreg=self.gen.greg(0),
                              cdreg=self.gen.vreg(0),
                              a_dt=adt.SINT32, b_dt=adt.SINT32, c_dt=adt.SINT32,
-                             modifiers={mod.NP,mod.VF}))
+                             modifiers={mod.NP},
+                             operand_modifiers={'bdreg':{opd_mod.VF}}))
 
     def test_fma_vf_int16int32_np_invalid(self):
         """
@@ -200,7 +203,8 @@ class test_rvv_opd3(unittest.TestCase):
                          bdreg=self.gen.greg(0),
                          cdreg=self.gen.vreg(0),
                          a_dt=adt.SINT16, b_dt=adt.SINT16, c_dt=adt.SINT32,
-                         modifiers={mod.NP, mod.VF},
+                         modifiers={mod.NP},
+                         operand_modifiers={'bdreg':{opd_mod.VF}},
                          widening_method=wm.VEC_GROUP)
 
 

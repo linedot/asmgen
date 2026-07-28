@@ -70,14 +70,14 @@ class test_riscv64_opdna1(unittest.TestCase):
 
     def test_scalar_invalid_modifiers(self):
         """ Ensure scalar class rejects invalid vector/matrix modifiers """
-        invalid_mods = [mod.TINDEX, mod.VINDEX, mod.GLANE, mod.ILANE, mod.POSTINC,
+        invalid_mods = [mod.TINDEX, mod.VINDEX, mod.POSTINC,
                         mod.TOFFSET, mod.VOFFSET, mod.ISTRIDE, mod.GSTRIDE, mod.STRUCT]
+
         for invalid_mod in invalid_mods:
             with self.subTest(modifier=invalid_mod):
                 with self.assertRaisesRegex(
                         ValueError,
-                        ("riscv64_opdna1 does not support these modifiers "
-                        f"at all: {{{invalid_mod.name}}}")):
+                        r"RISCV64 \+D/F has no"):
                     self.load(dregs=[self.t2], areg=self.t1, dt=adt.UINT64, modifiers={invalid_mod})
 
 if __name__ == '__main__':

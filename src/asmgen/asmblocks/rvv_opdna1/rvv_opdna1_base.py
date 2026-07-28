@@ -20,7 +20,8 @@ from ..op import (
     opdna1,
     opdna1_modifier as mod,
     opdna1_action,
-    operation_signature
+    operation_signature,
+    operand_modifier as opd_mod
 )
 
 from ..riscv64_opdna1.riscv64_opdna1_base import riscv64_opdna1
@@ -38,6 +39,8 @@ class rvv_opdna1(opdna1):
     Abstraction for loads/stores (maybe also prefetches)
     """
 
+    has_bcast = False
+
     def __init__(self, action : opdna1_action,
                  asmwrap : Callable[[str],str],
                  lmul_getter :Callable[[],int]):
@@ -47,7 +50,7 @@ class rvv_opdna1(opdna1):
 
         self.scalar_opdna1 = riscv64_opdna1(action=action, asmwrap=asmwrap)
 
-        self.signatures = make_rvv_opdna1_signatures(self.get_lmul)
+        self.signatures = make_rvv_opdna1_signatures(self.get_lmul, self.has_bcast)
         self.signatures.extend(self.scalar_opdna1.get_signatures())
 
     def get_signatures(self) -> list[operation_signature]:
@@ -64,57 +67,108 @@ class rvv_opdna1(opdna1):
             return "vs"
         raise ValueError(f"Invalid action: {self.action}")
 
-    # I explicitly want it this way
-    # pylint: disable-next=too-many-branches
-    def diagnose_failure(self, modifiers : set[mod],
-                         kwargs : dict[str,Any],
-                         dts : dict[str,adt]):
-        # Unsupported modifiers
-        if mod.TINDEX in modifiers:
-            raise ValueError("RVV has no ld/st with 2D tile offset indices")
-        if mod.GLANE in modifiers:
-            raise ValueError("RVV has no GP-reg lane ld/st")
-        if mod.ILANE in modifiers:
-            raise ValueError("RVV has no immediate lane ld/st")
-        if mod.POSTINC in modifiers:
-            raise ValueError("RVV has no postinc ld/st form")
-        if mod.TOFFSET in modifiers:
-            raise ValueError("RVV has no ld/st with 2D tile offsets")
-        if mod.VOFFSET in modifiers:
-            raise ValueError("RVV has no ld/st with vector offsets")
-        if mod.IOFFSET in modifiers:
-            raise ValueError("RVV has no ld/st with immediate offsets")
-        if mod.ISTRIDE in modifiers:
-            raise ValueError("RVV has no ld/st with immediate strides")
-        if mod.MASK in modifiers:
-            raise NotImplementedError("Masked ld/st for RVV not yet implemented")
-        if mod.ROW in modifiers:
-            raise ValueError("RVV has no row selection ld/st")
-        if mod.COL in modifiers:
-            raise ValueError("RVV has no column selection ld/st")
-        if mod.NT in modifiers:
-            raise NotImplementedError("Non-temporals for RVV not yet implemented")
+    def diagnose_unsupported_mods(self, modifiers: set[mod]):
+        """
+        Check if any modifier is unsupported at all
+        """
+
+        unsupported_mods = {
+            mod.TINDEX:  (ValueError, "RVV has no ld/st with 2D tile offset indices"),
+            mod.IOFFSET: (ValueError, "RVV has no ld/st with immediate offsets"),
+            mod.VOFFSET: (ValueError, "RVV has no ld/st with vector offsets"),
+            mod.TOFFSET: (ValueError, "RVV has no ld/st with 2D tile offsets"),
+            mod.ISTRIDE: (ValueError, "RVV has no ld/st with immediate strides"),
+            mod.MASK:    (NotImplementedError, "RVV masked ld/st not implemented yet"),
+            mod.POSTINC: (ValueError, "RVV has no postinc ld/st"),
+            mod.NT:      (ValueError, "RVV has no non-temporals ld/st"),
+        }
+
+        for m, (exc_type, msg) in unsupported_mods.items():
+            if m in modifiers:
+                raise exc_type(msg)
+
+    def diagnose_unsupported_opd_mods(self, opd_mods : dict[str,set[opd_mod]]):
+        """
+        Check if any operand modifier is unsupported at all
+        """
+
+        unsupported_opd_mods = {
+            opd_mod.VF:        (ValueError, "VF mod makes no sense for ld/st"),
+            opd_mod.BLOCKLANE: (ValueError, "BLOCKLANE makes no sense for ld/st"),
+            opd_mod.ROW:       (ValueError, "RVV has no row selection ld/st"),
+            opd_mod.COL:       (ValueError, "RVV has no column selection ld/st"),
+            opd_mod.ILANE:     (ValueError, "RVV has no immediate lane selection ld/st"),
+            opd_mod.GLANE:     (ValueError, "RVV has no GP-reg lane selection ld/st"),
+        }
+        for umod, (exc_type, msg) in unsupported_opd_mods.items():
+            for _, mods in opd_mods.items():
+                if umod in mods:
+                    raise exc_type(msg)
+
+    def diagnose_missing_params(self, modifiers : set[mod],
+                                operand_modifiers: dict[str,set[opd_mod]],
+                                kwargs : dict[str,Any]):
+        """
+        Check if mandatory additional parameters for specific modifiers are missing
+        """
+
+        # None that are supported need params
+        del operand_modifiers
+
+        required_params = {
+            mod.STRUCT  : ['nstructs'],
+            mod.GSTRIDE : ['streg'],
+            mod.VINDEX  : ['it','vidxreg'],
+        }
+        for m, plist in required_params.items():
+            for p in plist:
+                if m in modifiers and p not in kwargs:
+                    raise ValueError(f"{m.name} modifier requires '{p}' parameter")
+
+    def diagnose_bcast(self, modifiers : set[mod],
+                       operand_modifiers: dict[str,set[opd_mod]]):
+        """
+        Check if BCAST modifier was used correctly
+        """
+        has_bcast = any(opd_mod.BCAST in mods for mods in operand_modifiers.values())
+
+        if has_bcast:
+            if self.action != opdna1_action.LOAD:
+                raise ValueError("BCAST modifier is only valid for LOAD operations")
+
+            if not all(opd_mod.BCAST in mods
+                       for name, mods in operand_modifiers.items()
+                       if name != 'agreg'):
+                raise ValueError(
+                        "If an operand has BCAST modifier, all data operands must have it")
+
+            if mod.GSTRIDE in modifiers:
+                raise ValueError("BCAST and GSTRIDE are mutually exclusive")
 
         if (mod.GSTRIDE in modifiers) and (mod.VINDEX in modifiers):
             raise ValueError("mod.GSTRIDE and mod.VINDEX are mutually exclusive")
 
-        # Missing args
-        if mod.VINDEX in modifiers:
-            if "vidxreg" not in kwargs:
-                raise ValueError("Missing one of these parameters: vidxreg")
-            if "it" not in kwargs:
-                raise ValueError("Missing one of these parameters: it")
 
-        if mod.STRUCT in modifiers:
-            if "nstructs" not in kwargs:
-                raise ValueError("Missing one of these parameters: nstructs")
+    def diagnose_failure(self, modifiers : set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
+                         kwargs : dict[str,Any],
+                         dts : dict[str,adt]):
 
-        if mod.GSTRIDE in modifiers and "streg" not in kwargs:
-            raise ValueError("Missing one of these parameters: streg")
+        self.diagnose_unsupported_mods(modifiers)
+        self.diagnose_unsupported_opd_mods(operand_modifiers)
+
+        if (mod.GSTRIDE in modifiers) and (mod.VINDEX in modifiers):
+            raise ValueError("mod.GSTRIDE and mod.VINDEX are mutually exclusive")
+
+        self.diagnose_bcast(modifiers, operand_modifiers)
+
+        self.diagnose_missing_params(modifiers, operand_modifiers, kwargs)
 
 
     def get_instruction(self, base : str,
-                        modifiers: set[mod], dt : adt, **kwargs) -> str:
+                        modifiers: set[mod],
+                        operand_modifiers : dict[str,set[opd_mod]],
+                        dt : adt, **kwargs) -> str:
         """
         Constructs the instruction mnemonic
 
@@ -135,7 +189,10 @@ class rvv_opdna1(opdna1):
         # if mod.VINDEX: +i
         # +{eew}
 
-        if mod.GSTRIDE in modifiers:
+        has_bcast = any(opd_mod.BCAST in mods
+                        for _,mods in operand_modifiers.items())
+
+        if mod.GSTRIDE in modifiers or has_bcast:
             inst_name += "s"
         if mod.VINDEX in modifiers:
             inst_name += "ux" # only unordered.
@@ -154,13 +211,15 @@ class rvv_opdna1(opdna1):
         return inst_name
 
     def get_addressing(self, areg : riscv64_greg,
-                       modifiers: set[mod], **kwargs) -> str:
+                       modifiers: set[mod],
+                       operand_modifiers : dict[str,set[opd_mod]],
+                       **kwargs) -> str:
         """
         Constructs the addressing string
 
         :param areg: address register
         :param modifiers: operation modifiers
-        
+
         :return: string containing the addressing
         """
         if not isinstance(areg, riscv64_greg):
@@ -174,6 +233,11 @@ class rvv_opdna1(opdna1):
                 raise ValueError(f"{streg} is not a riscv64_greg")
             return f"{base_addr}, {streg}"
 
+        has_bcast = any(opd_mod.BCAST in mods
+                        for _,mods in operand_modifiers.items())
+        if has_bcast:
+            return f"{base_addr}, zero"
+
         if mod.VINDEX in modifiers:
             vidxreg = kwargs["vidxreg"]
             if not isinstance(vidxreg, rvv_vreg):
@@ -185,7 +249,9 @@ class rvv_opdna1(opdna1):
 
     def implementation(self, *, dregs : list[data_reg],
                        agreg : greg_base, a_dt : adt,
-                       modifiers : set[mod], **kwargs) -> str:
+                       modifiers : set[mod],
+                       operand_modifiers : dict[str,set[opd_mod]],
+                       **kwargs) -> str:
 
         if not dregs:
             raise ValueError("No dregs provided")
@@ -194,10 +260,18 @@ class rvv_opdna1(opdna1):
         if isinstance(dregs[0], (riscv64_greg, riscv64_freg)):
             return self.scalar_opdna1(
                     dregs=dregs, areg=agreg, dt=a_dt,
-                    modifiers=modifiers, **kwargs)
+                    modifiers=modifiers,
+                    operand_modifiers=operand_modifiers,
+                    **kwargs)
 
-        inst = self.get_instruction(self.inst_base, modifiers, a_dt, **kwargs)
-        addressing = self.get_addressing(agreg, modifiers, **kwargs)
+        inst = self.get_instruction(self.inst_base,
+                                    modifiers,
+                                    operand_modifiers,
+                                    a_dt, **kwargs)
+        addressing = self.get_addressing(agreg,
+                                         modifiers,
+                                         operand_modifiers,
+                                         **kwargs)
 
 
         dreg_str = str(dregs[0])

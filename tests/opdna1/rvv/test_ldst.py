@@ -9,6 +9,7 @@ RVV opdna1 (ld/st) testsuite
 import unittest
 
 from asmgen.asmblocks.op import opdna1_modifier as mod
+from asmgen.asmblocks.op import operand_modifier as opd_mod
 from asmgen.registers import asm_data_type as adt, asm_index_type as ait
 from asmgen.asmblocks.types.riscv64_types import riscv64_greg, riscv64_freg
 from asmgen.asmblocks.types.rvv_types import rvv_vreg
@@ -57,6 +58,37 @@ class test_rvv_opdna1(unittest.TestCase):
             "vlse64.v v0, (t0), t1\n"
         )
 
+    def test_broadcast_load(self):
+        """
+        Test broadcasting a single element to all lanes
+        (BCAST mapped to vlse with zero stride)
+        """
+        self.assertEqual(
+            self.rvv.load(dregs=self.vs[:1], areg=self.t0, dt=adt.FP32,
+                          modifiers=set(),
+                          operand_modifiers={'adreg': {opd_mod.BCAST}}),
+            "vlse32.v v0, (t0), zero\n"
+        )
+
+    def test_broadcast_segmented_load(self):
+        """ Test broadcasting a structure to all lanes (vlseg with zero stride) """
+        # e.g., Broadcasting an RGB pixel to all lanes
+        self.assertEqual(
+            self.rvv.load(dregs=self.vs[4:7], areg=self.t0, dt=adt.UINT8,
+                          modifiers={mod.STRUCT}, nstructs=3,
+                          operand_modifiers={'adreg': {opd_mod.BCAST},
+                                             'bdreg': {opd_mod.BCAST},
+                                             'cdreg': {opd_mod.BCAST}}),
+            "vlsseg3e8.v v4, (t0), zero\n"
+        )
+
+    def test_bcast_on_store_fails(self):
+        """ Test that trying to broadcast on a store is correctly rejected """
+        with self.assertRaisesRegex(ValueError, "only valid for LOAD"):
+            self.rvv.store(dregs=self.vs[:1], areg=self.t0, dt=adt.FP32,
+                           modifiers=set(),
+                           operand_modifiers={'adreg': {opd_mod.BCAST}})
+
     def test_indexed_vector_operations(self):
         """ Test unordered indexed vector operations (vluxei/vsuxei) """
         self.assertEqual(
@@ -90,10 +122,13 @@ class test_rvv_opdna1(unittest.TestCase):
 
     def test_missing_required_parameters(self):
         """ Test kwargs validation for VINDEX and STRUCT """
-        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: vidxreg"):
-            self.rvv.load(dregs=self.vs[:1], areg=self.t0, dt=adt.FP32, modifiers={mod.VINDEX})
+        with self.assertRaisesRegex(ValueError,
+                                    "VINDEX modifier requires '(vidxreg|it)' parameter"):
+            self.rvv.load(dregs=self.vs[:1], areg=self.t0, dt=adt.FP32,
+                          modifiers={mod.VINDEX})
 
-        with self.assertRaisesRegex(ValueError, "Missing one of these parameters: nstructs"):
+        with self.assertRaisesRegex(ValueError,
+                                    "STRUCT modifier requires 'nstructs' parameter"):
             self.rvv.load(dregs=self.vs[:1], areg=self.t0, dt=adt.FP32, modifiers={mod.STRUCT})
 
 if __name__ == '__main__':

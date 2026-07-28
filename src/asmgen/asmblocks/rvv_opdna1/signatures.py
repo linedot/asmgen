@@ -15,7 +15,8 @@ from ..op import (
     operand_shape as osh,
     operand_type as ot,
     register_type as rt,
-    opdna1_modifier as mod
+    opdna1_modifier as mod,
+    operand_modifier as opd_mod
 )
 
 from ..op.constraint import otherplusn_constraint
@@ -39,7 +40,7 @@ class struct_constraint(otherplusn_constraint):
     makeval : Callable[[int],rvv_vreg] = lambda idx : rvv_vreg(reg_idx=idx)
 
 
-def make_rvv_opdna1_signatures(get_lmul: Callable[[],int]):
+def make_rvv_opdna1_signatures(get_lmul: Callable[[],int], has_bcast=False):
     """
     Generate signatures for RVV opdna1 operations
     """
@@ -104,6 +105,27 @@ def make_rvv_opdna1_signatures(get_lmul: Callable[[],int]):
                 operands=operands
                 ))
 
+
+            if has_bcast:
+                # BCAST + STRUCT
+                bcast_operands = {
+                    'agreg' : osh(ot.REGISTER, rt.GP, adt.UINT64),
+                    'adreg' : osh(ot.REGISTER, rt.VEC, dt, modifiers={opd_mod.BCAST})
+                }
+                bcast_operands.update({
+                    mop(i)+'dreg': osh(ot.REGISTER, rt.VEC, dt,
+                                       modifiers={opd_mod.BCAST},
+                                       value_constraints=[
+                                           sc(other=mop(i-1)+'dreg', offset=get_lmul())
+                                       ])
+                    for i in range(1,nstructs)
+                })
+                sigs.append(sig(
+                    modifiers={mod.STRUCT},
+                    structural_params={'nstructs': nstructs},
+                    operands=bcast_operands
+                ))
+
         # VINDEX
         sigs.append(sig(
             modifiers={mod.VINDEX},
@@ -128,6 +150,19 @@ def make_rvv_opdna1_signatures(get_lmul: Callable[[],int]):
                 'streg': osh(ot.REGISTER, rt.GP, adt.UINT64)
                 }
             ))
+
+        if has_bcast:
+            # BCAST
+            sigs.append(sig(
+                modifiers=set(),
+                structural_params={
+                    },
+                operands={
+                    'adreg': osh(ot.REGISTER, rt.VEC, dt,
+                                 modifiers={opd_mod.BCAST}),
+                    'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64)
+                    }
+                ))
 
         # TODO:
         # - STRUCT+VINDEX

@@ -12,7 +12,8 @@ from ..op import (
     operand_shape as osh,
     operand_type as ot,
     register_type as rt,
-    opd3_modifier as mod
+    opd3_modifier as mod,
+    operand_modifier as opd_mod
 )
 
 from ..op.opd3 import widening_method as wm
@@ -56,42 +57,53 @@ def make_rvv_opd3_signatures(supports_np: bool) -> list[sig]:
 
     np_options = [set(), {mod.NP}] if supports_np else [set()]
 
-    def add_sig(a_dt, b_dt, c_dt, *, b_rt, mods, is_widening=False):
+    def add_sig(a_dt, b_dt, c_dt, *, b_rt, mods, opd_mods=None, is_widening=False):
+        if opd_mods is None:
+            opd_mods = dict()
         struct_params = {'widening_method': wm.VEC_GROUP} if is_widening else {}
         constraints = [_RVV_IDX_2X] if is_widening else []
 
+        b_mods = opd_mods.get('bdreg',set())
         sigs.append(sig(
             modifiers=mods,
             structural_params=struct_params,
             operands={
                 'adreg': osh(ot.REGISTER, rt.VEC, a_dt),
-                'bdreg': osh(ot.REGISTER, b_rt, b_dt),
+                'bdreg': osh(ot.REGISTER, b_rt, b_dt, modifiers=b_mods),
                 'cdreg': osh(ot.REGISTER, rt.VEC, c_dt, value_constraints=constraints)
             }
         ))
 
     for dt in _FLOATS:
-        for base_mods, b_rt in [(set(), rt.VEC), ({mod.VF}, rt.FP)]:
+        for b_mods, b_rt in [(set(), rt.VEC), ({opd_mod.VF}, rt.FP)]:
             for np_mod in np_options:
-                mods = base_mods | np_mod
+                mods = np_mod
 
-                add_sig(dt, dt, dt, b_rt=b_rt, mods=mods)
+                add_sig(dt, dt, dt, b_rt=b_rt, mods=mods, opd_mods={'bdreg':b_mods})
                 if dt in _WIDENING_MAP:
-                    add_sig(dt, dt, _WIDENING_MAP[dt], b_rt=b_rt, mods=mods, is_widening=True)
+                    add_sig(dt, dt, _WIDENING_MAP[dt], b_rt=b_rt,
+                            mods=mods,
+                            opd_mods={'bdreg':b_mods},
+                            is_widening=True)
 
     for dt in _INTS:
-        for base_mods, b_rt in [(set(), rt.VEC), ({mod.VF}, rt.GP)]:
+        for b_mods, b_rt in [(set(), rt.VEC), ({opd_mod.VF}, rt.GP)]:
             for np_mod in np_options:
-                mods = base_mods | np_mod
+                mods = np_mod
 
-                add_sig(dt, dt, dt, b_rt=b_rt, mods=mods)
+                add_sig(dt, dt, dt, b_rt=b_rt, mods=mods, opd_mods={'bdreg':b_mods})
 
                 if dt in _WIDENING_MAP:
                     if mod.NP in mods:
                         continue
-                    add_sig(dt, dt, _WIDENING_MAP[dt], b_rt=b_rt, mods=mods, is_widening=True)
+                    add_sig(dt, dt, _WIDENING_MAP[dt], b_rt=b_rt,
+                            mods=mods,
+                            opd_mods={'bdreg':b_mods},
+                            is_widening=True)
 
     for a_dt, b_dt, c_dt in _MIXED_INTS:
-        add_sig(a_dt, b_dt, c_dt, b_rt=rt.GP, mods={mod.VF}, is_widening=True)
+        add_sig(a_dt, b_dt, c_dt, b_rt=rt.GP, mods=set(), is_widening=True)
+        add_sig(a_dt, b_dt, c_dt, b_rt=rt.GP, mods=set(),
+                opd_mods={'bdreg':{opd_mod.VF}}, is_widening=True)
 
     return sigs

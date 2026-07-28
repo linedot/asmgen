@@ -17,6 +17,8 @@ class rvv_load(rvv_opdna1):
     RVV vector loads
     """
 
+    has_bcast = True
+
     def __init__(self,
                  asmwrap : Callable[[str],str],
                  lmul_getter :Callable[[],int]):
