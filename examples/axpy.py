@@ -4,225 +4,295 @@
 # Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
 # ------------------------------------------------------------------------------
 """
-Example generating an AXPY function
+Example generating an AXPY function with dynamic unrolling and arithmetic selection.
 """
 
-import sys
 import importlib
+import argparse
 
 from asmgen.registers import (
-        adt_size,
-        asm_data_type as adt,
-        reg_tracker
+    adt_size,
+    asm_data_type as adt,
+    reg_tracker
 )
 from asmgen.asmblocks.noarch import asmgen
 from asmgen.callconv.fngen import fngen
 from asmgen.asmblocks.noarch import comparison
-from asmgen.asmblocks.op import opd3_modifier as opd3_mod
+
+from asmgen.asmblocks.op import (
+    opdna1_modifier as ld_mod,
+    operand_modifier as opd_mod
+)
 from asmgen.asmblocks.op.operand import register_type as op_rt
 
-isa_modules = {
-        "fma128" : "avx_fma",
-        "fma256" : "avx_fma",
-        "avx512" : "avx_fma",
-        }
+ISA_MODULES = {
+    "fma128": "avx_fma",
+    "fma256": "avx_fma",
+    "avx512": "avx_fma",
+    "neon":   "neon",
+    "sve":    "sve",
+    "sme":    "sme",
+    "rvv":    "rvv"
+}
 
-def get_simplest_signature(signatures, dt, req_rt=None, require_mod=None):
+# -----------------------------------------------------------------------------
+# Signature Resolution Helpers
+# -----------------------------------------------------------------------------
+
+def get_complexity(signature):
     """
-    Finds the simplest matching signature for a given datatype.
-    Optionally enforces register type and/or a specific modifier.
+    Sorts signatures by fewest instruction mods, fewest operand mods,
+    then fewest operands
     """
-    valid_sigs = []
-    for s in signatures:
-        if s.operands['adreg'].dt == dt:
-            # Check register type (e.g. ensure we don't accidentally pick a scalar signature)
-            if req_rt and s.operands['adreg'].rtype != req_rt:
-                continue
+    opd_mod_count = sum(len(shape.modifiers)
+                        for shape in signature.operands.values()
+                        if shape.modifiers)
+    return (len(signature.modifiers), opd_mod_count, len(signature.operands))
 
-            if require_mod and require_mod not in s.modifiers:
-                continue
+def resolve_ldst_sig(signatures, dt, req_rt):
+    # Only allow signatures that use operands this specific microkernel can provide
+    safelist = {'adreg', 'agreg', 'amreg', 'ioffset', 'voffset'}
 
-            valid_sigs.append(s)
+    valid = [s for s in signatures
+             if s.operands['adreg'].dt == dt and s.operands['adreg'].rtype == req_rt]
+    valid = [s for s in valid
+             if set(s.operands.keys()).issubset(safelist)]
 
-    if not valid_sigs:
-        return None
+    if not valid:
+        raise RuntimeError(f"No valid load/store signature found for {dt}")
 
-    # Sort by number of modifiers; fewer modifiers = more "basic" instruction
-    return sorted(valid_sigs, key=lambda s: len(s.modifiers))[0]
+    valid = sorted(valid, key=get_complexity)
 
-def build_kwargs_from_modifiers(modifiers, mreg):
+    for s in valid:
+        if ld_mod.VOFFSET in s.modifiers: return s, "voffset"
+    for s in valid:
+        if ld_mod.IOFFSET in s.modifiers: return s, "ioffset"
+
+    return valid[0], "none"
+
+def resolve_arith_sig(signatures, dt, req_rt):
+    # AXPY only provides standard A, B, C, and Masks.
+    # This automatically filters out BLOCKLANE, PART, and other exotic variants!
+    safelist = {'adreg', 'bdreg', 'cdreg', 'amreg', 'bmreg', 'cmreg'}
+
+    valid = [s for s in signatures
+             if s.operands['adreg'].dt == dt and s.operands['adreg'].rtype == req_rt]
+    valid = [s for s in valid if set(s.operands.keys()).issubset(safelist)]
+
+    if not valid:
+        raise RuntimeError(f"No valid arithmetic signature found for {dt}")
+
+    valid = sorted(valid, key=get_complexity)
+
+    for s in valid:
+        if 'bdreg' in s.operands and opd_mod.VF in s.operands['bdreg'].modifiers:
+            return s, True
+
+    return valid[0], False
+
+def build_kwargs(signature, mreg=None):
     """
-    Dynamically generates the required kwargs dict based on active modifiers.
+    Supplies kwargs strictly based on what the signature's physical shape demands.
     """
     kw = {}
-    for m in modifiers:
-        if m.name == "MASK":
-            kw['amreg'] = mreg
-            kw['bmreg'] = mreg # Passed safely just in case it's an opd3 that requires both
-        elif m.name == "IOFFSET":
-            kw['ioffset'] = 0
+    if mreg is not None:
+        for name, shape in signature.operands.items():
+            if shape.rtype == op_rt.MASK:
+                kw[name] = mreg
     return kw
 
+def emit_ptr_bumping(gen: asmgen, addr_x, addr_y, vlen_reg, unroll, vbytes, dt):
+    block = ""
+    if vlen_reg:
+        for _ in range(unroll):
+            block += gen.add_greg_greg(dst=addr_x, reg1=addr_x, reg2=vlen_reg)
+            block += gen.add_greg_greg(dst=addr_y, reg1=addr_y, reg2=vlen_reg)
+    elif gen.max_add_voff >= unroll:
+        block += gen.add_greg_voff(reg=addr_x, offset=unroll, dt=dt)
+        block += gen.add_greg_voff(reg=addr_y, offset=unroll, dt=dt)
+    else:
+        block += gen.add_greg_imm(reg=addr_x, imm=unroll * vbytes)
+        block += gen.add_greg_imm(reg=addr_y, imm=unroll * vbytes)
+    return block
+
+# -----------------------------------------------------------------------------
+# Main Generator
+# -----------------------------------------------------------------------------
+
 def main():
+    parser = argparse.ArgumentParser(description="AXPY Microkernel Generator")
+    parser.add_argument("--isa", type=str, default="rvv", choices=ISA_MODULES.keys())
+    parser.add_argument("--unroll", type=int, default=1,
+                        help="Number of vectors to unroll")
+    parser.add_argument("--arith", type=str, choices=['fma', 'fmul_fadd'], default='fma')
+    args = parser.parse_args()
+
     dt = adt.FP64
+    module_name = ISA_MODULES[args.isa]
 
-    isa = 'rvv'
-    if len(sys.argv) == 2:
-        isa = sys.argv[1]
+    vbytes_map = {'avx_fma': 32
+                  if args.isa == 'fma256' else (16 if args.isa == 'fma128' else 64),
+                  'neon': 16}
+    vbytes = vbytes_map.get(module_name, 16)
 
-    module_name = isa
-    if isa in isa_modules:
-        module_name = isa_modules[isa]
-    generator_module = importlib.import_module(f"asmgen.asmblocks.{module_name}")
+    generator_class = getattr(
+            importlib.import_module(f"asmgen.asmblocks.{module_name}"), args.isa)
+    gen: asmgen = generator_class()
+    gen.set_output_inline(False)
 
-    generator_class = getattr(generator_module, isa)
-
-    gen : asmgen = generator_class()
-    gen.set_output_inline(yesno=False)
     rt = reg_tracker(reg_type_init_list=[
-        ("greg",gen.max_gregs),
-        ("freg",gen.max_fregs),
-        ("vreg",gen.max_vregs),
-        ("treg",gen.max_tregs(dt=dt)),
-        ("mreg",gen.max_mregs)
-        ])
+        ("greg", gen.max_gregs), ("freg", gen.max_fregs),
+        ("vreg", gen.max_vregs), ("mreg", gen.max_mregs)
+    ])
+
     cc = gen.create_callconv()
-
-    func = fngen(gen=gen, rt=rt)
-
     cc.add_param("greg", "x")
     cc.add_param("greg", "y")
     cc.add_param("freg", "alpha", adt.FP64)
     cc.add_param("greg", "n")
 
-    fnname = "myfunction"
+    func = fngen(gen=gen, rt=rt)
     func.init_cc(cc=cc)
 
-    addr_x_idx     = rt.aliased_regs["greg"]["x"]
-    addr_y_idx     = rt.aliased_regs["greg"]["y"]
-    n_idx          = rt.aliased_regs["greg"]["n"]
+    addr_x = gen.greg(rt.aliased_regs["greg"]["x"])
+    addr_y = gen.greg(rt.aliased_regs["greg"]["y"])
+    n = gen.greg(rt.aliased_regs["greg"]["n"])
+    alpha = gen.freg(rt.aliased_regs["freg"]["alpha"], dt=dt)
 
-    asmheader = (
-             ".section .text\n"
-            f".global {fnname}\n"
-            f"{fnname}:\n  "
-        )
+    x_regs = [gen.vreg(rt.reserve_any_reg("vreg")) for _ in range(args.unroll)]
+    y_regs = [gen.vreg(rt.reserve_any_reg("vreg")) for _ in range(args.unroll)]
 
-    innerblock = ""
+    innerblock = gen.isaquirks(dt=dt, rt=rt)
 
-    addr_x = gen.greg(addr_x_idx)
-    addr_y = gen.greg(addr_y_idx)
-    n = gen.greg(n_idx)
-
-    x_idx = rt.reserve_any_reg("vreg")
-    x = gen.vreg(x_idx)
-    y_idx = rt.reserve_any_reg("vreg")
-    y = gen.vreg(y_idx)
-    alpha_idx = rt.aliased_regs["freg"]["alpha"]
-    alpha = gen.freg(alpha_idx, dt=dt)
-
-    innerblock += gen.isaquirks(dt=dt,rt=rt)
-
+    vlen_reg = None
     if "vlen" in rt.aliased_regs["greg"]:
-        vlenidx = rt.aliased_regs["greg"]["vlen"]
-        vlen = gen.greg(vlenidx)
-        innerblock += gen.shift_greg_left(
-                reg=vlen,
-                bit_count=adt_size(dt).bit_length()-1)
+        vlen_reg = gen.greg(rt.aliased_regs["greg"]["vlen"])
+        shift_amt = adt_size(dt).bit_length() - 1
+        if shift_amt > 0:
+            innerblock += gen.shift_greg_left(reg=vlen_reg, bit_count=shift_amt)
 
-    # -------------------------------------------------------------------------
-    # 1. Declaratively resolve operation signatures
-    # -------------------------------------------------------------------------
+    # 1. Resolve Signatures
+    ld_sig, offset_type = resolve_ldst_sig(gen.load.get_signatures(), dt, op_rt.VEC)
+    st_sig, _ = resolve_ldst_sig(gen.store.get_signatures(), dt, op_rt.VEC)
 
-    # Look for an FMA signature that supports scalar-vector (VF)
-    fma_sig = get_simplest_signature(gen.fma.get_signatures(), dt,
-                                     req_rt=op_rt.VEC, require_mod=opd3_mod.VF)
-
-    if fma_sig:
-        can_vf = True
+    if args.arith == 'fma':
+        arith_sig, can_vf = resolve_arith_sig(gen.fma.get_signatures(), dt, op_rt.VEC)
+        arith_sig2 = None
     else:
-        # Fallback to standard vector-vector FMA
-        can_vf = False
-        fma_sig = get_simplest_signature(gen.fma.get_signatures(), dt,
-                                         req_rt=op_rt.VEC)
+        arith_sig, can_vf = resolve_arith_sig(gen.fmul.get_signatures(), dt, op_rt.VEC)
+        arith_sig2, _ = resolve_arith_sig(gen.fadd.get_signatures(), dt, op_rt.VEC)
 
-    # Get standard load and store signatures
-    ld_sig = get_simplest_signature(gen.load.get_signatures(), dt,
-                                    req_rt=op_rt.VEC)
-    st_sig = get_simplest_signature(gen.store.get_signatures(), dt,
-                                    req_rt=op_rt.VEC)
+    # 2. Setup Masking
+    needs_mask = any(
+        shape.rtype == op_rt.MASK
+        for s in (ld_sig, st_sig, arith_sig, arith_sig2) if s
+        for shape in s.operands.values()
+    )
 
-    fma_mods = fma_sig.modifiers
-    ld_mods = ld_sig.modifiers
-    st_mods = st_sig.modifiers
-
-    # -------------------------------------------------------------------------
-    # 2. Check mask requirements and allocate if necessary
-    # -------------------------------------------------------------------------
-
-    needs_mask = any(m.name == "MASK" for m in fma_mods | ld_mods | st_mods)
     mreg = None
-
     if needs_mask:
-        m_idx = rt.reserve_any_reg("mreg")
-        mreg = gen.mreg(m_idx)
-        # Initialize to all-true for basic unpredicated loop behavior
+        mreg = gen.mreg(rt.reserve_any_reg("mreg"))
         if hasattr(gen, "ptrue"):
-            innerblock += gen.ptrue(reg=mreg, dt=dt) # SVE
+            innerblock += gen.ptrue(reg=mreg, dt=dt)
         elif hasattr(gen, "init_mask_all"):
             innerblock += gen.init_mask_all(mreg=mreg, dt=dt)
 
-    # Pre-build the kwargs dictated by the chosen signatures
-    ld_kwargs = build_kwargs_from_modifiers(ld_mods, mreg)
-    st_kwargs = build_kwargs_from_modifiers(st_mods, mreg)
-    fma_kwargs = build_kwargs_from_modifiers(fma_mods, mreg)
-
-    # -------------------------------------------------------------------------
-    # 3. Setup scalar/vector broadcast based on capability
-    # -------------------------------------------------------------------------
+    ld_kwargs = build_kwargs(ld_sig, mreg)
+    st_kwargs = build_kwargs(st_sig, mreg)
 
     if not can_vf:
-        alpha_vreg_idx = rt.reserve_any_reg("vreg")
-        alpha_vreg = gen.vreg(alpha_vreg_idx)
+        alpha_vreg = gen.vreg(rt.reserve_any_reg("vreg"))
         innerblock += gen.fill_vector(sreg=alpha, vreg=alpha_vreg, dt=dt)
         breg = alpha_vreg
+        opd_modifiers = {}
     else:
         breg = alpha
+        opd_modifiers = {'bdreg': {opd_mod.VF}}
 
     innerblock += gen.label(label="loop")
 
-    # -------------------------------------------------------------------------
-    # 4. Generate Core Loop using declarative opdna1 / opd3 APIs
-    # -------------------------------------------------------------------------
+    # 3. Core Loop Gen
+    if offset_type != "none":
+        for i in range(args.unroll):
+            kw = ld_kwargs.copy()
+            if offset_type == "voffset": kw['voffset'] = i
+            else:                        kw['ioffset'] = i * vbytes
+            innerblock += gen.load(dregs=[x_regs[i]], areg=addr_x,
+                                   dt=dt, modifiers=ld_sig.modifiers, **kw)
+            innerblock += gen.load(dregs=[y_regs[i]], areg=addr_y,
+                                   dt=dt, modifiers=ld_sig.modifiers, **kw)
 
-    innerblock += gen.load(dregs=[x], areg=addr_x, dt=dt, modifiers=ld_mods, **ld_kwargs)
-    innerblock += gen.load(dregs=[y], areg=addr_y, dt=dt, modifiers=ld_mods, **ld_kwargs)
+        for i in range(args.unroll):
+            if args.arith == 'fma':
+                innerblock += gen.fma(adreg=x_regs[i], bdreg=breg, cdreg=y_regs[i],
+                                      a_dt=dt, b_dt=dt, c_dt=dt,
+                                      modifiers=arith_sig.modifiers,
+                                      operand_modifiers=opd_modifiers,
+                                      **build_kwargs(arith_sig, mreg))
+            else:
+                innerblock += gen.fmul(adreg=x_regs[i], bdreg=breg, cdreg=x_regs[i],
+                                       a_dt=dt, b_dt=dt, c_dt=dt,
+                                       modifiers=arith_sig.modifiers,
+                                       operand_modifiers=opd_modifiers,
+                                       **build_kwargs(arith_sig, mreg))
+                innerblock += gen.fadd(adreg=x_regs[i], bdreg=y_regs[i], cdreg=y_regs[i],
+                                       a_dt=dt, b_dt=dt, c_dt=dt,
+                                       modifiers=arith_sig2.modifiers,
+                                       operand_modifiers={},
+                                       **build_kwargs(arith_sig2, mreg))
 
-    innerblock += gen.fma(
-            adreg=x,
-            bdreg=breg,
-            cdreg=y,
-            a_dt=dt, b_dt=dt, c_dt=dt,
-            modifiers=fma_mods,
-            **fma_kwargs)
+        for i in range(args.unroll):
+            kw = st_kwargs.copy()
+            if offset_type == "voffset": kw['voffset'] = i
+            else:                        kw['ioffset'] = i * vbytes
+            innerblock += gen.store(dregs=[y_regs[i]], areg=addr_y,
+                                    dt=dt, modifiers=st_sig.modifiers, **kw)
 
-    innerblock += gen.store(dregs=[y], areg=addr_y, dt=dt, modifiers=st_mods, **st_kwargs)
+        innerblock += emit_ptr_bumping(gen, addr_x, addr_y,
+                                       vlen_reg, args.unroll, vbytes, dt)
 
-    # Loop pointer updates
-    if "vlen" in rt.aliased_regs["greg"]:
-        innerblock += gen.add_greg_greg(dst=addr_x, reg1=addr_x, reg2=vlen)
-        innerblock += gen.add_greg_greg(dst=addr_y, reg1=addr_y, reg2=vlen)
     else:
-        innerblock += gen.add_greg_voff(reg=addr_x, offset=1, dt=dt)
-        innerblock += gen.add_greg_voff(reg=addr_y, offset=1, dt=dt)
+        for i in range(args.unroll):
+            innerblock += gen.load(dregs=[x_regs[i]], areg=addr_x,
+                                   dt=dt, modifiers=ld_sig.modifiers, **ld_kwargs)
+            innerblock += gen.load(dregs=[y_regs[i]], areg=addr_y,
+                                   dt=dt, modifiers=ld_sig.modifiers, **ld_kwargs)
 
-    innerblock += gen.add_greg_imm(reg=n,imm=-1)
+            if args.arith == 'fma':
+                innerblock += gen.fma(adreg=x_regs[i], bdreg=breg, cdreg=y_regs[i],
+                                      a_dt=dt, b_dt=dt, c_dt=dt,
+                                      modifiers=arith_sig.modifiers,
+                                      operand_modifiers=opd_modifiers,
+                                      **build_kwargs(arith_sig, mreg))
+            else:
+                innerblock += gen.fmul(adreg=x_regs[i], bdreg=breg, cdreg=x_regs[i],
+                                       a_dt=dt, b_dt=dt, c_dt=dt,
+                                       modifiers=arith_sig.modifiers,
+                                       operand_modifiers=opd_modifiers,
+                                       **build_kwargs(arith_sig, mreg))
+                innerblock += gen.fadd(adreg=x_regs[i], bdreg=y_regs[i], cdreg=y_regs[i],
+                                       a_dt=dt, b_dt=dt, c_dt=dt,
+                                       modifiers=arith_sig2.modifiers,
+                                       operand_modifiers={},
+                                       **build_kwargs(arith_sig2, mreg))
+
+            innerblock += gen.store(dregs=[y_regs[i]], areg=addr_y,
+                                    dt=dt, modifiers=st_sig.modifiers, **st_kwargs)
+            innerblock += emit_ptr_bumping(gen, addr_x, addr_y,
+                                           vlen_reg, 1, vbytes, dt)
+
+    innerblock += gen.add_greg_imm(reg=n, imm=-1)
     innerblock += gen.cb(reg1=n, reg2=None, cmp=comparison.NZ, label="loop")
 
-    fnsave,fnload,fnrestore = func.get_boilerplate(cc=cc)
-    asmblock = asmheader + fnsave + fnload + innerblock + fnrestore
+    if hasattr(gen, "isaendquirks"):
+        innerblock += gen.isaendquirks(dt=dt, rt=rt)
 
-    print(asmblock)
+    fnsave, fnload, fnrestore = func.get_boilerplate(cc=cc)
+
+    print(".section .text")
+    print(".global myfunction")
+    print("myfunction:")
+    print(fnsave + fnload + innerblock + fnrestore)
 
 if __name__ == "__main__":
     main()
