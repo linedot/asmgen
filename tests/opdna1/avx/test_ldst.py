@@ -8,7 +8,10 @@ Test AVX loads/stores
 """
 import unittest
 
-from asmgen.asmblocks.op import opdna1_modifier as mod
+from asmgen.asmblocks.op import (
+    opdna1_modifier as mod,
+    operand_modifier as opd_mod
+)
 from asmgen.registers import asm_data_type as adt, asm_index_type as ait
 from asmgen.asmblocks.types.avx_types import (
     x86_greg,
@@ -97,25 +100,25 @@ class test_avx_opdna1(unittest.TestCase):
         """
         self.assertEqual(
             self.load_256(dregs=[self.ymm0], areg=self.r8, dt=adt.FP32,
-                          modifiers={mod.BCAST}),
+                          operand_modifiers={'adreg':{opd_mod.BCAST}}),
             "vbroadcastss (%r8), %ymm0\n"
         )
         # BCAST should fail on STORE
         with self.assertRaisesRegex(ValueError, "BCAST modifier can't be used with stores"):
             self.store_512(dregs=[self.zmm0], areg=self.r8, dt=adt.FP32,
-                           modifiers={mod.BCAST})
+                          operand_modifiers={'adreg':{opd_mod.BCAST}})
 
     # --- 3. Lane Loads (Primitives) ---
     def test_lane_loads_fp64(self):
         """ Test FP64 vmovsd (lane 0) and vmovhpd (lane 1) """
         self.assertEqual(
             self.load_128(dregs=[self.xmm0], areg=self.r8, dt=adt.FP64,
-                          modifiers={mod.ILANE}, lane=0),
+                          operand_modifiers={'adreg':{opd_mod.ILANE}}, adreg_lane=0),
             "vmovsd (%r8), %xmm0\n"
         )
         self.assertEqual(
             self.load_128(dregs=[self.xmm0], areg=self.r8, dt=adt.FP64,
-                          modifiers={mod.ILANE}, lane=1),
+                          operand_modifiers={'adreg':{opd_mod.ILANE}}, adreg_lane=1),
             "vmovhpd (%r8), %xmm0, %xmm0\n"
         )
 
@@ -123,13 +126,13 @@ class test_avx_opdna1(unittest.TestCase):
         """ Test FP32 vmovss (lane 0) and vinsertps (lane > 0) """
         self.assertEqual(
             self.load_128(dregs=[self.xmm1], areg=self.r8, dt=adt.FP32,
-                          modifiers={mod.ILANE}, lane=0),
+                          operand_modifiers={'adreg':{opd_mod.ILANE}}, adreg_lane=0),
             "vmovss (%r8), %xmm1\n"
         )
         # lane 1 << 4 = 0x10
         self.assertEqual(
             self.load_128(dregs=[self.xmm1], areg=self.r8, dt=adt.FP32,
-                          modifiers={mod.ILANE}, lane=1),
+                          operand_modifiers={'adreg':{opd_mod.ILANE}}, adreg_lane=1),
             "vinsertps $16, (%r8), %xmm1, %xmm1\n"
         )
     def test_lane_stores_float(self):
@@ -137,13 +140,13 @@ class test_avx_opdna1(unittest.TestCase):
         # FP64 lane 1
         self.assertEqual(
             self.store_128(dregs=[self.xmm0], areg=self.r8, dt=adt.FP64,
-                           modifiers={mod.ILANE}, lane=1),
+                           operand_modifiers={'adreg':{opd_mod.ILANE}}, adreg_lane=1),
             "vmovhpd %xmm0,(%r8)\n"
         )
         # FP32 lane 2 (2 << 4 = 32)
         self.assertEqual(
             self.store_128(dregs=[self.xmm1], areg=self.r8, dt=adt.FP32,
-                           modifiers={mod.ILANE}, lane=2),
+                           operand_modifiers={'adreg':{opd_mod.ILANE}}, adreg_lane=2),
             "vextractps $32, %xmm1, (%r8)\n"
         )
     def test_lane_ldst_integer(self):
@@ -151,13 +154,13 @@ class test_avx_opdna1(unittest.TestCase):
         # 32-bit INT load (vpinsrd)
         self.assertEqual(
             self.load_128(dregs=[self.xmm0], areg=self.r8, dt=adt.SINT32,
-                          modifiers={mod.ILANE}, lane=3),
+                          operand_modifiers={'adreg':{opd_mod.ILANE}}, adreg_lane=3),
             "vpinsrd $3, (%r8), %xmm0, %xmm0\n"
         )
         # 8-bit INT store (vpextrb)
         self.assertEqual(
             self.store_128(dregs=[self.xmm2], areg=self.r8, dt=adt.UINT8,
-                           modifiers={mod.ILANE}, lane=15),
+                           operand_modifiers={'adreg':{opd_mod.ILANE}}, adreg_lane=15),
             "vpextrb $15, %xmm2, (%r8)\n"
         )
 

@@ -11,6 +11,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_modifier as opd_mod,
     register_type as rt,
     opdna1_modifier as mod,
     opdna1_action
@@ -47,13 +48,19 @@ def make_avx_opdna1_signatures(action: opdna1_action,
 
     base_addr_mods = [set(), {mod.IOFFSET}, {mod.VOFFSET}]
 
-    def add_sig(dt, *, mods):
+    def add_sig(dt, *, mods, opd_mods = None):
         ops = {
             'adreg': osh(ot.REGISTER, rt.VEC, dt),
             'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64)
         }
         structural_params = {}
         clobber_list = []
+
+        if opd_mods is None:
+            opd_mods = dict()
+
+        for opd, omods in opd_mods.items():
+            ops[opd].modifiers = omods
 
         maskrt = rt.MASK if is_avx512 else rt.VEC
 
@@ -65,11 +72,14 @@ def make_avx_opdna1_signatures(action: opdna1_action,
         if mod.VOFFSET in mods:
             ops['voffset'] = osh(ot.IMMEDIATE, None, None)
 
-        if mod.ILANE in mods:
+        has_ilane = any(opd_mod.ILANE in mods for _,mods in opd_mods.items())
+
+        if has_ilane:
             # Only 128 bits are addressable
             max_lane = (16 // adt_size(dt)) - 1
-            ops['lane'] = osh(ot.IMMEDIATE, None, None,
-                              value_constraints=[minmax_constraint(minval=0, maxval=max_lane)])
+            ops['adreg_lane'] = osh(ot.IMMEDIATE, None, None,
+                                    value_constraints=[
+                                        minmax_constraint(minval=0, maxval=max_lane)])
 
         if mod.VINDEX in mods:
             # The index register is another vector
@@ -94,7 +104,7 @@ def make_avx_opdna1_signatures(action: opdna1_action,
     if action == opdna1_action.LOAD:
         for dt in _B32_64_DTS:
             for addr_mod in base_addr_mods:
-                add_sig(dt, mods=addr_mod | {mod.BCAST})
+                add_sig(dt, mods=addr_mod, opd_mods={'adreg':{opd_mod.BCAST}})
 
 
     # 3. Lane Loads / Stores
@@ -102,7 +112,7 @@ def make_avx_opdna1_signatures(action: opdna1_action,
     # calculable for any size (throws NotImplementedError in implementation if missing).
     for dt in _ALL_DTS:
         for addr_mod in base_addr_mods:
-            add_sig(dt, mods=addr_mod | {mod.ILANE})
+            add_sig(dt, mods=addr_mod, opd_mods={'adreg':{opd_mod.ILANE}})
 
 
     # 4. Gather / Scatter (VINDEX)

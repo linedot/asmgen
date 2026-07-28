@@ -11,6 +11,7 @@ from typing import Callable,Any
 
 from ...registers import asm_data_type as adt
 from ..op import opdna1_action as action
+from ..op import operand_modifier as opd_mod
 from ..op.opdna1 import opdna1_modifier as mod
 from .avx_opdna1_base import avx_opdna1,avx128_opdna1,avx256_opdna1,avx512_opdna1
 
@@ -19,11 +20,12 @@ class no_bcast(avx_opdna1):
     Helper class for diagnosing lack of BCAST support
     """
     def diagnose_failure(self, modifiers : set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
                          kwargs : dict[str,Any],
                          dts : dict[str, adt]):
-        super().diagnose_failure(modifiers,kwargs,dts)
+        super().diagnose_failure(modifiers, operand_modifiers, kwargs,dts)
 
-        if mod.BCAST in modifiers:
+        if any(opd_mod.BCAST in mods for _,mods in operand_modifiers.items()):
             raise ValueError("BCAST modifier can't be used with stores")
 
 class no_vindex(avx_opdna1):
@@ -31,9 +33,10 @@ class no_vindex(avx_opdna1):
     Helper class for diagnosing lack of VINDEX support
     """
     def diagnose_failure(self, modifiers : set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
                          kwargs : dict[str,Any],
                          dts : dict[str, adt]):
-        super().diagnose_failure(modifiers,kwargs,dts)
+        super().diagnose_failure(modifiers, operand_modifiers, kwargs,dts)
 
         if mod.VINDEX in modifiers:
             raise ValueError("VINDEX modifier can't be used with avx2 128/256 bit stores")

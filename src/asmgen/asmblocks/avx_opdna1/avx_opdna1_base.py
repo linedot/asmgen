@@ -12,7 +12,8 @@ from ..op import (
     opdna1,
     opdna1_modifier as mod,
     opdna1_action,
-    operation_signature
+    operation_signature,
+    operand_modifier as opd_mod
 )
 from ...registers import (
     asm_data_type as adt,
@@ -49,38 +50,81 @@ class avx_opdna1(opdna1):
     def get_signatures(self) -> list[operation_signature]:
         return self.signatures
 
-    def diagnose_failure(self, modifiers : set[mod],
-                         kwargs : dict[str,Any],
-                         dts : dict[str, adt]) -> list[operation_signature]:
+    def diagnose_unsupported_mods(self, modifiers: set[mod]):
+        """
+        Check if any modifier is unsupported at all
+        """
 
         unsupported_mods = {
-            mod.TINDEX:  (ValueError, "Base X86 has no ld/st with 2D tile offset indices"),
-            mod.GLANE:   (ValueError, "Base X86 has no GP-reg lane ld/st"),
-            mod.POSTINC: (ValueError, "Base X86 has no postinc ld/st"),
-            mod.TOFFSET: (ValueError, "Base X86 has no ld/st with 2D tile offsets"),
-            mod.VOFFSET: (ValueError, "Base X86 has no ld/st with vector offsets"),
-            mod.ISTRIDE: (ValueError, "Base X86 has no ld/st with immediate strides"),
-            mod.GSTRIDE: (ValueError, "Base X86 has no ld/st with GP-reg strides"),
-            mod.STRUCT:  (ValueError, "Base X86 has no structured ld/st"),
-            mod.ROW:     (ValueError, "Base X86 has no row selection ld/st"),
-            mod.COL:     (ValueError, "Base X86 has no column selection ld/st"),
-            mod.NT:      (NotImplementedError, "Non-temporals for Base X86 not yet implemented"),
+            mod.TINDEX:  (ValueError, "Base X86_64 has no ld/st with 2D tile offset indices"),
+            mod.VOFFSET: (ValueError, "Base X86_64 has no ld/st with 2D tile offsets"),
+            mod.TOFFSET: (ValueError, "Base X86_64 has no ld/st with 2D tile offsets"),
+            mod.ISTRIDE: (ValueError, "Base X86_64 has no ld/st with immediate strides"),
+            mod.GSTRIDE: (ValueError, "Base X86_64 has no ld/st with GP-reg strides"),
+            mod.STRUCT:  (ValueError, "Base X86_64 has no structured ld/st"),
+            mod.POSTINC: (ValueError, "Base X86_64 has no postinc ld/st"),
+            mod.NT:      (ValueError, "Base X86_64 has no non-temporals ld/st"),
         }
+
         for m, (exc_type, msg) in unsupported_mods.items():
             if m in modifiers:
                 raise exc_type(msg)
+
+    def diagnose_unsupported_opd_mods(self, opd_mods : dict[str,set[opd_mod]]):
+        """
+        Check if any operand modifier is unsupported at all
+        """
+
+        unsupported_opd_mods = {
+            opd_mod.VF:        (ValueError, "VF mod makes no sense for ld/st"),
+            opd_mod.BLOCKLANE: (ValueError, "BLOCKLANE makes no sense for ld/st"),
+            opd_mod.ROW:       (ValueError, "Base X86_64 has no row selection ld/st"),
+            opd_mod.COL:       (ValueError, "Base X86_64 has no column selection ld/st"),
+            opd_mod.GLANE:     (ValueError, "Base X86_64 has no GP-reg lane selection ld/st"),
+        }
+        for umod, (exc_type, msg) in unsupported_opd_mods.items():
+            for _, mods in opd_mods.items():
+                if umod in mods:
+                    raise exc_type(msg)
+
+    def diagnose_missing_params(self, modifiers : set[mod],
+                                operand_modifiers: dict[str,set[opd_mod]],
+                                kwargs : dict[str,Any]):
+        """
+        Check if mandatory additional parameters for specific modifiers are missing
+        """
 
         required_params = {
             mod.IOFFSET : ['ioffset'],
             mod.VOFFSET : ['voffset'],
             mod.VINDEX  : ['vidxreg','it'],
-            mod.ILANE   : ['lane'],
             mod.GOFFSET : ['offreg'],
         }
         for m, plist in required_params.items():
             for p in plist:
                 if m in modifiers and p not in kwargs:
                     raise ValueError(f"{m.name} modifier requires '{p}' parameter")
+
+        required_opd_params = {
+            opd_mod.ILANE   : ['lane'],
+        }
+
+        for m, plist in required_opd_params.items():
+            for p in plist:
+                for opd, mods in operand_modifiers.items():
+                    p_opd = f"{opd}_{p}"
+                    if m in mods and  p_opd not in kwargs:
+                        raise ValueError(
+                                f"{m.name} modifier for {opd} requires '{p_opd}' parameter")
+
+    def diagnose_failure(self, modifiers : set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
+                         kwargs : dict[str,Any],
+                         dts : dict[str, adt]) -> list[operation_signature]:
+
+        self.diagnose_unsupported_mods(modifiers)
+        self.diagnose_unsupported_opd_mods(operand_modifiers)
+        self.diagnose_missing_params(modifiers, operand_modifiers, kwargs)
 
 
     def get_addressing(self, areg: x86_greg, modifiers: set[mod], **kwargs) -> str:
@@ -199,7 +243,9 @@ class avx_opdna1(opdna1):
     # It's fine
     # pylint: disable-next=too-many-return-statements
     def implementation(self, *, dregs: list[data_reg], agreg: x86_greg, a_dt: adt,
-                       modifiers: set[mod], **kwargs) -> str:
+                       modifiers: set[mod],
+                       operand_modifiers : dict[str,set[opd_mod]],
+                       **kwargs) -> str:
         if not dregs:
             raise ValueError("No dregs provided")
 
@@ -212,14 +258,16 @@ class avx_opdna1(opdna1):
         addressing = self.get_addressing(agreg, modifiers, **kwargs)
 
 
-        if mod.BCAST in modifiers:
+        has_bcast = any(opd_mod.BCAST in mods for mods in operand_modifiers.values())
+        if has_bcast:
             return self.asmwrap(self.build_bcast(dreg, agreg, a_dt, addressing))
 
         if mod.VINDEX in modifiers:
             return self.build_vindex(dreg, kwargs['amreg'], agreg, a_dt, **kwargs)
 
-        if mod.ILANE in modifiers:
-            lane = kwargs["lane"]
+        has_ilane = any(opd_mod.ILANE in mods for mods in operand_modifiers.values())
+        if has_ilane:
+            lane = kwargs["adreg_lane"]
             if not isinstance(dreg, xmm_vreg):
                 xmm_alias = xmm_vreg(dreg.idx)
             else:

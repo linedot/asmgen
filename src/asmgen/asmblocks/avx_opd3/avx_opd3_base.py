@@ -17,7 +17,8 @@ from ...registers import (
 from ..op import (
     opd3,
     opd3_modifier as mod,
-    operation_signature
+    operation_signature,
+    operand_modifier as opd_mod
 )
 
 from ..types.avx_types import reg_prefixer
@@ -66,26 +67,52 @@ class avx_opd3_base(opd3):
         """
         raise NotImplementedError(NIE_MESSAGE)
 
-    def diagnose_failure(self, modifiers: set[mod],
+    def diagnose_unsupported_mods(self, modifiers: set[mod]):
+        """
+        Check if any modifier is unsupported at all
+        """
+
+        unsupported_mods = {
+            mod.PART:  (ValueError, "AVX has no partial opd3 instructions"),
+            mod.MASK:  (ValueError, "AVX has no masked opd3 instructions"),
+        }
+
+        for m, (exc_type, msg) in unsupported_mods.items():
+            if m in modifiers:
+                raise exc_type(msg)
+
+    def diagnose_unsupported_opd_mods(self, opd_mods : dict[str,set[opd_mod]]):
+        """
+        Check if any operand modifier is unsupported at all
+        """
+
+        unsupported_opd_mods = {
+            opd_mod.VF:        (ValueError, "AVX has no VF-form opd3"),
+            opd_mod.BLOCKLANE: (ValueError, "AVX has no BLOCKLANE opd3"),
+            opd_mod.BCAST:     (ValueError, "BCAST has no meaning for opd3"),
+            opd_mod.ROW:       (ValueError, "AVX has no row selection opd3"),
+            opd_mod.COL:       (ValueError, "AVX has no column selection opd3"),
+            opd_mod.ILANE:     (ValueError, "AVX has no immediate lane selection opd3"),
+            opd_mod.GLANE:     (ValueError, "AVX has no GP-reg lane selection opd3"),
+        }
+        for umod, (exc_type, msg) in unsupported_opd_mods.items():
+            for _, mods in opd_mods.items():
+                if umod in mods:
+                    raise exc_type(msg)
+
+    def diagnose_failure(self, modifiers : set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
                          kwargs : dict[str,Any],
-                         dts : dict[str,adt]):
-        if mod.VF in modifiers:
-            raise ValueError("AVX has no vf form")
-        if mod.REGIDX in modifiers:
-            raise ValueError("AVX has no regidx form")
-        if mod.IDX in modifiers:
-            raise ValueError("AVX has no idx form")
-        if mod.BLOCKIDX in modifiers:
-            raise ValueError("AVX has no block-idx form")
-        if mod.PART in modifiers:
-            raise ValueError("AVX has no partial instructions")
-        if mod.MASK in modifiers:
-            raise NotImplementedError("AVX masked opd3 not yet implemented")
+                         dts : dict[str, adt]) -> list[operation_signature]:
+
+        self.diagnose_unsupported_mods(modifiers)
+        self.diagnose_unsupported_opd_mods(operand_modifiers)
 
     def implementation(self, *,
                        adreg : data_reg, bdreg : data_reg, cdreg : data_reg,
                        a_dt : adt, b_dt : adt, c_dt : adt,
                        modifiers : set[mod] = None,
+                       operand_modifiers : dict[str,set[opd_mod]],
                        **kwargs) -> str:
 
         if modifiers is None:

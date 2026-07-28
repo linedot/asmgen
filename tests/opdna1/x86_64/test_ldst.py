@@ -8,7 +8,10 @@ Test Base X86_64 loads/stores
 """
 import unittest
 
-from asmgen.asmblocks.op import opdna1_modifier as mod
+from asmgen.asmblocks.op import (
+    opdna1_modifier as mod,
+    operand_modifier as opd_mod
+)
 from asmgen.registers import asm_data_type as adt
 from asmgen.asmblocks.types.avx_types import x86_greg, avx_freg, reg_prefixer
 from asmgen.asmblocks.x86_opdna1 import x86_load, x86_store
@@ -79,15 +82,21 @@ class test_x86_opdna1(unittest.TestCase):
 
     def test_invalid_modifiers(self):
         """ Test that invalid modifiers are properly rejected """
-        invalid_mods = [mod.TINDEX, mod.VINDEX, mod.GLANE, mod.ILANE, mod.POSTINC,
+        invalid_mods = [mod.TINDEX, mod.VINDEX, mod.POSTINC,
                         mod.TOFFSET, mod.VOFFSET, mod.ISTRIDE, mod.GSTRIDE,
-                        mod.STRUCT, mod.BCAST, mod.MASK]
+                        mod.STRUCT, mod.MASK]
+
+        # none are supported
+        invalid_opd_mods = list(opd_mod)
 
         for invalid_mod in invalid_mods:
-            with self.subTest(modifier=invalid_mod):
-                with self.assertRaisesRegex(ValueError, "Base X86 has no"):
-                    self.load(dregs=[self.r8], areg=self.r15,
-                              dt=adt.UINT64, modifiers={invalid_mod})
+            for invalid_opd_mod in invalid_opd_mods:
+                with self.subTest(modifier=invalid_mod):
+                    with self.assertRaisesRegex(ValueError, "Base X86_64 has no"):
+                        self.load(dregs=[self.r8], areg=self.r15,
+                                  dt=adt.UINT64,
+                                  modifiers={invalid_mod},
+                                  operand_modifiers={'adreg':{invalid_opd_mod}})
 
     def test_missing_ioffset(self):
         """ Test kwargs validation for IOFFSET """

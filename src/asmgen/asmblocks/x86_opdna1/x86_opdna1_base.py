@@ -13,7 +13,8 @@ from ..op import (
     opdna1,
     opdna1_modifier as mod,
     opdna1_action,
-    operation_signature
+    operation_signature,
+    operand_modifier as opd_mod
 )
 
 from ...registers import asm_data_type as adt, adt_size
@@ -39,30 +40,54 @@ class x86_opdna1(opdna1):
     def get_signatures(self) -> list[operation_signature]:
         return self.signatures
 
-    def diagnose_failure(self, modifiers : set[mod],
-                         kwargs : dict[str,Any],
-                         dts : dict[str, adt]) -> list[operation_signature]:
+    def diagnose_unsupported_mods(self, modifiers: set[mod]):
+        """
+        Check if any modifier is unsupported at all
+        """
 
         unsupported_mods = {
-            mod.TINDEX:  (ValueError, "Base X86 has no ld/st with 2D tile offset indices"),
-            mod.VINDEX:  (ValueError, "Base X86 has no ld/st with 1D vector offset indices"),
-            mod.GLANE:   (ValueError, "Base X86 has no GP-reg lane ld/st"),
-            mod.ILANE:   (ValueError, "Base X86 has no immediate lane ld/st"),
-            mod.POSTINC: (ValueError, "Base X86 has no postinc ld/st"),
-            mod.TOFFSET: (ValueError, "Base X86 has no ld/st with 2D tile offsets"),
-            mod.VOFFSET: (ValueError, "Base X86 has no ld/st with vector offsets"),
-            mod.ISTRIDE: (ValueError, "Base X86 has no ld/st with immediate strides"),
-            mod.GSTRIDE: (ValueError, "Base X86 has no ld/st with GP-reg strides"),
-            mod.STRUCT:  (ValueError, "Base X86 has no structured ld/st"),
-            mod.BCAST:   (ValueError, "Base X86 has no broadcasting ld/st"),
-            mod.ROW:     (ValueError, "Base X86 has no row selection ld/st"),
-            mod.COL:     (ValueError, "Base X86 has no column selection ld/st"),
-            mod.MASK:    (ValueError, "Base X86 has no masked ld/st"),
-            mod.NT:      (NotImplementedError, "Non-temporals for Base X86 not yet implemented"),
+            mod.TINDEX:  (ValueError, "Base X86_64 has no ld/st with 2D tile offset indices"),
+            mod.VINDEX:  (ValueError, "Base X86_64 has no ld/st with 1D vector offset indices"),
+            mod.VOFFSET: (ValueError, "Base X86_64 has no ld/st with 2D tile offsets"),
+            mod.TOFFSET: (ValueError, "Base X86_64 has no ld/st with 2D tile offsets"),
+            mod.ISTRIDE: (ValueError, "Base X86_64 has no ld/st with immediate strides"),
+            mod.GSTRIDE: (ValueError, "Base X86_64 has no ld/st with GP-reg strides"),
+            mod.MASK:    (ValueError, "Base X86_64 has no masked ld/st"),
+            mod.STRUCT:  (ValueError, "Base X86_64 has no structured ld/st"),
+            mod.POSTINC: (ValueError, "Base X86_64 has no postinc ld/st"),
+            mod.NT:      (ValueError, "Base X86_64 has no non-temporals ld/st"),
         }
+
         for m, (exc_type, msg) in unsupported_mods.items():
             if m in modifiers:
                 raise exc_type(msg)
+
+    def diagnose_unsupported_opd_mods(self, opd_mods : dict[str,set[opd_mod]]):
+        """
+        Check if any operand modifier is unsupported at all
+        """
+
+        unsupported_opd_mods = {
+            opd_mod.VF:        (ValueError, "VF mod makes no sense for ld/st"),
+            opd_mod.BLOCKLANE: (ValueError, "BLOCKLANE makes no sense for ld/st"),
+            opd_mod.BCAST:     (ValueError, "Base X86_64 has no broadcasting ld/st"),
+            opd_mod.ROW:       (ValueError, "Base X86_64 has no row selection ld/st"),
+            opd_mod.COL:       (ValueError, "Base X86_64 has no column selection ld/st"),
+            opd_mod.ILANE:     (ValueError, "Base X86_64 has no immediate lane selection ld/st"),
+            opd_mod.GLANE:     (ValueError, "Base X86_64 has no GP-reg lane selection ld/st"),
+        }
+        for umod, (exc_type, msg) in unsupported_opd_mods.items():
+            for _, mods in opd_mods.items():
+                if umod in mods:
+                    raise exc_type(msg)
+
+    def diagnose_failure(self, modifiers : set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
+                         kwargs : dict[str,Any],
+                         dts : dict[str, adt]) -> list[operation_signature]:
+
+        self.diagnose_unsupported_mods(modifiers)
+        self.diagnose_unsupported_opd_mods(operand_modifiers)
 
         required_params = {
             mod.IOFFSET : ['ioffset'],
@@ -106,7 +131,9 @@ class x86_opdna1(opdna1):
         return f"{offset}({register_part})" if offset != 0 else f"({register_part})"
 
     def implementation(self, *, dregs: list, agreg: x86_greg, a_dt: adt,
-                       modifiers: set[mod], **kwargs) -> str:
+                       modifiers: set[mod],
+                       operand_modifiers : dict[str,set[opd_mod]],
+                       **kwargs) -> str:
 
         dreg = dregs[0]
 

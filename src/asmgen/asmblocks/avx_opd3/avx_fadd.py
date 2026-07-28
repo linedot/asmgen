@@ -9,7 +9,10 @@ AVX fadd instruction
 
 from typing import Any
 
-from ..op import opd3_modifier as mod
+from ..op import (
+    opd3_modifier as mod,
+    operand_modifier as opd_mod
+)
 from ...registers import asm_data_type as adt
 
 from .avx_opd3_base import avx_opd3_base
@@ -23,8 +26,9 @@ class avx_fadd(avx_opd3_base):
         return "vadd"
 
     def diagnose_failure(self, modifiers: set[mod],
+                         operand_modifiers : dict[str,set[opd_mod]],
                          kwargs : dict[str,Any],
                          dts : dict[str,adt]):
-        super().diagnose_failure(modifiers, kwargs, dts)
+        super().diagnose_failure(modifiers, operand_modifiers, kwargs, dts)
         if mod.NP in modifiers:
             raise ValueError("AVX fadd has no NP form")
