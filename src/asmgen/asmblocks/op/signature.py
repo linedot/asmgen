@@ -74,9 +74,11 @@ class operation_signature:
                      'operand_modifiers',
                      'dt',
                      'adreg','bdreg','cdreg','ddreg',
+                     'edreg','fdreg','gdreg','hdreg',
                      'agreg',
                      'amreg','bmreg',
-                     'a_dt','b_dt','c_dt','d_dt'}
+                     'a_dt','b_dt','c_dt','d_dt',
+                     'e_dt','f_dt','g_dt','h_dt'}
 
         for key in kwargs:
             if key not in base_kwargs and \

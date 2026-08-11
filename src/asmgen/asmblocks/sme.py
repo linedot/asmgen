@@ -17,6 +17,7 @@ from .sve import sve
 
 from .types.sme_types import sme_treg
 from .sme_opd3 import sme_fopa
+from .sme_move import sme_move
 
 from .sme_opdna1.sme_load import sme_load
 from .sme_opdna1.sme_store import sme_store
@@ -35,6 +36,9 @@ class sme(sve):
 
         self.load = sme_load(asmwrap = self.asmwrap)
         self.store = sme_store(asmwrap = self.asmwrap)
+
+        self.move = sme_move(asmwrap=self.asmwrap,
+                                  dt_suffixes=self.dt_suffixes)
 
     @property
     def c_simd_size_function(self):

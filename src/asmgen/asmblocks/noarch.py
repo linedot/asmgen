@@ -16,7 +16,6 @@ from enum import Enum,auto
 from abc import ABC, abstractmethod
 from typing import TypeAlias,Union,TYPE_CHECKING
 
-from .op import dummy_opd3
 from ..registers import (
     reg_tracker,
     asm_data_type,
@@ -58,11 +57,6 @@ class asmgen(ABC):
         Constructor method
         """
         self.output_inline = True
-        self.fopa = dummy_opd3()
-        self.fma = dummy_opd3()
-        self.fmul = dummy_opd3()
-        self.fadd = dummy_opd3()
-        self.dota = dummy_opd3()
 
         self.asmdata : dict[str,list[asm_data]] = dict()
 

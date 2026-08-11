@@ -188,6 +188,7 @@ class operation(ABC):
 
         resolved_operands['modifiers'] = modifiers
         resolved_operands['operand_modifiers'] = operand_modifiers
+        resolved_operands['dts'] = dts
 
         # opdna1 has a different interface
         resolved_operands['dregs'] = dregs

@@ -23,6 +23,11 @@ from .operand import (
     register_type
 )
 
+from .move import (
+    move,
+    move_modifier
+)
+
 from .opdna1 import (
     opdna1_modifier,
     opdna1_action,
