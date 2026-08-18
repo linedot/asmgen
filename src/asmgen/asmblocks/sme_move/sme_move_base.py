@@ -16,9 +16,11 @@ from ..op.operand import operand_modifier
 from ..op.move import move,move_modifier
 from ..op.misc import make_ord_prefix as mop
 
-from ..types.sme_types import sme_treg
-from ..types.aarch64_types import aarch64_greg
+from ..sve_move import sve_move
 
+from ..types.sve_types import sve_vreg
+from ..types.sme_types import sme_treg
+from ..types.aarch64_types import aarch64_greg,aarch64_freg
 
 from .signatures import make_sme_move_signatures
 
@@ -32,7 +34,9 @@ class sme_move(move):
         self.asmwrap = asmwrap
         self.dt_suffixes = dt_suffixes
 
+        self.sve_move = sve_move(asmwrap=asmwrap, dt_suffixes=dt_suffixes)
         self.signatures = make_sme_move_signatures()
+        self.signatures.extend(self.sve_move.get_signatures())
 
     def get_signatures(self) -> list[operation_signature]:
         return self.signatures
@@ -99,6 +103,17 @@ class sme_move(move):
             input_count = kwargs['nin']
         if move_modifier.MULTIPLE_OUT in modifiers:
             output_count = kwargs['nout']
+
+        if input_count == output_count and input_count == 1:
+            if all(isinstance(reg, sve_vreg)
+                   for reg in dregs) or any(isinstance(reg, (aarch64_freg,aarch64_greg))
+                                            for reg in dregs):
+                return self.sve_move(
+                        dregs=dregs,
+                        dts=[dts['adreg'],dts['bdreg']],
+                        modifiers=modifiers,
+                        operand_modifiers=operand_modifiers,
+                        **kwargs)
 
         t_to_v = False
         v_to_t = False

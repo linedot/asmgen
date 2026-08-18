@@ -23,7 +23,7 @@ from asmgen.asmblocks.sme import sme
 # pylint: disable-next=too-many-instance-attributes
 class test_sme_opdna1(unittest.TestCase):
     """
-    Testsuite for SME opdna1 operations
+    Testsuite for SME move operations
     """
     def setUp(self):
         self.w12 = aarch64_greg(12)
@@ -39,6 +39,23 @@ class test_sme_opdna1(unittest.TestCase):
 
         self.gen = sme()
         self.gen.set_output_inline(yesno=False)
+
+    def test_sve_dispatch(self):
+        """
+        Tests that moves handled by the sve implementation are handled
+        """
+
+        self.assertEqual(
+                "dup z0.d,z1.d[3]\n",
+                self.gen.move(
+                    dregs=[self.z1,self.z0],
+                    dts=[adt.FP64,adt.FP64],
+                    operand_modifiers={
+                        'adreg': {opd_mod.ILANE},
+                        'bdreg': {opd_mod.BCAST}
+                        },
+                    adreg_lane=3
+                    ))
 
 
     def test_v_to_t_fp64(self):
@@ -86,7 +103,7 @@ class test_sme_opdna1(unittest.TestCase):
             dts=[adt.FP64 for _ in range(8)],
             modifiers={mod.MASK,mod.MULTIPLE_IN,mod.MULTIPLE_OUT},
             amreg=self.p0,
-            operand_modifiers={f'{mop(i+4)}dreg':{opd_mod.ROW} 
+            operand_modifiers={f'{mop(i+4)}dreg':{opd_mod.ROW}
                                for i in range(4)},
             nin = 4,
             nout = 4,

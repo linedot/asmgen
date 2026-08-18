@@ -23,6 +23,8 @@ from .sve_opd3 import sve_fma,sve_fmul,sve_fadd
 from .sve_opdna1.sve_load import sve_load
 from .sve_opdna1.sve_store import sve_store
 
+from .sve_move import sve_move
+
 from .neon import neon
 
 class sve(aarch64):
@@ -63,6 +65,8 @@ class sve(aarch64):
 
         self.load = sve_load(asmwrap = self.asmwrap)
         self.store = sve_store(asmwrap = self.asmwrap)
+        self.move = sve_move(asmwrap=self.asmwrap,
+                             dt_suffixes=self.dt_suffixes)
 
     def get_req_flags(self) -> list[str]:
         """

@@ -1,0 +1,87 @@
+# ------------------------------------------------------------------------------
+# SPDX-License-Identifier: MIT OR GPL-3.0-or-later
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@fz-juelich.de>
+# Copyright (C) 2021 Stepan Nassyr <s.nassyr@xcpp.org>
+# ------------------------------------------------------------------------------
+"""
+data move operation base class for SVE
+"""
+
+from typing import Callable
+
+from ...registers import asm_data_type as adt, data_reg
+
+from ..op.signature import operation_signature
+from ..op.operand import operand_modifier as omod
+from ..op.move import move,move_modifier as mod
+
+from ..types.sve_types import sve_vreg
+from ..types.aarch64_types import aarch64_greg,aarch64_freg
+
+
+from .signatures import make_sve_move_signatures
+
+class sve_move(move):
+    """
+    SVE data move instructions
+    """
+
+    def __init__(self, asmwrap : Callable[[str],str],
+                 dt_suffixes = dict[adt,str]):
+        self.asmwrap = asmwrap
+        self.dt_suffixes = dt_suffixes
+
+        self.signatures = make_sve_move_signatures()
+
+    def get_signatures(self) -> list[operation_signature]:
+        return self.signatures
+
+    def build_vec_lane_spec(self,
+                            vreg : sve_vreg,
+                            lane : int,
+                            dt : adt) -> str:
+        """
+        Generate specification for accessing a specific lane of an SVE vreg
+
+        :param vreg: register to access
+        :param lane: lane to access
+        :param dt: element data type
+        :return: string that can be used as operand to an SVE instruction
+        """
+
+        dt_suf = self.dt_suffixes[dt]
+        return f"{vreg}.{dt_suf}[{lane}]"
+
+
+    def implementation(self, *, dregs : list[data_reg],
+                       dts : dict[str, adt],
+                       modifiers : set[mod],
+                       operand_modifiers : dict[str,set[omod]],
+                       **kwargs) -> str:
+
+        predicate = ""
+        if mod.MASK in modifiers:
+            predicate = f"{kwargs['amreg']}/m,"
+
+        input_reg = dregs[0]
+        output_reg = dregs[1]
+
+        input_dt = dts['adreg']
+        output_dt = dts['bdreg']
+
+        input_mods = operand_modifiers.get('adreg',set())
+        # not used for making decision rn
+        #output_mods = operand_modifiers.get('bdreg',set())
+
+        inst = "mov"
+        in_str = ""
+        out_str = f"{output_reg}.{self.dt_suffixes[output_dt]}"
+        if omod.ILANE in input_mods:
+            in_str = self.build_vec_lane_spec(input_reg, kwargs['adreg_lane'], input_dt)
+            inst = "dup"
+        elif isinstance(input_reg, (aarch64_freg,aarch64_greg)):
+            in_str = str(input_reg.retype(input_dt))
+        else:
+            in_str = f"{input_reg}.{self.dt_suffixes[input_dt]}"
+
+        return self.asmwrap(f"{inst} {out_str},{predicate}{in_str}")
