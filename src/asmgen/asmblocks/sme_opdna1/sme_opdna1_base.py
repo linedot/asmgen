@@ -21,9 +21,10 @@ from ...registers import asm_data_type as adt, adt_size
 
 from ..types.aarch64_types import aarch64_greg
 from ..types.sme_types import sme_treg
-from ..sve_opdna1 import sve_opdna1
+from ..sve_opdna1 import sve_load,sve_store
 
 from .signatures import make_sme_opdna1_signatures
+
 
 class sme_opdna1(opdna1):
     """
@@ -32,11 +33,17 @@ class sme_opdna1(opdna1):
     Routes all other operations to sve_opdna1.
     """
 
+    _SVE_DELEGATE = {
+        opdna1_action.STORE : sve_store,
+        opdna1_action.LOAD : sve_load,
+    }
+
     def __init__(self, action: opdna1_action, asmwrap: Callable[[str],str]):
         self.action = action
         self.asmwrap = asmwrap
 
-        self.sve_opdna1 = sve_opdna1(action=action, asmwrap=asmwrap)
+        # fix for bcast_supported in the SVE delegate
+        self.sve_opdna1 = self._SVE_DELEGATE[action](asmwrap=asmwrap)
 
         self.signatures = make_sme_opdna1_signatures()
         self.signatures.extend(self.sve_opdna1.get_signatures())
@@ -193,6 +200,9 @@ class sme_opdna1(opdna1):
         # --- ROUTING LOGIC ---
         # If it's not a Tile Register AND it's not a Non-Temporal instruction, SVE handles it.
         if not isinstance(dregs[0], sme_treg) and mod.NT not in modifiers:
+            
+            #Hack: remove dts from kwargs
+            del kwargs['dts']
             return self.sve_opdna1(dregs=dregs, areg=agreg, dt=a_dt,
                                    modifiers=modifiers,
                                    operand_modifiers=operand_modifiers,
