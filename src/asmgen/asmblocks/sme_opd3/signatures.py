@@ -41,7 +41,7 @@ _MIXED_INTS = [
 # pylint: disable-next=too-many-branches
 def make_sme_opd3_signatures(supports_np: bool) -> list[sig]:
     """
-    Generate signatures for NEON opd3 operations
+    Generate signatures for SME opd3 operations
     """
     sigs = []
 
