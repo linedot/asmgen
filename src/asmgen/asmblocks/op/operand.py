@@ -93,3 +93,15 @@ class operand_shape:
     dt        : adt|None = None
     modifiers : set[operand_modifier] = field(default_factory=set)
     value_constraints: list[operand_constraint] = field(default_factory=list)
+
+
+    def __post_init__(self):
+        if not isinstance(self.otype, operand_type):
+            raise TypeError(
+                    f"otype must be operand_type, got {type(self.otype).__name__}")
+        if not isinstance(self.orole, operand_role):
+            raise TypeError(
+                    f"orole must be operand_role, got {type(self.orole).__name__}")
+        if self.orole in (operand_role.DATA, operand_role.MASK) \
+                and self.otype != operand_type.REGISTER:
+            raise ValueError(f"{self.orole.name} operand must be a register")

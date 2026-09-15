@@ -90,7 +90,7 @@ def make_neon_opdna1_signatures(bcast_supported=False):
 
         if mod.POSTINC in mods:
             if postinc_reg:
-                ops['increg'] = osh(ot.REGISTER, orl.PARAM, rt.GP, adt.UINT64)
+                ops['increg'] = osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
             else:
                 ops['iinc'] = osh(ot.IMMEDIATE, orl.PARAM, None, None)
 

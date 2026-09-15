@@ -107,7 +107,7 @@ def make_sme_move_signatures() -> list[opsig]:
                     )
             operands[f'adreg_{rcstr}reg'] = osh(
                     otype=ot.REGISTER,
-                    orole=orl.ADDRESS,
+                    orole=orl.PARAM,
                     rtype=rgt.GP,
                     value_constraints=[sme_rowcolreg_constraint()]
                     )
@@ -122,7 +122,7 @@ def make_sme_move_signatures() -> list[opsig]:
                         )
                 operands[f'{rc_treg}_imm{rcstr}'] = osh(
                         otype=ot.IMMEDIATE,
-                        orole=orl.DATA,
+                        orole=orl.PARAM,
                         value_constraints=[otherplusn_constraint(
                             other=f"{mop(i-1)}dreg_imm{rcstr}",
                             offset=1
