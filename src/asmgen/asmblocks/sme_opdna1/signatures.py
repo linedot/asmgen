@@ -123,7 +123,7 @@ def make_sme_opdna1_signatures():
 
     def add_sig(dt, *, mods, opd_mods=None, nstructs=1):
         ops = {
-            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, dt.UINT64),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
             'amreg': osh(ot.REGISTER, orl.MASK, rt.MASK, dt)
         }
         if opd_mods is None:

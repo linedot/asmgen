@@ -71,7 +71,7 @@ def make_sve_opdna1_signatures(bcast_supported=False):
         ops = {
             'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, dt,
                          modifiers=opd_mods.get('adreg', set())),
-            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, dt.UINT64,
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64,
                          modifiers=opd_mods.get('agreg', set())),
             'amreg': osh(ot.REGISTER, orl.MASK, rt.MASK, dt,
                          modifiers=opd_mods.get('amreg', set()))

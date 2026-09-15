@@ -58,7 +58,7 @@ def make_neon_opdna1_signatures(bcast_supported=False):
     def add_sig(dt, *, mods, opd_mods, nstructs=1, postinc_reg=False):
         ops = {
             'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, dt),
-            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, dt.UINT64),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
         }
 
         struct_params={}
