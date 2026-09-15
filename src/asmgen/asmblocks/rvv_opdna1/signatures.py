@@ -14,6 +14,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     register_type as rt,
     opdna1_modifier as mod,
     operand_modifier as opd_mod
@@ -74,8 +75,8 @@ def make_rvv_opdna1_signatures(get_lmul: Callable[[],int], has_bcast=False):
             modifiers=set(),
             structural_params={},
             operands={
-                'adreg': osh(ot.REGISTER, rt.VEC, dt),
-                'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
+                'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, dt),
+                'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
                 }
         ))
 
@@ -87,10 +88,10 @@ def make_rvv_opdna1_signatures(get_lmul: Callable[[],int], has_bcast=False):
         # explicitly
         for nstructs in range(1,9):
             operands = {
-                'agreg' : osh(ot.REGISTER, rt.GP, adt.UINT64),
-                'adreg' : osh(ot.REGISTER, rt.VEC, dt)}
+                'agreg' : osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+                'adreg' : osh(ot.REGISTER, orl.DATA, rt.VEC, dt)}
             operands.update({
-                mop(i)+'dreg': osh(ot.REGISTER, rt.VEC, dt,
+                mop(i)+'dreg': osh(ot.REGISTER, orl.DATA, rt.VEC, dt,
                                    value_constraints=[
                                        sc(other=mop(i-1)+'dreg',
                                           offset=get_lmul())
@@ -109,11 +110,11 @@ def make_rvv_opdna1_signatures(get_lmul: Callable[[],int], has_bcast=False):
             if has_bcast:
                 # BCAST + STRUCT
                 bcast_operands = {
-                    'agreg' : osh(ot.REGISTER, rt.GP, adt.UINT64),
-                    'adreg' : osh(ot.REGISTER, rt.VEC, dt, modifiers={opd_mod.BCAST})
+                    'agreg' : osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+                    'adreg' : osh(ot.REGISTER, orl.DATA, rt.VEC, dt, modifiers={opd_mod.BCAST})
                 }
                 bcast_operands.update({
-                    mop(i)+'dreg': osh(ot.REGISTER, rt.VEC, dt,
+                    mop(i)+'dreg': osh(ot.REGISTER, orl.DATA, rt.VEC, dt,
                                        modifiers={opd_mod.BCAST},
                                        value_constraints=[
                                            sc(other=mop(i-1)+'dreg', offset=get_lmul())
@@ -133,9 +134,9 @@ def make_rvv_opdna1_signatures(get_lmul: Callable[[],int], has_bcast=False):
                 'it': index_type_map[adt_size(dt)]
                 },
             operands={
-                'adreg': osh(ot.REGISTER, rt.VEC, dt),
-                'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
-                'vidxreg': osh(ot.REGISTER, rt.VEC,
+                'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, dt),
+                'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+                'vidxreg': osh(ot.REGISTER, orl.ADDRESS, rt.VEC,
                                vidx_type_map[adt_size(dt)])
                 }
             ))
@@ -145,9 +146,9 @@ def make_rvv_opdna1_signatures(get_lmul: Callable[[],int], has_bcast=False):
             structural_params={
                 },
             operands={
-                'adreg': osh(ot.REGISTER, rt.VEC, dt),
-                'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
-                'streg': osh(ot.REGISTER, rt.GP, adt.UINT64)
+                'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, dt),
+                'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+                'streg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
                 }
             ))
 
@@ -158,9 +159,9 @@ def make_rvv_opdna1_signatures(get_lmul: Callable[[],int], has_bcast=False):
                 structural_params={
                     },
                 operands={
-                    'adreg': osh(ot.REGISTER, rt.VEC, dt,
+                    'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, dt,
                                  modifiers={opd_mod.BCAST}),
-                    'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64)
+                    'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
                     }
                 ))
 

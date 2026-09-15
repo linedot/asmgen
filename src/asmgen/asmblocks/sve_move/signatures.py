@@ -13,6 +13,7 @@ from ..op import (
     operand_modifier as omod,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     register_type as rgt,
     move_modifier as mod,
 )
@@ -45,25 +46,38 @@ def make_sve_move_signatures() -> list[opsig]:
         operands = {}
 
         if mod.MASK in mods:
-            operands['amreg'] =  osh(otype=ot.REGISTER, rtype=rgt.MASK, dt=dt)
+            operands['amreg'] =  osh(otype=ot.REGISTER,
+                                     orole=orl.MASK,
+                                     rtype=rgt.MASK, dt=dt)
 
 
-        operands['bdreg'] = osh(otype=ot.REGISTER, rtype=rgt.VEC, dt=dt)
+        operands['bdreg'] = osh(otype=ot.REGISTER,
+                                orole=orl.DATA,
+                                rtype=rgt.VEC, dt=dt)
 
         if not bmods and not amods:
-            operands['adreg'] = osh(otype=ot.REGISTER, rtype=rgt.VEC, dt=dt)
+            operands['adreg'] = osh(otype=ot.REGISTER,
+                                    orole=orl.DATA,
+                                    rtype=rgt.VEC, dt=dt)
 
         if (omod.BCAST in bmods) and not amods:
             if dt in _FLOATS:
-                operands['adreg'] = osh(otype=ot.REGISTER, rtype=rgt.FP, dt=dt)
+                operands['adreg'] = osh(otype=ot.REGISTER,
+                                        orole=orl.DATA,
+                                        rtype=rgt.FP, dt=dt)
             else:
-                operands['adreg'] = osh(otype=ot.REGISTER, rtype=rgt.GP, dt=dt)
+                operands['adreg'] = osh(otype=ot.REGISTER,
+                                        orole=orl.DATA,
+                                        rtype=rgt.GP, dt=dt)
         if omod.ILANE in amods:
-            operands['adreg'] = osh(otype=ot.REGISTER, rtype=rgt.VEC, dt=dt)
+            operands['adreg'] = osh(otype=ot.REGISTER,
+                                    orole=orl.DATA,
+                                    rtype=rgt.VEC, dt=dt)
 
             # 512 bits are directly addressable
             max_lane = 512/8 /adt_size(dt)
             operands['adreg_lane'] = osh(otype=ot.IMMEDIATE,
+                                         orole=orl.PARAM,
                                          value_constraints=[
                                              minmax_constraint(minval=0,maxval=max_lane)
                                              ])

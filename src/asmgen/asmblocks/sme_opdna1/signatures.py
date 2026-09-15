@@ -14,6 +14,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     register_type as rt,
     opdna1_modifier as mod,
     operand_modifier as opd_mod
@@ -122,8 +123,8 @@ def make_sme_opdna1_signatures():
 
     def add_sig(dt, *, mods, opd_mods=None, nstructs=1):
         ops = {
-            'agreg': osh(ot.REGISTER, rt.GP, dt.UINT64),
-            'amreg': osh(ot.REGISTER, rt.MASK, dt)
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, dt.UINT64),
+            'amreg': osh(ot.REGISTER, orl.MASK, rt.MASK, dt)
         }
         if opd_mods is None:
             opd_mods = dict()
@@ -136,18 +137,18 @@ def make_sme_opdna1_signatures():
                     sme_mreg_pn_constraint()
                     )
             struct_params['nstructs'] = nstructs
-            ops['adreg'] = osh(ot.REGISTER, rt.VEC, dt,
+            ops['adreg'] = osh(ot.REGISTER, orl.DATA, rt.VEC, dt,
                                value_constraints = [
                                    sme_nt_struct_firstreg_constraint(nstructs=nstructs)
                                 ])
             for i in range(1, nstructs):
                 ops[f"{mop(i)}dreg"] = osh(
-                    ot.REGISTER, rt.VEC, dt,
+                    ot.REGISTER, orl.DATA, rt.VEC, dt,
                     value_constraints=[
                         sme_nt_struct_constraint(other=f"{mop(i-1)}dreg",nstructs=nstructs)
                     ])
         else:
-            ops['adreg'] = osh(ot.REGISTER, rt.TILE, dt)
+            ops['adreg'] = osh(ot.REGISTER, orl.DATA, rt.TILE, dt)
             ops['amreg'].value_constraints.append(
                     sme_mreg_notpn_constraint()
                     )
@@ -156,24 +157,24 @@ def make_sme_opdna1_signatures():
             ops[name].modifiers = omods
 
         if opd_mod.ROW in opd_mods.get('adreg',set()):
-            ops['adreg_rowreg'] = osh(ot.REGISTER, rt.GP, adt.SINT32,
+            ops['adreg_rowreg'] = osh(ot.REGISTER, orl.PARAM, rt.GP, adt.SINT32,
                                       value_constraints=[sme_rowcolreg_constraint()])
             maxrow = 16//adt_size(dt) - 1
-            ops['adreg_immrow'] = osh(ot.IMMEDIATE, None, None,
+            ops['adreg_immrow'] = osh(ot.IMMEDIATE, orl.PARAM, None, None,
                                       value_constraints=[
                                           minmax_constraint(minval=0,maxval=maxrow)])
 
         if opd_mod.COL in opd_mods.get('adreg',set()):
-            ops['adreg_colreg'] = osh(ot.REGISTER, rt.GP, adt.SINT32,
+            ops['adreg_colreg'] = osh(ot.REGISTER, orl.PARAM, rt.GP, adt.SINT32,
                                 value_constraints=[sme_rowcolreg_constraint()])
             maxrow = 16//adt_size(dt) - 1
-            ops['adreg_immcol'] = osh(ot.IMMEDIATE, None, None,
+            ops['adreg_immcol'] = osh(ot.IMMEDIATE, orl.PARAM, None, None,
                                 value_constraints=[minmax_constraint(minval=0,maxval=maxrow)])
 
         if mod.GOFFSET in mods:
-            ops['offreg'] = osh(ot.REGISTER, rt.GP, adt.SINT64)
+            ops['offreg'] = osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.SINT64)
         if mod.VOFFSET in mods:
-            ops['voffset'] = osh(ot.IMMEDIATE, None, None)
+            ops['voffset'] = osh(ot.IMMEDIATE, orl.PARAM, None, None)
 
         sigs.append(sig(
             modifiers=mods,

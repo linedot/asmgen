@@ -14,6 +14,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     register_type as rt,
     opdna1_modifier as mod,
     operand_modifier as opd_mod
@@ -68,11 +69,11 @@ def make_sve_opdna1_signatures(bcast_supported=False):
             opd_mods = {}
 
         ops = {
-            'adreg': osh(ot.REGISTER, rt.VEC, dt,
+            'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, dt,
                          modifiers=opd_mods.get('adreg', set())),
-            'agreg': osh(ot.REGISTER, rt.GP, dt.UINT64,
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, dt.UINT64,
                          modifiers=opd_mods.get('agreg', set())),
-            'amreg': osh(ot.REGISTER, rt.MASK, dt,
+            'amreg': osh(ot.REGISTER, orl.MASK, rt.MASK, dt,
                          modifiers=opd_mods.get('amreg', set()))
         }
 
@@ -84,7 +85,7 @@ def make_sve_opdna1_signatures(bcast_supported=False):
             for i in range(1, nstructs):
                 reg_name = f"{mop(i)}dreg" # bdreg, cdreg, ddreg
                 ops[reg_name] = osh(
-                    ot.REGISTER, rt.VEC, dt,
+                    ot.REGISTER, orl.DATA, rt.VEC, dt,
                     modifiers=opd_mods.get(reg_name, set()),
                     value_constraints=[
                         sve_struct_constraint(other=f"{mop(i-1)}dreg")
@@ -98,17 +99,17 @@ def make_sve_opdna1_signatures(bcast_supported=False):
             idx_dt = INDEX_ADT_SIZE_MAP.get(idx_sz, adt.SINT32)
             idx_it = INDEX_AIT_SIZE_MAP.get(idx_sz, ait.INT32)
 
-            ops['vidxreg'] = osh(ot.REGISTER, rt.VEC, idx_dt,
+            ops['vidxreg'] = osh(ot.REGISTER, orl.ADDRESS, rt.VEC, idx_dt,
                                  modifiers=opd_mods.get('vidxreg', set()))
             struct_params['it'] = idx_it
 
         if mod.IOFFSET in mods:
-            ops['ioffset'] = osh(ot.IMMEDIATE, None, None)
+            ops['ioffset'] = osh(ot.IMMEDIATE, orl.PARAM, None, None)
         if mod.GOFFSET in mods:
-            ops['offreg'] = osh(ot.REGISTER, rt.GP, adt.SINT64,
+            ops['offreg'] = osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.SINT64,
                                 modifiers=opd_mods.get('offreg', set()))
         if mod.VOFFSET in mods:
-            ops['voffset'] = osh(ot.IMMEDIATE, None, None)
+            ops['voffset'] = osh(ot.IMMEDIATE, orl.PARAM, None, None)
 
         sigs.append(sig(
             modifiers=mods,

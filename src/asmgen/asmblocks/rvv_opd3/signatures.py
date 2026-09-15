@@ -11,6 +11,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     register_type as rt,
     opd3_modifier as mod,
     operand_modifier as opd_mod
@@ -68,9 +69,10 @@ def make_rvv_opd3_signatures(supports_np: bool) -> list[sig]:
             modifiers=mods,
             structural_params=struct_params,
             operands={
-                'adreg': osh(ot.REGISTER, rt.VEC, a_dt),
-                'bdreg': osh(ot.REGISTER, b_rt, b_dt, modifiers=b_mods),
-                'cdreg': osh(ot.REGISTER, rt.VEC, c_dt, value_constraints=constraints)
+                'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, a_dt),
+                'bdreg': osh(ot.REGISTER, orl.DATA, b_rt, b_dt, modifiers=b_mods),
+                'cdreg': osh(ot.REGISTER, orl.DATA, rt.VEC, c_dt,
+                             value_constraints=constraints)
             }
         ))
 

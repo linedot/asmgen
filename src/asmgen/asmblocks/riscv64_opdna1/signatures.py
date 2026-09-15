@@ -11,6 +11,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     register_type as rt,
     opdna1_modifier as mod
 )
@@ -34,8 +35,8 @@ def make_riscv64_opdna1_signatures():
         modifiers=set(),
         structural_params={},
         operands={
-            'adreg': osh(ot.REGISTER, rt.FP, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64)
+            'adreg': osh(ot.REGISTER, orl.DATA, rt.FP, dt),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
             }
         ))
         # normal fld with immediate offset
@@ -43,9 +44,9 @@ def make_riscv64_opdna1_signatures():
         modifiers={mod.IOFFSET},
         structural_params={},
         operands={
-            'adreg': osh(ot.REGISTER, rt.FP, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
-            'ioffset': osh(ot.IMMEDIATE, None, adt.UINT64)
+            'adreg': osh(ot.REGISTER, orl.DATA, rt.FP, dt),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+            'ioffset': osh(ot.IMMEDIATE, orl.PARAM, None, adt.UINT64)
             }
         ))
 
@@ -55,17 +56,17 @@ def make_riscv64_opdna1_signatures():
         modifiers=set(),
         structural_params={},
         operands={
-            'adreg': osh(ot.REGISTER, rt.GP, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64)
+            'adreg': osh(ot.REGISTER, orl.DATA, rt.GP, dt),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
             }
         ))
         sigs.append(sig(
         modifiers={mod.IOFFSET},
         structural_params={},
         operands={
-            'adreg': osh(ot.REGISTER, rt.GP, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
-            'ioffset': osh(ot.IMMEDIATE, None, adt.UINT64)
+            'adreg': osh(ot.REGISTER, orl.DATA, rt.GP, dt),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+            'ioffset': osh(ot.IMMEDIATE, orl.PARAM, None, adt.UINT64)
             }
         ))
 

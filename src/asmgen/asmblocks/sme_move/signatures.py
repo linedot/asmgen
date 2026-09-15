@@ -16,6 +16,7 @@ from ..op import (
     operand_modifier as omod,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     register_type as rgt,
     move_modifier as mod,
     make_ord_prefix as mop
@@ -78,7 +79,8 @@ def make_sme_move_signatures() -> list[opsig]:
         structural_params = {}
 
         operands = {
-                'amreg' : osh(otype=ot.REGISTER, rtype=rgt.MASK, dt=dt)
+                'amreg' : osh(otype=ot.REGISTER, orole=orl.MASK,
+                              rtype=rgt.MASK, dt=dt)
             }
         if t_to_v:
             # 4 slices exist for 64bit (SVL >256bit required)
@@ -92,17 +94,20 @@ def make_sme_move_signatures() -> list[opsig]:
 
             operands['adreg'] = osh(
                     otype=ot.REGISTER,
+                    orole=orl.DATA,
                     rtype=rgt.TILE,
                     dt=dt,
                     modifiers={rcmod}
                     )
             operands[f'adreg_imm{rcstr}'] = osh(
                     otype=ot.IMMEDIATE,
+                    orole=orl.PARAM,
                     value_constraints=[oneof_constraint(
                         valset={i*nvecs for i in range(slices//nvecs)})]
                     )
             operands[f'adreg_{rcstr}reg'] = osh(
                     otype=ot.REGISTER,
+                    orole=orl.ADDRESS,
                     rtype=rgt.GP,
                     value_constraints=[sme_rowcolreg_constraint()]
                     )
@@ -110,19 +115,23 @@ def make_sme_move_signatures() -> list[opsig]:
                 rc_treg = f"{mop(i)}dreg"
                 operands[rc_treg] = osh(
                         otype=ot.REGISTER,
+                        orole=orl.DATA,
                         rtype=rgt.TILE,
                         dt=dt,
                         modifiers={rcmod}
                         )
                 operands[f'{rc_treg}_imm{rcstr}'] = osh(
                         otype=ot.IMMEDIATE,
+                        orole=orl.DATA,
                         value_constraints=[otherplusn_constraint(
                             other=f"{mop(i-1)}dreg_imm{rcstr}",
                             offset=1
                             )]
                         )
                 operands[f'{rc_treg}_{rcstr}reg'] = osh(
-                        otype=ot.REGISTER,rtype=rgt.GP,
+                        otype=ot.REGISTER,
+                        orole=orl.PARAM,
+                        rtype=rgt.GP,
                         value_constraints=[
                             samegregidx_constraint(
                                 other=f"{mop(inputs)}dreg_{rcstr}reg")
@@ -132,6 +141,7 @@ def make_sme_move_signatures() -> list[opsig]:
                 vreg = f"{mop(i+inputs)}dreg"
                 operands[vreg] = osh(
                         otype=ot.REGISTER,
+                        orole=orl.DATA,
                         rtype=rgt.VEC,
                         dt=dt
                         )
@@ -147,6 +157,7 @@ def make_sme_move_signatures() -> list[opsig]:
                 vreg = f"{mop(i)}dreg"
                 operands[vreg] = osh(
                         otype=ot.REGISTER,
+                        orole=orl.DATA,
                         rtype=rgt.VEC,
                         dt=dt
                         )
@@ -164,28 +175,35 @@ def make_sme_move_signatures() -> list[opsig]:
                 treg = f"{mop(i+inputs)}dreg"
                 operands[treg] = osh(
                         otype=ot.REGISTER,
+                        orole=orl.DATA,
                         rtype=rgt.TILE,
                         dt=dt,
                         modifiers={rcmod}
                         )
 
                 if i == 0:
-                    operands[f'{treg}_imm{rcstr}'] = osh(otype=ot.IMMEDIATE)
+                    operands[f'{treg}_imm{rcstr}'] = osh(
+                            otype=ot.IMMEDIATE,
+                            orole=orl.PARAM)
                     operands[f'{treg}_{rcstr}reg'] = osh(
                             otype=ot.REGISTER,
+                            orole=orl.PARAM,
                             rtype=rgt.GP,
                             value_constraints=[sme_rowcolreg_constraint()]
                             )
                 else:
                     operands[f'{treg}_imm{rcstr}'] = osh(
                             otype=ot.IMMEDIATE,
+                            orole=orl.PARAM,
                             value_constraints=[otherplusn_constraint(
                                 other=f"{mop(i+inputs-1)}dreg_imm{rcstr}",
                                 offset=1
                                 )]
                             )
                     operands[f'{treg}_{rcstr}reg'] = osh(
-                            otype=ot.REGISTER, rtype=rgt.GP,
+                            otype=ot.REGISTER,
+                            orole=orl.PARAM,
+                            rtype=rgt.GP,
                             value_constraints=[
                                 samegregidx_constraint(
                                     other=f"{mop(inputs)}dreg_{rcstr}reg")

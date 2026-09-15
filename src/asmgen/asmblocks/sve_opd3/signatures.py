@@ -10,6 +10,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     register_type as rt,
     opd3_modifier as mod,
     operand_modifier as opd_mod
@@ -60,13 +61,13 @@ def make_sve_opd3_signatures(supports_np: bool) -> list[sig]:
         struct_params = {'widening_method': wm.SPLIT_INSTRUCTIONS} if is_widening else {}
 
         ops = {
-            'adreg': osh(ot.REGISTER, rt.VEC, a_dt),
-            'bdreg': osh(ot.REGISTER, rt.VEC, b_dt),
-            'cdreg': osh(ot.REGISTER, rt.VEC, c_dt)
+            'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, a_dt),
+            'bdreg': osh(ot.REGISTER, orl.DATA, rt.VEC, b_dt),
+            'cdreg': osh(ot.REGISTER, orl.DATA, rt.VEC, c_dt)
         }
 
         if mod.MASK in mods:
-            ops['amreg'] = osh(ot.REGISTER, rt.MASK, c_dt)
+            ops['amreg'] = osh(ot.REGISTER, orl.MASK, rt.MASK, c_dt)
 
         bdreg_mods = opd_mods.get('bdreg',set())
 
@@ -77,7 +78,7 @@ def make_sve_opd3_signatures(supports_np: bool) -> list[sig]:
             blocksize = 16//adt_size(b_dt)
             struct_params['bdreg_blocksize'] = blocksize
             ops['bdreg_lane'] = osh(
-                ot.IMMEDIATE, None, None,
+                ot.IMMEDIATE, orl.PARAM, None, None,
                 value_constraints=[minmax_constraint(minval=0, maxval=blocksize-1)]
             )
             # from ddi0602:
@@ -101,7 +102,7 @@ def make_sve_opd3_signatures(supports_np: bool) -> list[sig]:
         if mod.PART in mods:
             max_part = (adt_size(c_dt) // adt_size(a_dt)) - 1
             ops['part'] = osh(
-                ot.IMMEDIATE, None, None,
+                ot.IMMEDIATE, orl.PARAM, None, None,
                 value_constraints=[minmax_constraint(minval=0, maxval=max_part)]
             )
 

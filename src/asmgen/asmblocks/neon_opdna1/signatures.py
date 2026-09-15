@@ -14,6 +14,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     operand_modifier as opd_mod,
     register_type as rt,
     opdna1_modifier as mod
@@ -56,8 +57,8 @@ def make_neon_opdna1_signatures(bcast_supported=False):
 
     def add_sig(dt, *, mods, opd_mods, nstructs=1, postinc_reg=False):
         ops = {
-            'adreg': osh(ot.REGISTER, rt.VEC, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, dt.UINT64),
+            'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, dt),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, dt.UINT64),
         }
 
         struct_params={}
@@ -67,31 +68,31 @@ def make_neon_opdna1_signatures(bcast_supported=False):
             struct_params['nstructs'] = nstructs
             for i in range(1, nstructs):
                 ops[f"{mop(i)}dreg"] = osh(
-                    ot.REGISTER, rt.VEC, dt,
+                    ot.REGISTER, orl.DATA, rt.VEC, dt,
                     value_constraints=[
                         neon_struct_constraint(other=f"{mop(i-1)}dreg")
                     ])
 
         if mod.IOFFSET in mods:
-            ops['ioffset'] = osh(ot.IMMEDIATE, None, None)
+            ops['ioffset'] = osh(ot.IMMEDIATE, orl.PARAM, None, None)
         if mod.VOFFSET in mods:
-            ops['voffset'] = osh(ot.IMMEDIATE, None, None)
+            ops['voffset'] = osh(ot.IMMEDIATE, orl.PARAM, None, None)
 
         for opd, omods in opd_mods.items():
             ops[opd].modifiers = omods
             if opd_mod.ILANE in omods:
                 max_lane = (16 // adt_size(dt))-1
                 ops[f"{opd}_lane"] = osh(
-                        ot.IMMEDIATE, None, None,
+                        ot.IMMEDIATE, orl.PARAM, None, None,
                         value_constraints=[
                             minmax_constraint(minval=0,maxval=max_lane)]
                         )
 
         if mod.POSTINC in mods:
             if postinc_reg:
-                ops['increg'] = osh(ot.REGISTER, rt.GP, adt.UINT64)
+                ops['increg'] = osh(ot.REGISTER, orl.PARAM, rt.GP, adt.UINT64)
             else:
-                ops['iinc'] = osh(ot.IMMEDIATE, None, None)
+                ops['iinc'] = osh(ot.IMMEDIATE, orl.PARAM, None, None)
 
         sigs.append(sig(
             modifiers=mods,

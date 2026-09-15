@@ -11,6 +11,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     operand_modifier as opd_mod,
     register_type as rt,
     opdna1_modifier as mod,
@@ -50,8 +51,8 @@ def make_avx_opdna1_signatures(action: opdna1_action,
 
     def add_sig(dt, *, mods, opd_mods = None):
         ops = {
-            'adreg': osh(ot.REGISTER, rt.VEC, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64)
+            'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, dt),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
         }
         structural_params = {}
         clobber_list = []
@@ -65,25 +66,25 @@ def make_avx_opdna1_signatures(action: opdna1_action,
         maskrt = rt.MASK if is_avx512 else rt.VEC
 
         if mod.MASK in mods:
-            ops['amreg'] = osh(ot.REGISTER, maskrt, dt)
+            ops['amreg'] = osh(ot.REGISTER, orl.MASK, maskrt, dt)
 
         if mod.IOFFSET in mods:
-            ops['ioffset'] = osh(ot.IMMEDIATE, None, None)
+            ops['ioffset'] = osh(ot.IMMEDIATE, orl.PARAM, None, None)
         if mod.VOFFSET in mods:
-            ops['voffset'] = osh(ot.IMMEDIATE, None, None)
+            ops['voffset'] = osh(ot.IMMEDIATE, orl.PARAM, None, None)
 
         has_ilane = any(opd_mod.ILANE in mods for _,mods in opd_mods.items())
 
         if has_ilane:
             # Only 128 bits are addressable
             max_lane = (16 // adt_size(dt)) - 1
-            ops['adreg_lane'] = osh(ot.IMMEDIATE, None, None,
+            ops['adreg_lane'] = osh(ot.IMMEDIATE, orl.PARAM, None, None,
                                     value_constraints=[
                                         minmax_constraint(minval=0, maxval=max_lane)])
 
         if mod.VINDEX in mods:
             # The index register is another vector
-            ops['vidxreg'] = osh(ot.REGISTER, rt.VEC, dt)
+            ops['vidxreg'] = osh(ot.REGISTER, orl.ADDRESS, rt.VEC, dt)
             structural_params['it'] = _SIZE_AIT_MAP[adt_size(dt)]
             clobber_list.append('amreg')
 

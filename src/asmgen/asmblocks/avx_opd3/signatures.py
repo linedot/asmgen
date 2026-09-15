@@ -10,6 +10,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     register_type as rt,
     opd3_modifier as mod
 )
@@ -30,9 +31,9 @@ def make_avx_opd3_signatures(supports_np : bool, has_fp16 : bool) -> list[sig]:
     def add_sig(a_dt, b_dt, c_dt, *, mods):
 
         ops = {
-            'adreg': osh(ot.REGISTER, rt.VEC, a_dt),
-            'bdreg': osh(ot.REGISTER, rt.VEC, b_dt),
-            'cdreg': osh(ot.REGISTER, rt.VEC, c_dt)
+            'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, a_dt),
+            'bdreg': osh(ot.REGISTER, orl.DATA, rt.VEC, b_dt),
+            'cdreg': osh(ot.REGISTER, orl.DATA, rt.VEC, c_dt)
         }
         sigs.append(sig(
             modifiers=mods,

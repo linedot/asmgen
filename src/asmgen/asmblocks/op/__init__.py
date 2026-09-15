@@ -20,6 +20,7 @@ from .operand import (
     operand_modifier,
     operand_shape,
     operand_type,
+    operand_role,
     register_type
 )
 

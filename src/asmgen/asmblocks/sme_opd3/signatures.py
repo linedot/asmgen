@@ -10,6 +10,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     register_type as rt,
     opd3_modifier as mod
 )
@@ -54,14 +55,14 @@ def make_sme_opd3_signatures(supports_np: bool) -> list[sig]:
         struct_params = {'widening_method': wm.DOT_NEIGHBOURS} if is_widening else {}
 
         ops = {
-            'adreg': osh(ot.REGISTER, rt.VEC, a_dt),
-            'bdreg': osh(ot.REGISTER, rt.VEC, b_dt),
-            'cdreg': osh(ot.REGISTER, rt.TILE, c_dt)
+            'adreg': osh(ot.REGISTER, orl.DATA, rt.VEC, a_dt),
+            'bdreg': osh(ot.REGISTER, orl.DATA, rt.VEC, b_dt),
+            'cdreg': osh(ot.REGISTER, orl.DATA, rt.TILE, c_dt)
         }
 
         if mod.MASK in mods:
-            ops['amreg'] = osh(ot.REGISTER, rt.MASK, a_dt)
-            ops['bmreg'] = osh(ot.REGISTER, rt.MASK, b_dt)
+            ops['amreg'] = osh(ot.REGISTER, orl.MASK, rt.MASK, a_dt)
+            ops['bmreg'] = osh(ot.REGISTER, orl.MASK, rt.MASK, b_dt)
 
         sigs.append(sig(
             modifiers=mods,

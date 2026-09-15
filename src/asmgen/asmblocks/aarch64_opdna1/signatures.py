@@ -11,6 +11,7 @@ from ..op import (
     operation_signature as sig,
     operand_shape as osh,
     operand_type as ot,
+    operand_role as orl,
     register_type as rt,
     opdna1_modifier as mod
 )
@@ -37,8 +38,8 @@ def make_aarch64_opdna1_signatures():
         modifiers=set(),
         structural_params={},
         operands={
-            'adreg': osh(ot.REGISTER, a_rt, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64)
+            'adreg': osh(ot.REGISTER, orl.DATA, a_rt, dt),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
             }
         ))
         # (f)ld with immediate offset
@@ -46,9 +47,9 @@ def make_aarch64_opdna1_signatures():
         modifiers={mod.IOFFSET},
         structural_params={},
         operands={
-            'adreg': osh(ot.REGISTER, a_rt, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
-            'ioffset': osh(ot.IMMEDIATE, None, adt.UINT64)
+            'adreg': osh(ot.REGISTER, orl.DATA, a_rt, dt),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+            'ioffset': osh(ot.IMMEDIATE, orl.PARAM, None, adt.UINT64)
             }
         ))
         # (f)ld with gp-reg offset
@@ -56,9 +57,9 @@ def make_aarch64_opdna1_signatures():
         modifiers={mod.GOFFSET},
         structural_params={},
         operands={
-            'adreg': osh(ot.REGISTER, a_rt, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
-            'offreg': osh(ot.REGISTER, rt.GP, adt.UINT64)
+            'adreg': osh(ot.REGISTER, orl.DATA, a_rt, dt),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+            'offreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
             }
         ))
         # (f)ld with postinc immediate offset
@@ -66,9 +67,9 @@ def make_aarch64_opdna1_signatures():
         modifiers={mod.POSTINC},
         structural_params={},
         operands={
-            'adreg': osh(ot.REGISTER, a_rt, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
-            'iinc': osh(ot.IMMEDIATE, None, adt.UINT64)
+            'adreg': osh(ot.REGISTER, orl.DATA, a_rt, dt),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+            'iinc': osh(ot.IMMEDIATE, orl.PARAM, None, adt.UINT64)
             }
         ))
         # (f)ld with postinc gp-reg offset
@@ -76,9 +77,9 @@ def make_aarch64_opdna1_signatures():
         modifiers={mod.POSTINC},
         structural_params={},
         operands={
-            'adreg': osh(ot.REGISTER, a_rt, dt),
-            'agreg': osh(ot.REGISTER, rt.GP, adt.UINT64),
-            'increg': osh(ot.REGISTER, rt.GP, adt.UINT64)
+            'adreg': osh(ot.REGISTER, orl.DATA, a_rt, dt),
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+            'increg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
             }
         ))
 

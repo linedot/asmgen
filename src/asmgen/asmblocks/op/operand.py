@@ -31,6 +31,15 @@ class operand_type(Enum):
     REGISTER = auto()
     IMMEDIATE = auto()
 
+class operand_role(Enum):
+    """
+    Which role the operand plays in the operation
+    """
+    DATA = auto()
+    ADDRESS = auto()
+    MASK = auto()
+    PARAM = auto()
+
 
 class register_type(Enum):
     """
@@ -79,6 +88,7 @@ class operand_shape:
     """
 
     otype     : operand_type
+    orole     : operand_role
     rtype     : register_type | None = None
     dt        : adt|None = None
     modifiers : set[operand_modifier] = field(default_factory=set)
