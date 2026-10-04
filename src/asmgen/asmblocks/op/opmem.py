@@ -84,8 +84,6 @@ class opmem(operation):
         if operand_modifiers is None:
             operand_modifiers = dict()
 
-        print(kwargs.keys())
-
         return self.execute(
             dregs=dregs,
             gregs=[areg],
