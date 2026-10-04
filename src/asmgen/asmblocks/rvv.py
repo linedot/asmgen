@@ -19,7 +19,7 @@ from .riscv64 import riscv64
 from .types.rvv_types import rvv_vreg
 
 from .rvv_opd3 import rvv_fma,rvv_fmul,rvv_fadd
-from .rvv_opdna1 import rvv_load,rvv_store
+from .rvv_opmem import rvv_load,rvv_store
 
 
 # pylint: disable=too-many-public-methods

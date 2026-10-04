@@ -29,10 +29,10 @@ from .move import (
     move_modifier
 )
 
-from .opdna1 import (
-    opdna1_modifier,
-    opdna1_action,
-    opdna1
+from .opmem import (
+    opmem_modifier,
+    opmem_action,
+    opmem
 )
 
 from .opd3 import (

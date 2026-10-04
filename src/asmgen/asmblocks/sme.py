@@ -19,8 +19,8 @@ from .types.sme_types import sme_treg
 from .sme_opd3 import sme_fopa
 from .sme_move import sme_move
 
-from .sme_opdna1.sme_load import sme_load
-from .sme_opdna1.sme_store import sme_store
+from .sme_opmem.sme_load import sme_load
+from .sme_opmem.sme_store import sme_store
 
 
 class sme(sve):

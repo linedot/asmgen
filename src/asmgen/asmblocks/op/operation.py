@@ -190,7 +190,7 @@ class operation(ABC):
         resolved_operands['operand_modifiers'] = operand_modifiers
         resolved_operands['dts'] = dts
 
-        # opdna1 has a different interface
+        # opmem has a different interface
         resolved_operands['dregs'] = dregs
 
         return self.implementation(**resolved_operands)

@@ -35,7 +35,7 @@ from ...registers import asm_data_type as adt,adt_size
 from ..types.aarch64_types import aarch64_greg
 from ..types.sve_types import sve_vreg
 
-from ..sme_opdna1.signatures import sme_rowcolreg_constraint
+from ..sme_opmem.signatures import sme_rowcolreg_constraint
 
 _FLOATS = [adt.FP64, adt.FP32, adt.FP16, adt.BF16, adt.FP8E4M3, adt.FP8E5M2]
 _INTS = [adt.SINT64, adt.SINT32, adt.SINT16, adt.SINT8,

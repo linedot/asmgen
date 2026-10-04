@@ -19,7 +19,7 @@ from ..registers import (
 from .types.aarch64_types import aarch64_greg,aarch64_freg
 from ..callconv.callconv import callconv
 
-from .aarch64_opdna1 import aarch64_load, aarch64_store
+from .aarch64_opmem import aarch64_load, aarch64_store
 
 class aarch64(asmgen):
     """

@@ -28,8 +28,8 @@ from .types.avx_types import x86_greg,avx_freg,xmm_vreg,ymm_vreg,zmm_vreg,reg_pr
 from .avx_opd3 import avx_fma,avx_fmul,avx_fadd
 
 
-from .avx_opdna1.avx_load import avx128_load,avx256_load,avx512_load
-from .avx_opdna1.avx_store import avx128_store,avx256_store,avx512_store
+from .avx_opmem.avx_load import avx128_load,avx256_load,avx512_load
+from .avx_opmem.avx_store import avx128_store,avx256_store,avx512_store
 
 class avxbase(asmgen):
     """

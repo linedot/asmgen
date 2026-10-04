@@ -21,7 +21,7 @@ from asmgen.asmblocks.sme import sme
 
 # fine for testing
 # pylint: disable-next=too-many-instance-attributes
-class test_sme_opdna1(unittest.TestCase):
+class test_sme_opmem(unittest.TestCase):
     """
     Testsuite for SME move operations
     """

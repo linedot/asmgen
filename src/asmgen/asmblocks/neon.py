@@ -18,7 +18,7 @@ from .aarch64 import aarch64
 from .types.aarch64_types import aarch64_freg
 from .types.neon_types import neon_vreg
 from .neon_opd3 import neon_fma,neon_fmul,neon_fadd
-from .neon_opdna1 import neon_load, neon_store
+from .neon_opmem import neon_load, neon_store
 
 class neon(aarch64):
     """

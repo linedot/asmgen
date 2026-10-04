@@ -20,8 +20,8 @@ from ..registers import (
 
 from .types.sve_types import sve_vreg,sve_preg
 from .sve_opd3 import sve_fma,sve_fmul,sve_fadd
-from .sve_opdna1.sve_load import sve_load
-from .sve_opdna1.sve_store import sve_store
+from .sve_opmem.sve_load import sve_load
+from .sve_opmem.sve_store import sve_store
 
 from .sve_move import sve_move
 

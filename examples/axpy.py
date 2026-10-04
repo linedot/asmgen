@@ -20,7 +20,7 @@ from asmgen.callconv.fngen import fngen
 from asmgen.asmblocks.noarch import comparison
 
 from asmgen.asmblocks.op import (
-    opdna1_modifier as ld_mod,
+    opmem_modifier as mem_mod,
     operand_modifier as opd_mod
 )
 from asmgen.asmblocks.op.operand import register_type as op_rt
@@ -64,9 +64,9 @@ def resolve_ldst_sig(signatures, dt, req_rt):
     valid = sorted(valid, key=get_complexity)
 
     for s in valid:
-        if ld_mod.VOFFSET in s.modifiers: return s, "voffset"
+        if mem_mod.VOFFSET in s.modifiers: return s, "voffset"
     for s in valid:
-        if ld_mod.IOFFSET in s.modifiers: return s, "ioffset"
+        if mem_mod.IOFFSET in s.modifiers: return s, "ioffset"
 
     return valid[0], "none"
 
