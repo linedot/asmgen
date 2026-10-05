@@ -8,3 +8,4 @@ Meta-module for Base X86 opmem operations
 """
 from .x86_load import *
 from .x86_store import *
+from .x86_prefetch import *

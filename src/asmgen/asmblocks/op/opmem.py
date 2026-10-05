@@ -52,28 +52,30 @@ class opmem_action(Enum):
     """
     LOAD = auto()
     STORE = auto()
+    PREFETCH = auto()
 
 class opmem(operation):
     """
     Assembly/IR instruction with n data operand and 1 address operand
 
-    Absraction for loads/stores (maybe also prefetches)
+    Absraction for loads/stores/prefetches
     """
     NIE_MESSAGE="Method not implemented"
 
-    def __call__(self, *, dregs : list[data_reg],
-                 areg : greg_base, dt : adt,
+    def __call__(self, *, dregs : list[data_reg]|None = None,
+                 areg : greg_base, dt : adt|None = None,
                  modifiers : set[opmem_modifier] = None,
                  operand_modifiers : dict[str,set[operand_modifier]] = None,
                  **kwargs) -> str:
         """
         Return the ASM/IR instruction
-        
-        :param dregs : Data registers
+
+        :param dregs : Data registers; may be empty/omitted for operations
+            without data operands (prefetches, cache maintenance)
         :type dregs : list[class:`asmgen.registers.data_reg`]
         :param areg : Address register
         :type areg : class:`asmgen.registers.greg_base`
-        :param dt : Data type
+        :param dt : Data type; required iff dregs are provided
         :type dt : class:`asmgen.registers.asm_data_type`
         :return : ASM/IR instruction corresponding to the operation
         :rtype : str
@@ -83,6 +85,10 @@ class opmem(operation):
             modifiers = set()
         if operand_modifiers is None:
             operand_modifiers = dict()
+
+        if dregs and dt is None:
+            raise ValueError("dt is required when dregs are provided")
+        dregs = dregs if dregs else []
 
         # dts will be present in kwargs if an opmem routes to another opmem
         # like when a vector opmem routes to a scalar opmem
@@ -103,12 +109,15 @@ class opmem(operation):
     @abstractmethod
     # pylint: disable-next=arguments-differ
     def implementation(self, *, dregs : list[data_reg],
-                       agreg : greg_base, a_dt : adt,
+                       agreg : greg_base,
                        modifiers : set[opmem_modifier],
                        operand_modifiers : dict[str,set[operand_modifier]],
                        **kwargs) -> str:
         """
         opmem implementation/call interface
+
+        Data types arrive via kwargs (`a_dt`, `b_dt`, ...) and are absent
+        entirely when there are no dregs (prefetches, cache maintenance)
         """
         raise NotImplementedError(self.NIE_MESSAGE)
 
@@ -117,13 +126,11 @@ class dummy_opmem(opmem):
     """
     Dummy opd1a1 operation; ISAs assign this by default to operations they do not support
     """
-
     def get_signatures(self) -> list[operation_signature]:
         raise NotImplementedError(self.NIE_MESSAGE)
 
     def implementation(self, *,
                        dregs : list[data_reg], agreg : greg_base,
-                       a_dt : adt,
                        modifiers : set[opmem_modifier],
                        operand_modifiers : dict[str,set[operand_modifier]],
                        **kwargs) -> str:

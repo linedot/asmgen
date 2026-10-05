@@ -201,13 +201,15 @@ class sve_opmem(opmem):
 
     # Wrong
     # pylint: disable-next=too-many-locals
-    def implementation(self, *, dregs: list, agreg: aarch64_greg, a_dt: adt,
+    def implementation(self, *, dregs: list, agreg: aarch64_greg,
                        modifiers: set[mod],
                        operand_modifiers : dict[str,set[opd_mod]],
                        **kwargs) -> str:
 
         if not dregs:
             raise ValueError("No dregs provided")
+
+        a_dt = kwargs.pop('a_dt')
 
         # Forward scalars to AArch64 base
         if isinstance(dregs[0], (aarch64_greg, aarch64_freg)):

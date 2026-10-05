@@ -8,3 +8,4 @@ Meta-module for Base AArch64 opmem operations
 """
 from .aarch64_load import *
 from .aarch64_store import *
+from .aarch64_prefetch import *

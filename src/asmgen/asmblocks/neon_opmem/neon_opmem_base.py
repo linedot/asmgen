@@ -261,13 +261,15 @@ class neon_opmem(opmem):
     # I don't know how pylint counts it, but it's not 16
     # pylint: disable-next=too-many-locals
     def implementation(self, *,
-                       dregs: list, agreg: aarch64_greg, a_dt: adt,
+                       dregs: list, agreg: aarch64_greg,
                        modifiers: set[mod],
                        operand_modifiers : dict[str,set[opd_mod]],
                        **kwargs) -> str:
 
         if not dregs:
             raise ValueError("No dregs provided")
+
+        a_dt = kwargs.pop('a_dt')
 
         # If scalar registers are passed, forward to base AArch64
         if isinstance(dregs[0], (aarch64_greg, aarch64_freg)):

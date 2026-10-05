@@ -71,3 +71,28 @@ def make_riscv64_opmem_signatures():
         ))
 
     return sigs
+
+
+def make_riscv64_prefetch_signatures():
+    """
+    Generate signatures for RISCV64 +D/F (Zicbop) prefetch operations
+    """
+    return [
+        # prefetch without offset
+        sig(
+        modifiers=set(),
+        structural_params={},
+        operands={
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
+            }
+        ),
+        # prefetch with immediate offset
+        sig(
+        modifiers={mod.IOFFSET},
+        structural_params={},
+        operands={
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+            'ioffset': osh(ot.IMMEDIATE, orl.PARAM, None, adt.UINT64)
+            }
+        ),
+    ]

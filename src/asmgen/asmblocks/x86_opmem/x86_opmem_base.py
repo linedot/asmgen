@@ -130,11 +130,12 @@ class x86_opmem(opmem):
 
         return f"{offset}({register_part})" if offset != 0 else f"({register_part})"
 
-    def implementation(self, *, dregs: list, agreg: x86_greg, a_dt: adt,
+    def implementation(self, *, dregs: list, agreg: x86_greg,
                        modifiers: set[mod],
                        operand_modifiers : dict[str,set[opd_mod]],
                        **kwargs) -> str:
 
+        a_dt = kwargs['a_dt']
         dreg = dregs[0]
 
         is_freg = isinstance(dreg, avx_freg)

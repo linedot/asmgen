@@ -192,17 +192,18 @@ class sme_opmem(opmem):
 
     # Inlining any params or breaking the method up IMHO doesn't impove readability
     # pylint: disable-next=too-many-locals
-    def implementation(self, *, dregs: list, agreg: aarch64_greg, a_dt: adt,
+    def implementation(self, *, dregs: list, agreg: aarch64_greg,
                        modifiers: set[mod],
                        operand_modifiers : dict[str,set[opd_mod]],
                        **kwargs) -> str:
 
+        a_dt = kwargs.pop('a_dt')
+        # dts is rebuilt by the forwarded opmem.__call__
+        kwargs.pop('dts', None)
+
         # --- ROUTING LOGIC ---
         # If it's not a Tile Register AND it's not a Non-Temporal instruction, SVE handles it.
         if not isinstance(dregs[0], sme_treg) and mod.NT not in modifiers:
-            
-            #Hack: remove dts from kwargs
-            del kwargs['dts']
             return self.sve_opmem(dregs=dregs, areg=agreg, dt=a_dt,
                                    modifiers=modifiers,
                                    operand_modifiers=operand_modifiers,

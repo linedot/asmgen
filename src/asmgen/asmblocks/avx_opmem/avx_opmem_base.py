@@ -242,16 +242,20 @@ class avx_opmem(opmem):
 
     # It's fine
     # pylint: disable-next=too-many-return-statements
-    def implementation(self, *, dregs: list[data_reg], agreg: x86_greg, a_dt: adt,
+    def implementation(self, *, dregs: list[data_reg], agreg: x86_greg,
                        modifiers: set[mod],
                        operand_modifiers : dict[str,set[opd_mod]],
                        **kwargs) -> str:
         if not dregs:
             raise ValueError("No dregs provided")
 
+        a_dt = kwargs.pop('a_dt')
+
         if isinstance(dregs[0], (x86_greg, avx_freg)):
             return self.scalar_opmem(dregs=dregs, areg=agreg, dt=a_dt,
-                                      modifiers=modifiers, **kwargs)
+                                      modifiers=modifiers,
+                                      operand_modifiers=operand_modifiers,
+                                      **kwargs)
 
         dreg = dregs[0]
 

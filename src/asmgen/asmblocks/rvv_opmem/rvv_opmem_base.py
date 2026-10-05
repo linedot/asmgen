@@ -248,13 +248,15 @@ class rvv_opmem(opmem):
 
 
     def implementation(self, *, dregs : list[data_reg],
-                       agreg : greg_base, a_dt : adt,
+                       agreg : greg_base,
                        modifiers : set[mod],
                        operand_modifiers : dict[str,set[opd_mod]],
                        **kwargs) -> str:
 
         if not dregs:
             raise ValueError("No dregs provided")
+
+        a_dt = kwargs.pop('a_dt')
 
         # If scalar registers are passed, forward to base RISC-V
         if isinstance(dregs[0], (riscv64_greg, riscv64_freg)):

@@ -76,3 +76,37 @@ def make_x86_64_opmem_signatures():
         ))
 
     return sigs
+
+
+def make_x86_prefetch_signatures():
+    """
+    Generate signatures for Base X86_64 prefetch operations
+    """
+    return [
+        # prefetch without offset
+        sig(
+        modifiers=set(),
+        structural_params={},
+        operands={
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
+            }
+        ),
+        # prefetch with immediate offset
+        sig(
+        modifiers={mod.IOFFSET},
+        structural_params={},
+        operands={
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+            'ioffset': osh(ot.IMMEDIATE, orl.PARAM, None, adt.UINT64)
+            }
+        ),
+        # prefetch with gp-reg offset
+        sig(
+        modifiers={mod.GOFFSET},
+        structural_params={},
+        operands={
+            'agreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64),
+            'offreg': osh(ot.REGISTER, orl.ADDRESS, rt.GP, adt.UINT64)
+            }
+        ),
+    ]

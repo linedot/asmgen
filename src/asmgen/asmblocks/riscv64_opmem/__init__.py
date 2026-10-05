@@ -8,3 +8,4 @@ Meta-module for RISC-V +D/F opmem operations
 """
 from .riscv64_load import *
 from .riscv64_store import *
+from .riscv64_prefetch import *

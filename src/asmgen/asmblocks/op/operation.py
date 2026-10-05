@@ -99,7 +99,7 @@ class operation(ABC):
             dreg_name = f"{pfx}dreg"
             dt_name = f"{pfx}_dt"
             resolved_operands[dreg_name] = reg
-            resolved_operands[dt_name] = dts[dreg_name]
+            resolved_operands[dt_name] = dts.get(dreg_name)
 
         return resolved_operands
 
@@ -125,9 +125,9 @@ class operation(ABC):
     # function if anything else gets added
     # pylint: disable-next=too-many-locals
     def execute(self, *,
-                dregs : list[data_reg],
-                gregs : list[greg_base],
-                dts : dict[str,adt],
+                dregs : list[data_reg]|None = None,
+                gregs : list[greg_base]|None = None,
+                dts : dict[str,adt]|None = None,
                 modifiers : set[mod],
                 operand_modifiers : dict[str,set[opd_mod]],
                 **kwargs) -> str:
@@ -135,12 +135,16 @@ class operation(ABC):
         Performs checks on all arguments, generates the parameters for the underlying
         implementation and calls it
 
-        :param dregs: Data registers to use
+        :param dregs: Data registers to use; may be empty for operations
+            without data operands
         :param gregs: GP registers to use
         :param dts: Data type to use for each named operand
         :param modifiers: operation modifiers
         """
 
+        dregs = dregs if dregs else []
+        gregs = gregs if gregs else []
+        dts = dts if dts else {}
 
         resolved_operands = kwargs.copy()
 

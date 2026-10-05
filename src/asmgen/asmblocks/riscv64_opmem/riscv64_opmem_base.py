@@ -126,12 +126,13 @@ class riscv64_opmem(opmem):
     def get_signatures(self) -> list[operation_signature]:
         return self.signatures
 
-    def implementation(self, *, dregs : list[data_reg], agreg : greg_base, a_dt : adt,
+    def implementation(self, *, dregs : list[data_reg], agreg : greg_base,
                        modifiers : set[mod],
                        operand_modifiers : dict[str,set[opd_mod]],
                        **kwargs) -> str:
 
 
+        a_dt = kwargs['a_dt']
         dreg = dregs[0]
 
         inst = self.inst_base

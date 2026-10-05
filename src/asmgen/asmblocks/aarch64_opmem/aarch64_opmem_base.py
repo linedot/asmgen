@@ -90,7 +90,10 @@ class aarch64_opmem(opmem):
         if mod.NT in modifiers:
             raise NotImplementedError("Non-temporals for Base AArch64 not yet implemented")
 
-        if len(dts) != 1:  # `dts` has one entry per passed `dreg`
+        # `dts` has one entry per passed `dreg`; ld/st always use exactly one
+        # register, data-less ops (prefetches) use none
+        if self.action in (opmem_action.LOAD, opmem_action.STORE) \
+                and len(dts) != 1:
             raise ValueError("AArch64 scalar load/store uses exactly one register.")
 
         if mod.POSTINC in modifiers:
@@ -158,13 +161,14 @@ class aarch64_opmem(opmem):
 
         return base
 
-    def implementation(self, *, dregs: list, agreg: aarch64_greg, a_dt: adt,
+    def implementation(self, *, dregs: list, agreg: aarch64_greg,
                        modifiers: set[mod], **kwargs) -> str:
 
         if len(dregs) != 1:
             raise ValueError(
                     "AArch64 scalar load/store uses exactly one register.")
 
+        a_dt = kwargs['a_dt']
         dreg = dregs[0].retype(dt=a_dt)
         is_freg = isinstance(dreg, aarch64_freg)
 
