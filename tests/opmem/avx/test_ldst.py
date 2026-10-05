@@ -63,20 +63,25 @@ class test_avx_opmem(unittest.TestCase):
 
     # --- 1. Basic Routing & Unit Stride ---
     def test_scalar_routing(self):
-        """ Ensure scalar registers fall back to x86_opmem """
+        """
+        Ensure scalar registers fall back to x86_opmem
+        """
         self.assertEqual(
-            self.load_128(dregs=[self.f0], areg=self.r8, dt=adt.FP32, modifiers=set()),
+            self.load_128(dregs=[self.f0], areg=self.r8,
+                          dt=adt.FP32, modifiers=set()),
             "vmovss (%r8), %xmm0\n"
         )
 
     def test_basic_vector_loads(self):
         """ Test standard vmovups / vmovupd """
         self.assertEqual(
-            self.load_128(dregs=[self.xmm0], areg=self.r8, dt=adt.FP32, modifiers=set()),
+            self.load_128(dregs=[self.xmm0], areg=self.r8,
+                          dt=adt.FP32, modifiers=set()),
             "vmovups (%r8), %xmm0\n"
         )
         self.assertEqual(
-            self.load_512(dregs=[self.zmm1], areg=self.r15, dt=adt.FP64, modifiers=set()),
+            self.load_512(dregs=[self.zmm1], areg=self.r15,
+                          dt=adt.FP64, modifiers=set()),
             "vmovupd (%r15), %zmm1\n"
         )
 
@@ -110,7 +115,9 @@ class test_avx_opmem(unittest.TestCase):
 
     # --- 3. Lane Loads (Primitives) ---
     def test_lane_loads_fp64(self):
-        """ Test FP64 vmovsd (lane 0) and vmovhpd (lane 1) """
+        """
+        Test FP64 vmovsd (lane 0) and vmovhpd (lane 1)
+        """
         self.assertEqual(
             self.load_128(dregs=[self.xmm0], areg=self.r8, dt=adt.FP64,
                           operand_modifiers={'adreg':{opd_mod.ILANE}}, adreg_lane=0),
@@ -123,7 +130,9 @@ class test_avx_opmem(unittest.TestCase):
         )
 
     def test_lane_loads_fp32(self):
-        """ Test FP32 vmovss (lane 0) and vinsertps (lane > 0) """
+        """
+        Test FP32 vmovss (lane 0) and vinsertps (lane > 0)
+        """
         self.assertEqual(
             self.load_128(dregs=[self.xmm1], areg=self.r8, dt=adt.FP32,
                           operand_modifiers={'adreg':{opd_mod.ILANE}}, adreg_lane=0),
@@ -136,7 +145,9 @@ class test_avx_opmem(unittest.TestCase):
             "vinsertps $16, (%r8), %xmm1, %xmm1\n"
         )
     def test_lane_stores_float(self):
-        """ Test floating point lane memory stores """
+        """
+        Test floating point lane memory stores
+        """
         # FP64 lane 1
         self.assertEqual(
             self.store_128(dregs=[self.xmm0], areg=self.r8, dt=adt.FP64,
@@ -150,7 +161,9 @@ class test_avx_opmem(unittest.TestCase):
             "vextractps $32, %xmm1, (%r8)\n"
         )
     def test_lane_ldst_integer(self):
-        """ Test Integer domain lane inserts/extracts """
+        """
+        Test Integer domain lane inserts/extracts
+        """
         # 32-bit INT load (vpinsrd)
         self.assertEqual(
             self.load_128(dregs=[self.xmm0], areg=self.r8, dt=adt.SINT32,
@@ -166,38 +179,50 @@ class test_avx_opmem(unittest.TestCase):
 
     # --- 4. Gather & Scatter (VINDEX) ---
     def test_gather_avx2(self):
-        """ AVX2 Gather format """
+        """
+        AVX2 Gather format
+        """
         self.assertEqual(
-            self.load_256(dregs=[self.ymm0], amreg=self.ymm2, areg=self.r8, dt=adt.FP64,
+            self.load_256(dregs=[self.ymm0], amreg=self.ymm2, areg=self.r8,
+                          dt=adt.FP64,
                           modifiers={mod.VINDEX, mod.MASK}, vidxreg=self.ymm1, it=ait.INT64),
             "vgatherqpd %ymm2, (%r8,%ymm1,8), %ymm0\n"
         )
 
     def test_gather_avx512(self):
-        """ AVX512 Gather with K-mask """
+        """
+        AVX512 Gather with K-mask
+        """
         expected = "vgatherdps (%r8,%zmm1,4), %zmm0{%k2}\n"
         self.assertEqual(
-            self.load_512(dregs=[self.zmm0], amreg=self.k2, areg=self.r8, dt=adt.FP32,
-                          modifiers={mod.VINDEX, mod.MASK}, vidxreg=self.zmm1, it=ait.INT32),
+            self.load_512(dregs=[self.zmm0], amreg=self.k2, areg=self.r8,
+                          dt=adt.FP32, modifiers={mod.VINDEX, mod.MASK},
+                          vidxreg=self.zmm1, it=ait.INT32),
             expected
         )
     def test_scatter_avx512(self):
-        """ AVX512 Scatter with K-mask """
+        """
+        AVX512 Scatter with K-mask
+        """
         expected = "vscatterdps %zmm0, (%r8,%zmm1,4){%k2}\n"
         self.assertEqual(
-            self.store_512(dregs=[self.zmm0], amreg=self.k2, areg=self.r8, dt=adt.FP32,
-                           modifiers={mod.VINDEX, mod.MASK}, vidxreg=self.zmm1, it=ait.INT32),
+            self.store_512(dregs=[self.zmm0], amreg=self.k2, areg=self.r8,
+                           dt=adt.FP32, modifiers={mod.VINDEX, mod.MASK},
+                           vidxreg=self.zmm1, it=ait.INT32),
             expected
         )
 
     def test_scatter_unsupported(self):
-        """ AVX128/256 should reject scatter """
+        """
+        AVX128/256 should reject scatter
+        """
         with self.assertRaisesRegex(ValueError,
                                     "VINDEX modifier can't be used with avx2 128/256 bit stores"):
             store_128 = avx128_store(asmwrap=self.asmwrap,
                                      rpref=self.rpref)
-            store_128(dregs=[self.xmm0], amreg=self.xmm2, areg=self.r8, dt=adt.FP32,
-                      modifiers={mod.VINDEX, mod.MASK}, vidxreg=self.xmm1, it=ait.INT32)
+            store_128(dregs=[self.xmm0], amreg=self.xmm2, areg=self.r8,
+                      dt=adt.FP32, modifiers={mod.VINDEX, mod.MASK},
+                      vidxreg=self.xmm1, it=ait.INT32)
 
 if __name__ == '__main__':
     unittest.main()

@@ -84,6 +84,11 @@ class opmem(operation):
         if operand_modifiers is None:
             operand_modifiers = dict()
 
+        # dts will be present in kwargs if an opmem routes to another opmem
+        # like when a vector opmem routes to a scalar opmem
+        # Since dts are rebuilt, drop it from kwargs
+        kwargs.pop('dts', None)
+
         return self.execute(
             dregs=dregs,
             gregs=[areg],
