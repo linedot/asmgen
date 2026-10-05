@@ -13,10 +13,10 @@ from asmgen.asmblocks.op import (
     operand_modifier as opd_mod
 )
 from asmgen.registers import asm_data_type as adt
-from asmgen.asmblocks.types.aarch64_types import aarch64_greg
-from asmgen.asmblocks.types.sve_types import sve_vreg,sve_preg
-from asmgen.asmblocks.types.sme_types import sme_treg
-from asmgen.asmblocks.sme_opmem import sme_load,sme_store
+from asmgen.asmblocks.aarch64.types import aarch64_greg
+from asmgen.asmblocks.sve.types import sve_vreg,sve_preg
+from asmgen.asmblocks.sme.types import sme_treg
+from asmgen.asmblocks.sme.opmem import sme_load,sme_store
 
 def asmwrap(s: str) -> str:
     """

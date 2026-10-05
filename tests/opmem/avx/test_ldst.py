@@ -13,15 +13,15 @@ from asmgen.asmblocks.op import (
     operand_modifier as opd_mod
 )
 from asmgen.registers import asm_data_type as adt, asm_index_type as ait
-from asmgen.asmblocks.types.avx_types import (
+from asmgen.asmblocks.avx.types import (
     x86_greg,
     xmm_vreg, ymm_vreg, zmm_vreg,
     avx_freg,
     avx512_mreg,
     reg_prefixer,
 )
-from asmgen.asmblocks.avx_opmem import avx128_load, avx256_load, avx512_load
-from asmgen.asmblocks.avx_opmem import avx128_store, avx512_store
+from asmgen.asmblocks.avx.opmem import avx128_load, avx256_load, avx512_load
+from asmgen.asmblocks.avx.opmem import avx128_store, avx512_store
 
 def asmwrap(s: str) -> str:
     """

@@ -13,8 +13,8 @@ from asmgen.asmblocks.op import (
     operand_modifier as opd_mod
 )
 from asmgen.registers import asm_data_type as adt
-from asmgen.asmblocks.types.avx_types import x86_greg, avx_freg, reg_prefixer
-from asmgen.asmblocks.x86_opmem import x86_load, x86_store
+from asmgen.asmblocks.avx.types import x86_greg, avx_freg, reg_prefixer
+from asmgen.asmblocks.x86.opmem import x86_load, x86_store
 
 class test_x86_opmem(unittest.TestCase):
     """

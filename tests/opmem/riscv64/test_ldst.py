@@ -10,8 +10,8 @@ import unittest
 
 from asmgen.asmblocks.op import opmem_action, opmem_modifier as mod
 from asmgen.registers import asm_data_type as adt
-from asmgen.asmblocks.types.riscv64_types import riscv64_greg, riscv64_freg
-from asmgen.asmblocks.riscv64_opmem.riscv64_opmem_base import riscv64_opmem
+from asmgen.asmblocks.riscv64.types import riscv64_greg, riscv64_freg
+from asmgen.asmblocks.riscv64.opmem.base import riscv64_opmem
 
 
 def asmwrap(s: str) -> str:

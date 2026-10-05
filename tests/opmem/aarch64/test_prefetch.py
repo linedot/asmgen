@@ -8,8 +8,8 @@ Tests AArch64 prefetches
 """
 import unittest
 
-from asmgen.asmblocks.aarch64_opmem import aarch64_prefetch
-from asmgen.asmblocks.types.aarch64_types import aarch64_greg
+from asmgen.asmblocks.aarch64.opmem import aarch64_prefetch
+from asmgen.asmblocks.aarch64.types import aarch64_greg
 from asmgen.asmblocks.op import opmem_modifier as mod
 
 def asmwrap(s: str) -> str:

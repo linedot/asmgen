@@ -8,7 +8,7 @@ Contains the base class for AVX opd3 tests
 """
 import unittest
 
-from asmgen.asmblocks.avx_fma import fma128,fma256,avx512
+from asmgen.asmblocks.avx import fma128,fma256,avx512
 
 class test_avx_opd3(unittest.TestCase):
     """

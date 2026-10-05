@@ -17,7 +17,7 @@ from asmgen.registers import asm_data_type as adt
 from asmgen.registers import asm_index_type as ait
 from asmgen.registers import reg_tracker
 
-from asmgen.asmblocks.avx_fma import fma128,fma256,avx512
+from asmgen.asmblocks.avx import fma128,fma256,avx512
 from asmgen.asmblocks.neon import neon
 from asmgen.asmblocks.sve import sve
 from asmgen.asmblocks.sme import sme

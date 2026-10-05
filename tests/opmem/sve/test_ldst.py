@@ -13,9 +13,9 @@ from asmgen.asmblocks.op import (
     operand_modifier as opd_mod
 )
 from asmgen.registers import asm_data_type as adt, asm_index_type as ait
-from asmgen.asmblocks.types.aarch64_types import aarch64_greg, aarch64_freg
-from asmgen.asmblocks.types.sve_types import sve_vreg, sve_preg
-from asmgen.asmblocks.sve_opmem import sve_load, sve_store
+from asmgen.asmblocks.aarch64.types import aarch64_greg, aarch64_freg
+from asmgen.asmblocks.sve.types import sve_vreg, sve_preg
+from asmgen.asmblocks.sve.opmem import sve_load, sve_store
 
 def asmwrap(s: str) -> str:
     """

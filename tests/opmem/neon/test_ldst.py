@@ -13,8 +13,8 @@ from asmgen.asmblocks.op import (
     opmem_modifier as mod,
     operand_modifier as opd_mod
 )
-from asmgen.asmblocks.types.aarch64_types import aarch64_greg, aarch64_freg
-from asmgen.asmblocks.types.neon_types import neon_vreg
+from asmgen.asmblocks.aarch64.types import aarch64_greg, aarch64_freg
+from asmgen.asmblocks.neon.types import neon_vreg
 from asmgen.registers import asm_data_type as adt
 
 class test_neon_opmem(unittest.TestCase):

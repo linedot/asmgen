@@ -26,9 +26,9 @@ from asmgen.asmblocks.op import (
 from asmgen.asmblocks.op.operand import register_type as op_rt
 
 ISA_MODULES = {
-    "fma128": "avx_fma",
-    "fma256": "avx_fma",
-    "avx512": "avx_fma",
+    "fma128": "avx",
+    "fma256": "avx",
+    "avx512": "avx",
     "neon":   "neon",
     "sve":    "sve",
     "sme":    "sme",
@@ -130,7 +130,7 @@ def main():
     dt = adt.FP64
     module_name = ISA_MODULES[args.isa]
 
-    vbytes_map = {'avx_fma': 32
+    vbytes_map = {'avx': 32
                   if args.isa == 'fma256' else (16 if args.isa == 'fma128' else 64),
                   'neon': 16}
     vbytes = vbytes_map.get(module_name, 16)

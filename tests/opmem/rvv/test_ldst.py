@@ -11,8 +11,8 @@ import unittest
 from asmgen.asmblocks.op import opmem_modifier as mod
 from asmgen.asmblocks.op import operand_modifier as opd_mod
 from asmgen.registers import asm_data_type as adt, asm_index_type as ait
-from asmgen.asmblocks.types.riscv64_types import riscv64_greg, riscv64_freg
-from asmgen.asmblocks.types.rvv_types import rvv_vreg
+from asmgen.asmblocks.riscv64.types import riscv64_greg, riscv64_freg
+from asmgen.asmblocks.rvv.types import rvv_vreg
 from asmgen.asmblocks.rvv import rvv  # Updated import
 
 class test_rvv_opmem(unittest.TestCase):

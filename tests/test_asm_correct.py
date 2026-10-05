@@ -22,7 +22,7 @@ from parameterized import parameterized, parameterized_class
 
 from asmgen.registers import reg_tracker
 from asmgen.asmblocks.noarch import asmgen
-from asmgen.asmblocks.avx_fma import fma128,fma256,avx512
+from asmgen.asmblocks.avx import fma128,fma256,avx512
 from asmgen.asmblocks.neon import neon
 from asmgen.asmblocks.sve import sve
 from asmgen.asmblocks.rvv import rvv

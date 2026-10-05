@@ -12,7 +12,7 @@ import unittest
 
 from parameterized import parameterized_class
 from asmgen.asmblocks.noarch import asmgen
-from asmgen.asmblocks.avx_fma import fma128,fma256,avx512
+from asmgen.asmblocks.avx import fma128,fma256,avx512
 from asmgen.asmblocks.neon import neon
 from asmgen.asmblocks.rvv import rvv
 from asmgen.asmblocks.rvv071 import rvv071
@@ -21,7 +21,7 @@ from asmgen.asmblocks.sve import sve
 # base ISA classes
 from asmgen.asmblocks.riscv64 import riscv64
 from asmgen.asmblocks.aarch64 import aarch64
-from asmgen.asmblocks.avx_fma import avxbase
+from asmgen.asmblocks.avx.base import avxbase
 
 class callconv_testsuite_type_hinter:
     """
